@@ -1,0 +1,29 @@
+services:
+
+  postgres-dev:
+    image: postgres:16
+    container_name: meufluxo-postgres-dev
+    environment:
+      POSTGRES_DB: meufluxo_dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+
+  postgres-prod:
+    image: postgres:16
+    container_name: meufluxo-postgres-prod
+    environment:
+      POSTGRES_DB: meufluxo_prod
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: senha_forte
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_dev_data:
+  postgres_prod_data:
