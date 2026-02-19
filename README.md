@@ -45,6 +45,15 @@ Garantindo consistência de dados.
 
 ---
 
+# ⚙️ Profiles
+
+O projeto possui dois perfis:
+
+- dev → Hibernate controla o schema
+- prod → Flyway controla o schema
+
+---
+
 # 🗄️ Banco de Dados
 
 Banco utilizado: **PostgreSQL**
@@ -85,7 +94,8 @@ V3__create_cash_movements.sql
 V4__insert_default_adjustment_categories.sql
 ```
 
-Ao subir o container (modo produção), o Flyway executa automaticamente as migrations pendentes.
+No profile `prod`, o Flyway é executado automaticamente no startup.
+No profile `dev`, o Hibernate controla o schema (ddl-auto=update).
 
 ---
 
@@ -127,7 +137,7 @@ Na raiz do projeto:
 ### Modo PRODUÇÃO (prod)
 
 ```bash
-docker-compose --profile prod up -d --build
+docker compose --profile prod up -d --build
 ```
 
 Isso irá:
@@ -140,7 +150,7 @@ Isso irá:
 ### Modo DESENVOLVIMENTO (dev)
 
 ```bash
-docker-compose --profile dev up -d
+docker compose --profile dev up -d
 ```
 
 Isso irá:
@@ -156,9 +166,9 @@ Isso irá:
 ## 🛑 Parando os containers
 
 ```bash
-docker-compose --profile dev down
+docker compose --profile dev down
 
-docker-compose --profile prod down
+docker compose --profile prod down
 ```
 
 ---
@@ -192,12 +202,55 @@ GET /accounts
 
 ```
 POST /cash-movements
+
+{
+  "amount": 150.00,
+  "paymentMethod": "PIX",
+  "categoryId": 3,
+  "accountId": 1,
+  "occurredAt": "2026-02-19",
+  "description": "Salário Fevereiro"
+}
 ```
 
 ## Listar movimentações (paginado)
 
 ```
-GET /cash-movements?page=0&size=10
+GET /cash-movement?accountId=1?page=0&size=10
+
+{
+    "content": [
+        {
+            "id": 1,
+            "description": "Salário Fevereiro",
+            "paymentMethod": "PIX",
+            "amount": 100.00,
+            "occurredAt": "2026-02-19",
+            "referenceMonth": "02/2026",
+            "movementType": "INCOME",
+            "account": {
+                "id": 1,
+                "name": "Conta corrente Banco X",
+                "currentBalance": 100.00
+            },
+            "category": {
+                "id": 3,
+                "name": "Salário mensal"
+            },
+            "meta": {
+                "createdAt": "2026-02-19T18:29:07.855522",
+                "updatedAt": "2026-02-19T18:29:07.855528",
+                "active": true
+            }
+        }
+    ],
+    "page": 0,
+    "size": 10,
+    "totalElements": 1,
+    "totalPages": 1,
+    "first": true,
+    "last": true
+}
 ```
 
 ---
@@ -209,12 +262,31 @@ API_meufluxo
  ├── src
  │   ├── main
  │   │   ├── java
+ │   │       ├── common
+ │   │       ├── config
+ │   │       ├── controller
+ │   │       ├── dto
+ │   │       ├── enums
+ │   │       ├── mapper
+ │   │       ├── model
+ │   │       ├── repository
+ │   │       ├── service
+ │   │       └── MeufluxoApplication 
  │   │   └── resources
  │   │       └── db/migration
  ├── Dockerfile
  ├── docker-compose.yml
  └── pom.xml
 ```
+
+---
+
+# 🧠 Regras de Negócio
+
+- Não permite excluir categoria com movimentações vinculadas
+- Atualiza saldo da conta automaticamente ao criar movimentação
+- Permite inativação lógica (soft delete)
+- Controle mensal via referenceMonth
 
 ---
 
