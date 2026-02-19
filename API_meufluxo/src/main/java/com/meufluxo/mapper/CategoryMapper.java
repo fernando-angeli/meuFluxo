@@ -3,7 +3,6 @@ package com.meufluxo.mapper;
 import com.meufluxo.dto.BaseResponse;
 import com.meufluxo.dto.category.CategoryRequest;
 import com.meufluxo.dto.category.CategoryResponse;
-import com.meufluxo.enums.CategoryType;
 import com.meufluxo.enums.MovementType;
 import com.meufluxo.model.Category;
 import org.mapstruct.Mapper;

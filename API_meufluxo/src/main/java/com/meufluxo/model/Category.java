@@ -1,6 +1,5 @@
 package com.meufluxo.model;
 
-import com.meufluxo.enums.CategoryType;
 import com.meufluxo.enums.MovementType;
 import jakarta.persistence.*;
 import lombok.Getter;
