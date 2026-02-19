@@ -1,4 +1,4 @@
-package com.meufluxo.configs;
+package com.meufluxo.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
