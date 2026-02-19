@@ -9,7 +9,8 @@ public enum PaymentMethod {
     BOLETO("Boleto"),
     CASH("Dinheiro"),
     TRANSFER("Transferência"),
-    VA("Vale Alimentação");
+    VA("Vale Alimentação"),
+    ADJUSTMENT ("Ajustes");
 
     private final String labelPtBr;
 
