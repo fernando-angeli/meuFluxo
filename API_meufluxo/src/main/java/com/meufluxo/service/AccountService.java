@@ -47,32 +47,37 @@ public class AccountService {
         return PageResponse.toPageResponse(responsePage);
     }
 
-    public AccountResponse create(AccountRequest accountRequest) {
-        if(accountRepository.existsByName(accountRequest.name())){
+    public AccountResponse create(AccountRequest request) {
+        if(accountRepository.existsByName(request.name())){
             throw new BusinessException("Já existe uma conta com este nome");
         }
-        Account newAccount = accountMapper.toEntity(accountRequest);
+        Account newAccount = accountMapper.toEntity(request);
         newAccount.initializeBalance();
         newAccount = accountRepository.save(newAccount);
         return accountMapper.toResponse(newAccount);
     }
 
-    public AccountResponse update(Long id, AccountUpdateRequest accountRequest) {
+    public AccountResponse update(Long id, AccountUpdateRequest request) {
         Account existingAccount = findByIdOrThrow(id);
-        if(!existingAccount.getName().equals(accountRequest.name())
-            && accountRepository.existsByNameAndIdNot(accountRequest.name(), id)
-        ) {
-            throw new BusinessException("Já existe uma conta com este nome");
+        if(request.name() != null){
+            String newName = request.name().trim();
+            if(newName.isBlank())
+                throw new BusinessException("Nome não pode ser vazio.");
+            if(!newName.equals(existingAccount.getName()) && accountRepository.existsByNameAndIdNot(request.name(), id))
+                throw new BusinessException("Já existe uma conta com este nome");
+            existingAccount.setName(newName);
         }
-        existingAccount.setName(accountRequest.name());
-        existingAccount = accountRepository.saveAndFlush(existingAccount);
+        if(request.active() != null){
+            existingAccount.setActive(request.active());
+        }
+        existingAccount = accountRepository.save(existingAccount);
         return accountMapper.toResponse(existingAccount);
     }
 
     public void delete(Long id) {
         Account account = findByIdOrThrow(id);
         if(cashMovementRepository.existsByAccountId(id)) {
-            throw new BusinessException("Não é possível excluir a conta pois existem registros vinculados.");
+            throw new BusinessException("Não é possível excluir a conta pois existem registros vinculados, só é possível inativa-la.");
         }
         accountRepository.delete(account);
     }
@@ -88,4 +93,6 @@ public class AccountService {
         accountRepository.findById(id)
             .orElseThrow(() -> new NotFoundException("Conta não encontrada com ID: " + id));
     }
+
+
 }

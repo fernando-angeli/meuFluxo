@@ -50,7 +50,7 @@ public class AccountController {
         return ResponseEntity.created(uri).body(createdAccount);
     }
 
-    @PutMapping("/{id}")
+    @PatchMapping("/{id}")
     public ResponseEntity<AccountResponse> updateAccount(
             @Valid @RequestBody AccountUpdateRequest request,
             @PathVariable Long id) {
