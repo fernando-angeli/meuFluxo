@@ -5,6 +5,8 @@ import com.meufluxo.common.exception.NotFoundException;
 import com.meufluxo.dto.cashMovement.CashMovementRequest;
 import com.meufluxo.dto.cashMovement.CashMovementResponse;
 import com.meufluxo.dto.cashMovement.CashMovementUpdateRequest;
+import com.meufluxo.enums.MovementType;
+import com.meufluxo.enums.PaymentMethod;
 import com.meufluxo.mapper.CashMovementMapper;
 import com.meufluxo.model.Account;
 import com.meufluxo.model.CashMovement;
@@ -72,10 +74,11 @@ public class CashMovementService {
     public CashMovementResponse create(CashMovementRequest request) {
         Category category = categoryService.findByIdOrThrow(request.categoryId());
         Account account = accountService.findByIdOrThrow(request.accountId());
+
         CashMovement movement = cashMovementMapper.toEntity(request);
         movement.setCategory(category);
         movement.setAccount(account);
-        movement.setOccurredAt(LocalDateTime.now());
+
         BigDecimal amount = request.amount();
         movement.setMovementType(
                 request.movementType() != null ?
@@ -87,10 +90,12 @@ public class CashMovementService {
         return cashMovementMapper.toResponse(movement);
     }
 
-    public CashMovementResponse update(Long id, CashMovementUpdateRequest request) {
+    public CashMovementResponse update(
+            Long id,
+            CashMovementUpdateRequest request
+    ) {
         CashMovement existingCashMovement = findByIdOrThrow(id);
         existingCashMovement.revertImpact();
-
         Category category;
         if(request.categoryId() != null){
             category = categoryService.findByIdOrThrow(request.categoryId());
@@ -98,11 +103,9 @@ public class CashMovementService {
         } else {
             category = existingCashMovement.getCategory();
         }
-
         if(request.description() != null){
             existingCashMovement.setDescription(request.description());
         }
-
         if(request.amount() != null){
             BigDecimal amount = request.amount();
             existingCashMovement.setAmount(amount);
@@ -112,16 +115,13 @@ public class CashMovementService {
                             category.getMovementType()
             );
         }
-
         if(request.accountId() != null){
             Account account = accountService.findByIdOrThrow(request.accountId());
             existingCashMovement.setAccount(account);
         }
-
         if (request.occurredAt() != null) {
             existingCashMovement.setOccurredAt(request.occurredAt());
         }
-
         existingCashMovement.applyImpact();
         existingCashMovement = repository.save(existingCashMovement);
         return cashMovementMapper.toResponse(existingCashMovement);

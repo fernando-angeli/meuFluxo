@@ -1,11 +1,13 @@
 package com.meufluxo.dto.cashMovement;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.meufluxo.enums.MovementType;
 import com.meufluxo.enums.PaymentMethod;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 public record CashMovementUpdateRequest(
@@ -25,6 +27,9 @@ public record CashMovementUpdateRequest(
 
         String notes,
 
-        LocalDateTime occurredAt
+        LocalDate occurredAt,
+
+        @JsonIgnore
+        Boolean active
 ) {
 }
