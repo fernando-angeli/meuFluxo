@@ -1,16 +1,16 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/meufluxo_dev
+    url: jdbc:postgresql://localhost:5433/meufluxo_db_dev
     username: postgres
     password: postgres
 
   jpa:
+    show-sql: true
     hibernate:
       ddl-auto: update
-    show-sql: true
     properties:
       hibernate:
-        format_sql: true
+        format-sql: true
 
   flyway:
     enabled: false
