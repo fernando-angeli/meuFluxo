@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
   servlet:
     context-path: /api
 
@@ -7,11 +7,19 @@ spring:
   application:
     name: meufluxo
 
-  profiles:
-    active: ${SPRING_PROFILES_ACTIVE:dev}
+  datasource:
+    driver-class-name: org.postgresql.Driver
 
   jpa:
-    open-in-view: false
+    hibernate:
+      ddl-auto: none
+
+  flyway:
+    enabled: false
+
+logging:
+  level:
+    root: INFO
 
 #  jackson:
 #    serialization:
