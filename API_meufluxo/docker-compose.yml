@@ -1,29 +1,70 @@
+version: '3.9'
+
 services:
 
-  postgres-dev:
-    image: postgres:16
-    container_name: meufluxo-postgres-dev
+  meufluxo_db_prod:
+    image: postgres:16-alpine
+    profiles: ["prod"]
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_PROD_USER:-postgres}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    container_name: ${DB_PROD_NAME}
     environment:
-      POSTGRES_DB: meufluxo_dev
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ${DB_PROD_NAME}
+      POSTGRES_USER: ${DB_PROD_USER}
+      POSTGRES_PASSWORD: ${DB_PROD_PASSWORD}
     ports:
-      - "5432:5432"
-    volumes:
-      - postgres_dev_data:/var/lib/postgresql/data
-
-  postgres-prod:
-    image: postgres:16
-    container_name: meufluxo-postgres-prod
-    environment:
-      POSTGRES_DB: meufluxo_prod
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: senha_forte
-    ports:
-      - "5433:5432"
+      - "${DB_PROD_PORT}:5432"
     volumes:
       - postgres_prod_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  meufluxo_db_dev:
+    image: postgres:16-alpine
+    profiles: ["dev"]
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_DEV_USER:-postgres}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    container_name: ${DB_DEV_NAME}
+    environment:
+      POSTGRES_DB: ${DB_DEV_NAME}
+      POSTGRES_USER: ${DB_DEV_USER}
+      POSTGRES_PASSWORD: ${DB_DEV_PASSWORD}
+    ports:
+      - "${DB_DEV_PORT}:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  api:
+    build: .
+    container_name: meufluxo_api
+    profiles: ["prod"]
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/api/actuator/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      meufluxo_db_prod:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_PROD_NAME}:${DB_PROD_PORT}/${DB_PROD_NAME}
+      SPRING_DATASOURCE_USERNAME: ${DB_PROD_USER}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PROD_PASSWORD}
+      SERVER_PORT: ${SERVER_PORT}
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+    restart: no
+#    restart: unless-stopped
 
 volumes:
-  postgres_dev_data:
   postgres_prod_data:
+    name: meufluxo_postgres_prod_data
+  postgres_dev_data:
+    name: meufluxo_postgres_dev_data
