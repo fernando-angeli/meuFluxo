@@ -79,12 +79,13 @@ src/main/resources/db/migration
 ### 📌 Padrão de nomenclatura
 
 ```
-V1__create_tables.sql
-V2__add_indexes.sql
-V3__insert_default_categories.sql
+V1__create_accounts.sql
+V2__create_categories.sql
+V3__create_cash_movements.sql
+V4__insert_default_adjustment_categories.sql
 ```
 
-Ao subir o container, o Flyway executa automaticamente as migrations pendentes.
+Ao subir o container (modo produção), o Flyway executa automaticamente as migrations pendentes.
 
 ---
 
@@ -108,7 +109,9 @@ GET /cash-movements?page=0&size=10&sort=date,desc
 
 # 🐳 Executando com Docker Compose
 
-O projeto já está configurado para subir automaticamente API + Banco.
+O projeto já está configurado para subir automaticamente 
+- API + Banco (modo Produção)
+- Banco (modo desenvolvimento)
 
 ## 📌 Pré-requisitos
 
@@ -121,8 +124,10 @@ O projeto já está configurado para subir automaticamente API + Banco.
 
 Na raiz do projeto:
 
+### Modo PRODUÇÃO (prod)
+
 ```bash
-docker-compose up --build
+docker-compose --profile prod up -d --build
 ```
 
 Isso irá:
@@ -132,12 +137,28 @@ Isso irá:
 * Executar migrations do Flyway
 * Disponibilizar a API
 
+### Modo DESENVOLVIMENTO (dev)
+
+```bash
+docker-compose --profile dev up -d
+```
+
+Isso irá:
+
+* Subir o PostgreSQL
+* Hibernate criará as tabelas
+* Deixará o banco pronto e disponível (com as entidades criadas)
+
+> Após o banco ficar ON, subir a aplicação através da IDE (configurar para usar profile "dev") 
+  
 ---
 
 ## 🛑 Parando os containers
 
 ```bash
-docker-compose down
+docker-compose --profile dev down
+
+docker-compose --profile prod down
 ```
 
 ---
