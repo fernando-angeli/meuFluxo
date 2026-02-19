@@ -21,13 +21,13 @@ public abstract class BaseModel {
     private LocalDateTime updatedAt;
 
     @Column(nullable = false)
-    private boolean isActive = true;
+    private boolean active = true;
 
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
-        this.isActive = true;
+        this.active = true;
     }
 
     @PreUpdate
