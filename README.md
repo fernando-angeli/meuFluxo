@@ -45,6 +45,15 @@ Garantindo consistência de dados.
 
 ---
 
+# ⚙️ Profiles
+
+O projeto possui dois perfis:
+
+- dev → Hibernate controla o schema
+- prod → Flyway controla o schema
+
+---
+
 # 🗄️ Banco de Dados
 
 Banco utilizado: **PostgreSQL**
@@ -79,12 +88,14 @@ src/main/resources/db/migration
 ### 📌 Padrão de nomenclatura
 
 ```
-V1__create_tables.sql
-V2__add_indexes.sql
-V3__insert_default_categories.sql
+V1__create_accounts.sql
+V2__create_categories.sql
+V3__create_cash_movements.sql
+V4__insert_default_adjustment_categories.sql
 ```
 
-Ao subir o container, o Flyway executa automaticamente as migrations pendentes.
+No profile `prod`, o Flyway é executado automaticamente no startup.
+No profile `dev`, o Hibernate controla o schema (ddl-auto=update).
 
 ---
 
@@ -108,7 +119,9 @@ GET /cash-movements?page=0&size=10&sort=date,desc
 
 # 🐳 Executando com Docker Compose
 
-O projeto já está configurado para subir automaticamente API + Banco.
+O projeto já está configurado para subir automaticamente 
+- API + Banco (modo Produção)
+- Banco (modo desenvolvimento)
 
 ## 📌 Pré-requisitos
 
@@ -121,8 +134,10 @@ O projeto já está configurado para subir automaticamente API + Banco.
 
 Na raiz do projeto:
 
+### Modo PRODUÇÃO (prod)
+
 ```bash
-docker-compose up --build
+docker compose --profile prod up -d --build
 ```
 
 Isso irá:
@@ -132,12 +147,28 @@ Isso irá:
 * Executar migrations do Flyway
 * Disponibilizar a API
 
+### Modo DESENVOLVIMENTO (dev)
+
+```bash
+docker compose --profile dev up -d
+```
+
+Isso irá:
+
+* Subir o PostgreSQL
+* Hibernate criará as tabelas
+* Deixará o banco pronto e disponível (com as entidades criadas)
+
+> Após o banco ficar ON, subir a aplicação através da IDE (configurar para usar profile "dev") 
+  
 ---
 
 ## 🛑 Parando os containers
 
 ```bash
-docker-compose down
+docker compose --profile dev down
+
+docker compose --profile prod down
 ```
 
 ---
@@ -171,12 +202,55 @@ GET /accounts
 
 ```
 POST /cash-movements
+
+{
+  "amount": 150.00,
+  "paymentMethod": "PIX",
+  "categoryId": 3,
+  "accountId": 1,
+  "occurredAt": "2026-02-19",
+  "description": "Salário Fevereiro"
+}
 ```
 
 ## Listar movimentações (paginado)
 
 ```
-GET /cash-movements?page=0&size=10
+GET /cash-movement?accountId=1?page=0&size=10
+
+{
+    "content": [
+        {
+            "id": 1,
+            "description": "Salário Fevereiro",
+            "paymentMethod": "PIX",
+            "amount": 100.00,
+            "occurredAt": "2026-02-19",
+            "referenceMonth": "02/2026",
+            "movementType": "INCOME",
+            "account": {
+                "id": 1,
+                "name": "Conta corrente Banco X",
+                "currentBalance": 100.00
+            },
+            "category": {
+                "id": 3,
+                "name": "Salário mensal"
+            },
+            "meta": {
+                "createdAt": "2026-02-19T18:29:07.855522",
+                "updatedAt": "2026-02-19T18:29:07.855528",
+                "active": true
+            }
+        }
+    ],
+    "page": 0,
+    "size": 10,
+    "totalElements": 1,
+    "totalPages": 1,
+    "first": true,
+    "last": true
+}
 ```
 
 ---
@@ -188,12 +262,31 @@ API_meufluxo
  ├── src
  │   ├── main
  │   │   ├── java
+ │   │       ├── common
+ │   │       ├── config
+ │   │       ├── controller
+ │   │       ├── dto
+ │   │       ├── enums
+ │   │       ├── mapper
+ │   │       ├── model
+ │   │       ├── repository
+ │   │       ├── service
+ │   │       └── MeufluxoApplication 
  │   │   └── resources
  │   │       └── db/migration
  ├── Dockerfile
  ├── docker-compose.yml
  └── pom.xml
 ```
+
+---
+
+# 🧠 Regras de Negócio
+
+- Não permite excluir categoria com movimentações vinculadas
+- Atualiza saldo da conta automaticamente ao criar movimentação
+- Permite inativação lógica (soft delete)
+- Controle mensal via referenceMonth
 
 ---
 
