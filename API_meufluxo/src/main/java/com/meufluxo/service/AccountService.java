@@ -16,7 +16,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@Transactional
 public class AccountService {
 
     private final AccountRepository accountRepository;
@@ -26,29 +25,28 @@ public class AccountService {
     public AccountService(
             AccountRepository accountRepository,
             CashMovementRepository cashMovementRepository,
-            AccountMapper accountMapper)
-    {
+            AccountMapper accountMapper
+    ) {
         this.accountRepository = accountRepository;
         this.cashMovementRepository = cashMovementRepository;
         this.accountMapper = accountMapper;
     }
 
-    @Transactional(readOnly = true)
     public AccountResponse getById(Long id) {
         Account account = accountRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Conta não encontrada com ID: " + id));
         return accountMapper.toResponse(account);
     }
 
-    @Transactional(readOnly = true)
     public PageResponse<AccountResponse> getAll(Pageable pageable) {
         Page<Account> categories = accountRepository.findAll(pageable);
         Page<AccountResponse> responsePage = categories.map(accountMapper::toResponse);
         return PageResponse.toPageResponse(responsePage);
     }
 
+    @Transactional
     public AccountResponse create(AccountRequest request) {
-        if(accountRepository.existsByName(request.name())){
+        if (accountRepository.existsByName(request.name())) {
             throw new BusinessException("Já existe uma conta com este nome");
         }
         Account newAccount = accountMapper.toEntity(request);
@@ -57,42 +55,44 @@ public class AccountService {
         return accountMapper.toResponse(newAccount);
     }
 
-    public AccountResponse update(Long id, AccountUpdateRequest request) {
+    @Transactional
+    public AccountResponse update(
+            Long id,
+            AccountUpdateRequest request
+    ) {
         Account existingAccount = findByIdOrThrow(id);
-        if(request.name() != null){
+        if (request.name() != null) {
             String newName = request.name().trim();
-            if(newName.isBlank())
+            if (newName.isBlank())
                 throw new BusinessException("Nome não pode ser vazio.");
-            if(!newName.equals(existingAccount.getName()) && accountRepository.existsByNameAndIdNot(request.name(), id))
+            if (!newName.equals(existingAccount.getName()) && accountRepository.existsByNameAndIdNot(request.name(), id))
                 throw new BusinessException("Já existe uma conta com este nome");
             existingAccount.setName(newName);
         }
-        if(request.active() != null){
+        if (request.active() != null) {
             existingAccount.setActive(request.active());
         }
         existingAccount = accountRepository.save(existingAccount);
         return accountMapper.toResponse(existingAccount);
     }
 
+    @Transactional
     public void delete(Long id) {
         Account account = findByIdOrThrow(id);
-        if(cashMovementRepository.existsByAccountId(id)) {
+        if (cashMovementRepository.existsByAccountId(id)) {
             throw new BusinessException("Não é possível excluir a conta pois existem registros vinculados, só é possível inativa-la.");
         }
         accountRepository.delete(account);
     }
 
-    @Transactional(readOnly = true)
     public Account findByIdOrThrow(Long id) {
         return accountRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Conta não encontrada com ID: " + id));
     }
 
-    @Transactional(readOnly = true)
     public void existsId(Long id) {
         accountRepository.findById(id)
-            .orElseThrow(() -> new NotFoundException("Conta não encontrada com ID: " + id));
+                .orElseThrow(() -> new NotFoundException("Conta não encontrada com ID: " + id));
     }
-
 
 }
