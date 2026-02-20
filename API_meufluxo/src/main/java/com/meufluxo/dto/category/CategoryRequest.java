@@ -1,9 +1,9 @@
 package com.meufluxo.dto.category;
 
 import com.meufluxo.enums.MovementType;
-import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 public record CategoryRequest(
 

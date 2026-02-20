@@ -1,8 +1,8 @@
 package com.meufluxo.common.exception.handler;
 
 import com.meufluxo.common.exception.BusinessException;
-import com.meufluxo.common.exception.model.FieldError;
 import com.meufluxo.common.exception.NotFoundException;
+import com.meufluxo.common.exception.model.FieldError;
 import com.meufluxo.common.exception.model.StandardError;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -25,7 +25,7 @@ public class GlobalExceptionHandler {
             String detail,
             List<FieldError> errors,
             HttpServletRequest request
-    ){
+    ) {
         StandardError err = new StandardError(
                 Instant.now(),
                 status.value(),

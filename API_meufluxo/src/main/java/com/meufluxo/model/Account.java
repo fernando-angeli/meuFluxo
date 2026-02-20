@@ -6,7 +6,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
 
-import javax.swing.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -14,7 +13,7 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @Table(name = "accounts")
-public class Account extends BaseModel{
+public class Account extends BaseModel {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

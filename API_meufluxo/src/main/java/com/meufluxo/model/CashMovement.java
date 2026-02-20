@@ -14,7 +14,7 @@ import java.time.LocalDate;
 @Getter
 @Setter
 @Table(name = "cash_movements")
-public class CashMovement extends BaseModel{
+public class CashMovement extends BaseModel {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -77,7 +77,7 @@ public class CashMovement extends BaseModel{
         if (this.occurredAt == null) {
             throw new BusinessException("A data do movimento não pode ser nula.");
         }
-            this.referenceMonth = this.occurredAt.withDayOfMonth(1);
+        this.referenceMonth = this.occurredAt.withDayOfMonth(1);
     }
 
 }

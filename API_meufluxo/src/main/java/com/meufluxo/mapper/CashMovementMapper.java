@@ -4,7 +4,6 @@ import com.meufluxo.dto.BaseResponse;
 import com.meufluxo.dto.cashMovement.CashMovementRequest;
 import com.meufluxo.dto.cashMovement.CashMovementResponse;
 import com.meufluxo.model.CashMovement;
-import com.meufluxo.model.Category;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 

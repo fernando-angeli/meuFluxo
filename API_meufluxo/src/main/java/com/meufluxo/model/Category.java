@@ -9,10 +9,10 @@ import lombok.Setter;
 @Getter
 @Setter
 @Table(
-    name = "categories",
-    uniqueConstraints = {
-        @UniqueConstraint(name = "uk_category_name", columnNames = "name")
-    }
+        name = "categories",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_category_name", columnNames = "name")
+        }
 )
 public class Category extends BaseModel {
 
