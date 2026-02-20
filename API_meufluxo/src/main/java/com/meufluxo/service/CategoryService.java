@@ -66,7 +66,7 @@ public class CategoryService {
             if(!newName.equals(existingCategory.getName()) && categoryRepository.existsByNameAndIdNot(request.name(), id)) {
                 throw new BusinessException("Já existe uma categoria com este nome");
             }
-            existingCategory.setName(request.name());
+            existingCategory.setName(newName);
         }
         if(request.active() != null){
             existingCategory.setActive(request.active());
