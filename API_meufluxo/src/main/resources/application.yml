@@ -21,6 +21,14 @@ logging:
   level:
     root: INFO
 
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+
 #  jackson:
 #    serialization:
 #      fail-on-empty-beans: false
