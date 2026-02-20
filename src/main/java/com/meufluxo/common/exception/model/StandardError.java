@@ -10,5 +10,5 @@ public record StandardError(
         String detail,
         String path,
         List<FieldError> errors
-)
-{}
+) {
+}

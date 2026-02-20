@@ -49,7 +49,8 @@ public class AccountController {
     })
     public ResponseEntity<AccountResponse> getAccountById(
             @Parameter(description = "ID da conta", example = "1", required = true)
-            @PathVariable Long id) {
+            @PathVariable Long id
+    ) {
         AccountResponse response = service.getById(id);
         return ResponseEntity.ok(response);
     }
@@ -75,7 +76,8 @@ public class AccountController {
                     size = 20,
                     sort = "name",
                     direction = Sort.Direction.DESC
-            ) Pageable pageable) {
+            ) Pageable pageable
+    ) {
         return service.getAll(pageable);
     }
 
@@ -99,7 +101,8 @@ public class AccountController {
                     description = "Dados para criação de conta",
                     content = @Content(schema = @Schema(implementation = AccountRequest.class))
             )
-            @Valid @RequestBody AccountRequest request) {
+            @Valid @RequestBody AccountRequest request
+    ) {
         AccountResponse createdAccount = service.create(request);
         URI uri = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}")
                 .buildAndExpand(createdAccount.id()).toUri();
@@ -124,12 +127,14 @@ public class AccountController {
     public ResponseEntity<AccountResponse> updateAccount(
             @Parameter(description = "ID da conta", example = "1", required = true)
             @PathVariable Long id,
+
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     required = true,
                     description = "Campos para atualização (parcial)",
                     content = @Content(schema = @Schema(implementation = AccountUpdateRequest.class))
             )
-            @Valid @RequestBody AccountUpdateRequest request) {
+            @Valid @RequestBody AccountUpdateRequest request
+    ) {
         AccountResponse updatedAccount = service.update(id, request);
         return ResponseEntity.ok(updatedAccount);
     }
@@ -146,7 +151,8 @@ public class AccountController {
     })
     public ResponseEntity<Void> deleteAccount(
             @Parameter(description = "ID da conta", example = "1", required = true)
-            @PathVariable Long id) {
+            @PathVariable Long id
+    ) {
         service.delete(id);
         return ResponseEntity.noContent().build();
     }
