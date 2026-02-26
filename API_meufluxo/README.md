@@ -1,208 +1,185 @@
 # 🚀 MeuFluxo API
 
-API REST para controle de fluxo de caixa, desenvolvida com **Spring Boot**, **Java 25**, **PostgreSQL**, **Flyway** e executada totalmente via **Docker Compose**.
+API REST para controle de fluxo de caixa, desenvolvida com **Spring
+Boot**, **Java 25 (LTS)**, **PostgreSQL**, **Flyway** e executada via
+**Docker Compose**.
 
----
+O projeto foi estruturado com foco em organização arquitetural,
+separação de responsabilidades e preparação para evolução contínua.
+
+------------------------------------------------------------------------
 
 ## 🧱 Arquitetura
 
-O projeto segue arquitetura em camadas:
+A aplicação segue arquitetura em camadas:
 
-```
 controller → service → repository → database
-```
 
-* **Controller** → expõe endpoints REST
-* **Service** → regras de negócio
-* **Repository** → acesso a dados com Spring Data JPA
-* **Database** → PostgreSQL
+### 🔹 Responsabilidades por camada
 
----
+-   **Controller** → expõe endpoints REST e trata requisições/respostas\
+-   **Service** → centraliza regras de negócio e controle transacional\
+-   **Repository** → acesso a dados com Spring Data JPA\
+-   **Database** → PostgreSQL
+
+As regras de negócio são mantidas exclusivamente na camada de serviço,
+evitando lógica distribuída nas entidades.
+
+------------------------------------------------------------------------
 
 ## 🛠️ Tecnologias Utilizadas
 
-* Java 25
-* Spring Boot
-* Spring Data JPA
-* Hibernate
-* PostgreSQL
-* Flyway (migrations)
-* Docker
-* Docker Compose
+-   Java 25 (LTS)
+-   Spring Boot
+-   Spring Data JPA
+-   Hibernate
+-   PostgreSQL
+-   Flyway (migrations)
+-   Docker
+-   Docker Compose
 
----
+------------------------------------------------------------------------
 
 ## 🔐 Transações
 
-Todas as operações críticas utilizam:
+Operações críticas utilizam controle transacional explícito:
 
-```java
+``` java
 @Transactional
-@Transactional(readOnly=true)
 ```
 
-Garantindo consistência de dados.
+Garantindo consistência e integridade dos dados.
 
----
+------------------------------------------------------------------------
 
-# ⚙️ Profiles
+## ⚙️ Profiles
 
-O projeto possui dois perfis:
+O projeto possui dois perfis configurados:
 
-- dev → Hibernate controla o schema
-- prod → Flyway controla o schema
+-   **dev** → Hibernate controla o schema (`ddl-auto=update`)
+-   **prod** → Flyway controla o schema (migrations versionadas)
 
----
+Em ambiente de produção, o controle do banco é feito exclusivamente via Flyway.
 
-# 🗄️ Banco de Dados
+------------------------------------------------------------------------
+
+## 🗄️ Banco de Dados
 
 Banco utilizado: **PostgreSQL**
 
----
+O schema é tratado como parte controlada da aplicação, evitando
+dependência implícita do ORM para evolução estrutural.
+
+------------------------------------------------------------------------
 
 ## 📦 Estrutura Principal (implementada)
 
-* `accounts`
-* `categories`
-* `cash_movements`
+-   `accounts`
+-   `categories`
+-   `cash_movements`
 
----
+------------------------------------------------------------------------
 
 ## 🔗 Relacionamentos
 
-* `CashMovement` → ManyToOne → `Account`
-* `CashMovement` → ManyToOne → `Category`
+-   `CashMovement` → ManyToOne → `Account`
+-   `CashMovement` → ManyToOne → `Category`
 
----
+------------------------------------------------------------------------
 
-# 🧬 Versionamento com Flyway
+## 🧬 Versionamento com Flyway
 
-O schema do banco é controlado por **migrations**.
+O schema do banco é controlado por **migrations versionadas**.
 
 ### 📂 Localização
 
-```
 src/main/resources/db/migration
-```
 
 ### 📌 Padrão de nomenclatura
 
-```
-V1__create_accounts.sql
-V2__create_categories.sql
-V3__create_cash_movements.sql
-V4__insert_default_adjustment_categories.sql
-```
+V1\_\_create_accounts.sql\
+V2\_\_create_categories.sql\
+V3\_\_create_cash_movements.sql\
+V4\_\_insert_default_adjustment_categories.sql
 
 No profile `prod`, o Flyway é executado automaticamente no startup.
-No profile `dev`, o Hibernate controla o schema (ddl-auto=update).
 
----
+------------------------------------------------------------------------
 
-# 📄 Paginação
+## 📄 Paginação
 
 As buscas utilizam paginação com Spring Data:
 
-```java
+``` java
 Page<CashMovement> findByAccountId(Long accountId, Pageable pageable);
 ```
 
-O `Pageable` é fornecido pelo Spring Data e o retorno é um `Page<T>`.
-
 Exemplo de requisição:
 
-```
-GET /cash-movements?page=0&size=10&sort=date,desc
-```
+GET /cash-movements?page=0&size=10&sort=occurredAt,desc
 
----
+------------------------------------------------------------------------
 
-# 🐳 Executando com Docker Compose
+## 🐳 Executando com Docker Compose
 
-O projeto já está configurado para subir automaticamente 
-- API + Banco (modo Produção)
-- Banco (modo desenvolvimento)
+### 📌 Pré-requisitos
 
-## 📌 Pré-requisitos
+-   Docker instalado
+-   Docker Compose instalado
 
-* Docker instalado
-* Docker Compose instalado
-
----
+------------------------------------------------------------------------
 
 ## ▶️ Subindo o projeto
 
-Na raiz do projeto:
-
 ### Modo PRODUÇÃO (prod)
 
-```bash
+``` bash
 docker compose --profile prod up -d --build
 ```
 
-Isso irá:
-
-* Subir o PostgreSQL
-* Buildar a aplicação
-* Executar migrations do Flyway
-* Disponibilizar a API
-
 ### Modo DESENVOLVIMENTO (dev)
 
-```bash
+``` bash
 docker compose --profile dev up -d
 ```
 
-Isso irá:
+Após o banco estar ativo, subir a aplicação via IDE utilizando o profile
+`dev`.
 
-* Subir o PostgreSQL
-* Hibernate criará as tabelas
-* Deixará o banco pronto e disponível (com as entidades criadas)
-
-> Após o banco ficar ON, subir a aplicação através da IDE (configurar para usar profile "dev") 
-  
----
+------------------------------------------------------------------------
 
 ## 🛑 Parando os containers
 
-```bash
+``` bash
 docker compose --profile dev down
-
 docker compose --profile prod down
 ```
 
----
+------------------------------------------------------------------------
 
-# 🌍 Acesso
+## 🌍 Acesso
 
-Após subir os containers:
+API: http://localhost:8080/api
 
-```
-API: http://localhost:8080
 PostgreSQL: localhost:5432
-```
 
----
+------------------------------------------------------------------------
 
-# 📬 Exemplos de Endpoints
+## 📬 Exemplos de Endpoints
 
-## Criar conta
+### Criar conta
 
-```
 POST /accounts
-```
 
-## Listar contas
+### Listar contas
 
-```
 GET /accounts
-```
 
-## Criar movimentação
+### Criar movimentação
 
-```
 POST /cash-movements
 
+``` json
 {
   "amount": 150.00,
   "paymentMethod": "PIX",
@@ -213,93 +190,55 @@ POST /cash-movements
 }
 ```
 
-## Listar movimentações (paginado)
+### Listar movimentações (paginado)
 
-```
-GET /cash-movement?accountId=1?page=0&size=10
+GET /cash-movements?accountId=1&page=0&size=10
 
-{
-    "content": [
-        {
-            "id": 1,
-            "description": "Salário Fevereiro",
-            "paymentMethod": "PIX",
-            "amount": 100.00,
-            "occurredAt": "2026-02-19",
-            "referenceMonth": "02/2026",
-            "movementType": "INCOME",
-            "account": {
-                "id": 1,
-                "name": "Conta corrente Banco X",
-                "currentBalance": 100.00
-            },
-            "category": {
-                "id": 3,
-                "name": "Salário mensal"
-            },
-            "meta": {
-                "createdAt": "2026-02-19T18:29:07.855522",
-                "updatedAt": "2026-02-19T18:29:07.855528",
-                "active": true
-            }
-        }
-    ],
-    "page": 0,
-    "size": 10,
-    "totalElements": 1,
-    "totalPages": 1,
-    "first": true,
-    "last": true
-}
-```
+------------------------------------------------------------------------
 
----
+## 📌 Estrutura do Projeto
 
-# 📌 Estrutura do Projeto
+api\
+├── src\
+│ ├── main\
+│ │ ├── java\
+│ │ ├── common\
+│ │ ├── config\
+│ │ ├── controller\
+│ │ ├── dto\
+│ │ ├── enums\
+│ │ ├── mapper\
+│ │ ├── model\
+│ │ ├── repository\
+│ │ ├── service\
+│ │ └── MeufluxoApplication\
+│ │ └── resources\
+│ │ └── db/migration\
+├── Dockerfile\
+├── docker-compose.yml\
+└── pom.xml
 
-```
-API_meufluxo
- ├── src
- │   ├── main
- │   │   ├── java
- │   │       ├── common
- │   │       ├── config
- │   │       ├── controller
- │   │       ├── dto
- │   │       ├── enums
- │   │       ├── mapper
- │   │       ├── model
- │   │       ├── repository
- │   │       ├── service
- │   │       └── MeufluxoApplication 
- │   │   └── resources
- │   │       └── db/migration
- ├── Dockerfile
- ├── docker-compose.yml
- └── pom.xml
-```
+------------------------------------------------------------------------
 
----
+## 🧠 Regras de Negócio
 
-# 🧠 Regras de Negócio
+-   Não permite excluir categoria com movimentações vinculadas
+-   Atualiza saldo da conta automaticamente ao criar movimentação
+-   Permite inativação lógica (soft delete)
+-   Controle mensal via `referenceMonth`
 
-- Não permite excluir categoria com movimentações vinculadas
-- Atualiza saldo da conta automaticamente ao criar movimentação
-- Permite inativação lógica (soft delete)
-- Controle mensal via referenceMonth
+------------------------------------------------------------------------
 
----
+## 📈 Próximas Melhorias
 
-# 📈 Próximas Melhorias
+-   Autenticação com JWT
+-   Testes unitários
+-   Testes de integração
+-   Documentação com Swagger/OpenAPI
+-   CI/CD
 
-* Autenticação com JWT
-* Testes unitários
-* Testes de integração
-* Documentação com Swagger
-* CI/CD
+------------------------------------------------------------------------
 
----
-
-# 👨‍💻 Autor
+## 👨‍💻 Autor
 
 Luiz Fernando Angeli
