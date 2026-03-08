@@ -12,5 +12,8 @@ spring:
       hibernate:
         format-sql: true
 
+  kafka:
+    bootstrap-servers: localhost:9092
+
   flyway:
     enabled: false
