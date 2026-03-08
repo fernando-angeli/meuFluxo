@@ -14,7 +14,7 @@ import java.time.LocalDate;
 @Getter
 @Setter
 @Table(name = "cash_movements")
-public class CashMovement extends BaseModel {
+public class CashMovement extends UserOwnedEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -31,9 +31,9 @@ public class CashMovement extends BaseModel {
     @Column(nullable = false)
     private PaymentMethod paymentMethod;
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "category_id")
-    private Category category;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "subcategory_id", nullable = false)
+    private SubCategory subCategory;
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "account_id")
@@ -42,27 +42,15 @@ public class CashMovement extends BaseModel {
     @Column(name = "occurred_at", nullable = false)
     private LocalDate occurredAt;
 
-    @Column(name = "reference_month", nullable = false)
+    @Column(name = "reference_month", nullable = false, length = 7)
     private LocalDate referenceMonth;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "credit_card_invoice_id")
+    private CreditCardInvoice creditCardInvoice;
 
     private String description;
     private String notes;
-
-    public void applyImpact() {
-        if (this.movementType == MovementType.EXPENSE) {
-            account.debit(amount.abs());
-        } else {
-            account.credit(amount);
-        }
-    }
-
-    public void revertImpact() {
-        if (this.movementType == MovementType.EXPENSE) {
-            account.credit(amount);
-        } else {
-            account.debit(amount.abs());
-        }
-    }
 
     @PrePersist
     protected void onCreateCashMovement() {

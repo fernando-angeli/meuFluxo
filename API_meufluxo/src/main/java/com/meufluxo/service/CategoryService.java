@@ -10,46 +10,53 @@ import com.meufluxo.mapper.CategoryMapper;
 import com.meufluxo.model.Category;
 import com.meufluxo.repository.CashMovementRepository;
 import com.meufluxo.repository.CategoryRepository;
+import com.meufluxo.repository.SubCategoryRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class CategoryService {
+public class CategoryService extends BaseUserService {
 
     private final CategoryRepository categoryRepository;
+    private final SubCategoryRepository subCategoryRepository;
     private final CashMovementRepository cashMovementRepository;
     private final CategoryMapper categoryMapper;
 
     public CategoryService(
+            CurrentUserService currentUserService,
             CategoryRepository categoryRepository,
+            SubCategoryRepository subCategoryRepository,
             CashMovementRepository cashMovementRepository,
             CategoryMapper categoryMapper
     ) {
+        super(currentUserService);
         this.categoryRepository = categoryRepository;
+        this.subCategoryRepository = subCategoryRepository;
         this.cashMovementRepository = cashMovementRepository;
         this.categoryMapper = categoryMapper;
     }
 
     public CategoryResponse findById(Long id) {
-        Category category = categoryRepository.findById(id)
+        Category category = categoryRepository.findByIdAndUserId(id, getCurrentUserId())
                 .orElseThrow(() -> new NotFoundException("Categoria não encontrada com ID: " + id));
         return categoryMapper.toResponse(category);
     }
 
     public PageResponse<CategoryResponse> findAll(Pageable pageable) {
-        Page<Category> categories = categoryRepository.findAll(pageable);
+        Page<Category> categories = categoryRepository.findAllByUserId(getCurrentUserId(), pageable);
         Page<CategoryResponse> responsePage = categories.map(categoryMapper::toResponse);
         return PageResponse.toPageResponse(responsePage);
     }
 
     @Transactional
     public CategoryResponse create(CategoryRequest request) {
-        if (categoryRepository.existsByName(request.name())) {
+        if (categoryRepository.existsByNameAndUserId(request.name(), getCurrentUserId())) {
             throw new BusinessException("Já existe uma categoria com este nome");
         }
         Category newCategory = categoryMapper.toEntity(request);
+        newCategory.setUser(getCurrentUser());
         newCategory = categoryRepository.save(newCategory);
         return categoryMapper.toResponse(newCategory);
     }
@@ -79,20 +86,22 @@ public class CategoryService {
     @Transactional
     public void delete(Long id) {
         Category category = findByIdOrThrow(id);
-        if (cashMovementRepository.existsByCategoryId(id)) {
+        if (cashMovementRepository.existsBySubCategoryCategoryIdAndUserId(id, getCurrentUserId())) {
             throw new BusinessException("Não é possível excluir a categoria pois existem registros vinculados, só é possível inativa-la.");
-
+        }
+        if (subCategoryRepository.existsByCategoryId(id)){
+            throw new BusinessException("Não é possível excluir a categoria pois existem subcategorias vinculados, só é possível inativa-la.");
         }
         categoryRepository.delete(category);
     }
 
     public Category findByIdOrThrow(Long id) {
-        return categoryRepository.findById(id)
+        return categoryRepository.findByIdAndUserId(id, getCurrentUserId())
                 .orElseThrow(() -> new NotFoundException("Categoria não encontrada com ID: " + id));
     }
 
     public void existsId(Long id) {
-        categoryRepository.findById(id)
+        categoryRepository.findByIdAndUserId(id, getCurrentUserId())
                 .orElseThrow(() -> new NotFoundException("Categoria não encontrada com ID: " + id));
     }
 

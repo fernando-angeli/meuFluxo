@@ -3,97 +3,113 @@ package com.meufluxo.service;
 import com.meufluxo.common.dto.PageResponse;
 import com.meufluxo.common.exception.BusinessException;
 import com.meufluxo.common.exception.NotFoundException;
-import com.meufluxo.dto.category.CategoryRequest;
-import com.meufluxo.dto.category.CategoryResponse;
-import com.meufluxo.dto.category.CategoryUpdateRequest;
-import com.meufluxo.mapper.CategoryMapper;
+import com.meufluxo.dto.subCategory.SubCategoryRequest;
+import com.meufluxo.dto.subCategory.SubCategoryResponse;
+import com.meufluxo.dto.subCategory.SubCategoryUpdateRequest;
+import com.meufluxo.mapper.SubCategoryMapper;
 import com.meufluxo.model.Category;
+import com.meufluxo.model.SubCategory;
 import com.meufluxo.repository.CashMovementRepository;
-import com.meufluxo.repository.CategoryRepository;
+import com.meufluxo.repository.SubCategoryRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class CategoryService {
+public class SubCategoryService extends BaseUserService {
 
-    private final CategoryRepository categoryRepository;
+    private final SubCategoryRepository subCategoryRepository;
     private final CashMovementRepository cashMovementRepository;
-    private final CategoryMapper categoryMapper;
+    private final SubCategoryMapper subCategoryMapper;
+    private final CategoryService categoryService;
 
-    public CategoryService(
-            CategoryRepository categoryRepository,
+    public SubCategoryService(
+            CurrentUserService currentUserService,
+            SubCategoryRepository subCategoryRepository,
             CashMovementRepository cashMovementRepository,
-            CategoryMapper categoryMapper
+            SubCategoryMapper subCategoryMapper,
+            CategoryService categoryService
     ) {
-        this.categoryRepository = categoryRepository;
+        super(currentUserService);
+        this.subCategoryRepository = subCategoryRepository;
         this.cashMovementRepository = cashMovementRepository;
-        this.categoryMapper = categoryMapper;
+        this.subCategoryMapper = subCategoryMapper;
+        this.categoryService = categoryService;
     }
 
-    public CategoryResponse findById(Long id) {
-        Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Categoria não encontrada com ID: " + id));
-        return categoryMapper.toResponse(category);
+    public SubCategoryResponse findById(Long id) {
+        SubCategory subCategory = subCategoryRepository.findByIdAndUserId(id, getCurrentUserId())
+                .orElseThrow(() -> new NotFoundException("SubCategoria não encontrada com ID: " + id));
+        return subCategoryMapper.toResponse(subCategory);
     }
 
-    public PageResponse<CategoryResponse> findAll(Pageable pageable) {
-        Page<Category> categories = categoryRepository.findAll(pageable);
-        Page<CategoryResponse> responsePage = categories.map(categoryMapper::toResponse);
+    public PageResponse<SubCategoryResponse> findAll(Pageable pageable) {
+        Page<SubCategory> categories = subCategoryRepository.findAllByUserId(getCurrentUserId(), pageable);
+        Page<SubCategoryResponse> responsePage = categories.map(subCategoryMapper::toResponse);
         return PageResponse.toPageResponse(responsePage);
     }
 
     @Transactional
-    public CategoryResponse create(CategoryRequest request) {
-        if (categoryRepository.existsByName(request.name())) {
-            throw new BusinessException("Já existe uma categoria com este nome");
+    public SubCategoryResponse create(SubCategoryRequest request) {
+        if (subCategoryRepository.existsByNameAndCategoryIdAndUserId(request.name(), request.categoryId(), getCurrentUserId())) {
+            throw new BusinessException("Já existe uma subcategoria com este nome");
         }
-        Category newCategory = categoryMapper.toEntity(request);
-        newCategory = categoryRepository.save(newCategory);
-        return categoryMapper.toResponse(newCategory);
+        Category category = categoryService.findByIdOrThrow(request.categoryId());
+        SubCategory newSubCategory = subCategoryMapper.toEntity(request);
+        newSubCategory.setCategory(category);
+        newSubCategory.setUser(getCurrentUser());
+        newSubCategory = subCategoryRepository.save(newSubCategory);
+        return subCategoryMapper.toResponse(newSubCategory);
     }
 
     @Transactional
-    public CategoryResponse update(
+    public SubCategoryResponse update(
             Long id,
-            CategoryUpdateRequest request
+            SubCategoryUpdateRequest request
     ) {
-        Category existingCategory = findByIdOrThrow(id);
+        SubCategory existingSubCategory = findByIdOrThrow(id);
         if (request.name() != null) {
             String newName = request.name().trim();
             if (newName.isBlank())
                 throw new BusinessException("Nome não pode ser vazio.");
-            if (!newName.equals(existingCategory.getName()) && categoryRepository.existsByNameAndIdNot(request.name(), id)) {
+            if (!newName.equals(existingSubCategory.getName()) && subCategoryRepository.existsByNameAndIdNot(request.name(), id)) {
                 throw new BusinessException("Já existe uma categoria com este nome");
             }
-            existingCategory.setName(newName);
+            existingSubCategory.setName(newName);
+        }
+        if (request.categoryId() != null) {
+            Category newCategory = categoryService.findByIdOrThrow(request.categoryId());
+            Category lastCategory = categoryService.findByIdOrThrow(existingSubCategory.getCategory().getId());
+            if(newCategory.getMovementType() != lastCategory.getMovementType()){
+                throw new BusinessException("Não é possível mudar categoria de " + lastCategory.getMovementType() + " por " + newCategory.getMovementType());
+            }
+            existingSubCategory.setCategory(newCategory);
         }
         if (request.active() != null) {
-            existingCategory.setActive(request.active());
+            existingSubCategory.setActive(request.active());
         }
-        existingCategory = categoryRepository.saveAndFlush(existingCategory);
-        return categoryMapper.toResponse(existingCategory);
+        existingSubCategory = subCategoryRepository.saveAndFlush(existingSubCategory);
+        return subCategoryMapper.toResponse(existingSubCategory);
     }
 
     @Transactional
     public void delete(Long id) {
-        Category category = findByIdOrThrow(id);
-        if (cashMovementRepository.existsByCategoryId(id)) {
+        SubCategory subCategory = findByIdOrThrow(id);
+        if (cashMovementRepository.existsBySubCategoryIdAndUserId(id, getCurrentUserId())) {
             throw new BusinessException("Não é possível excluir a categoria pois existem registros vinculados, só é possível inativa-la.");
-
         }
-        categoryRepository.delete(category);
+        subCategoryRepository.delete(subCategory);
     }
 
-    public Category findByIdOrThrow(Long id) {
-        return categoryRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Categoria não encontrada com ID: " + id));
+    public SubCategory findByIdOrThrow(Long id) {
+        return subCategoryRepository.findByIdAndUserId(id, getCurrentUserId())
+                .orElseThrow(() -> new NotFoundException("SubCategoria não encontrada com ID: " + id));
     }
 
     public void existsId(Long id) {
-        categoryRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Categoria não encontrada com ID: " + id));
+        subCategoryRepository.findByIdAndUserId(id, getCurrentUserId())
+                .orElseThrow(() -> new NotFoundException("SubCategoria não encontrada com ID: " + id));
     }
 
 }

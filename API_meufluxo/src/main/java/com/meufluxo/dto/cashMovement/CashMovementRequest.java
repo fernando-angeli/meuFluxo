@@ -1,5 +1,6 @@
 package com.meufluxo.dto.cashMovement;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.meufluxo.enums.MovementType;
 import com.meufluxo.enums.PaymentMethod;
 import jakarta.validation.constraints.NotBlank;
@@ -21,10 +22,11 @@ public record CashMovementRequest(
         @NotNull(message = "O tipo de pagamento é obrigatório")
         PaymentMethod paymentMethod,
 
+        @JsonAlias({"occurred_at", "movementDate"})
         LocalDate occurredAt,
 
-        @NotNull(message = "A categoria é obrigatória")
-        Long categoryId,
+        @NotNull(message = "A sub-categoria é obrigatória")
+        Long subCategoryId,
 
         @NotNull(message = "A conta é obrigatória")
         Long accountId,

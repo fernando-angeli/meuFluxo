@@ -1,10 +1,10 @@
 package com.meufluxo.controller;
 
 import com.meufluxo.common.dto.PageResponse;
-import com.meufluxo.dto.category.CategoryRequest;
-import com.meufluxo.dto.category.CategoryResponse;
-import com.meufluxo.dto.category.CategoryUpdateRequest;
-import com.meufluxo.service.CategoryService;
+import com.meufluxo.dto.subCategory.SubCategoryRequest;
+import com.meufluxo.dto.subCategory.SubCategoryResponse;
+import com.meufluxo.dto.subCategory.SubCategoryUpdateRequest;
+import com.meufluxo.service.SubCategoryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -23,13 +23,13 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import java.net.URI;
 
 @RestController
-@RequestMapping(value = "/categories")
-@Tag(name = "Categorias", description = "Operações de categorias (criar, listar, atualizar, excluir)")
-public class CategoryController {
+@RequestMapping(value = "/categories/sub-categories")
+@Tag(name = "SubCategorias", description = "Operações de subCategorias (criar, listar, atualizar, excluir)")
+public class SubCategoryController {
 
-    private final CategoryService service;
+    private final SubCategoryService service;
 
-    public CategoryController(CategoryService service) {
+    public SubCategoryController(SubCategoryService service) {
         this.service = service;
     }
 
@@ -42,23 +42,23 @@ public class CategoryController {
             @ApiResponse(
                     responseCode = "200",
                     description = "Categoria encontrada",
-                    content = @Content(schema = @Schema(implementation = CategoryResponse.class))
+                    content = @Content(schema = @Schema(implementation = SubCategoryResponse.class))
             ),
             @ApiResponse(responseCode = "404", description = "Categoria não encontrada", content = @Content),
             @ApiResponse(responseCode = "400", description = "Parâmetros inválidos", content = @Content)
     })
-    public ResponseEntity<CategoryResponse> getCategoryById(
+    public ResponseEntity<SubCategoryResponse> getSubCategoryById(
             @Parameter(description = "ID da categoria", example = "1", required = true)
             @PathVariable Long id
     ) {
-        CategoryResponse response = service.findById(id);
+        SubCategoryResponse response = service.findById(id);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping
     @Operation(
-            summary = "Listar categorias",
-            description = "Lista categorias com paginação e ordenação."
+            summary = "Listar subSubCategorias",
+            description = "Lista subSubCategorias com paginação e ordenação."
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -67,7 +67,7 @@ public class CategoryController {
             ),
             @ApiResponse(responseCode = "400", description = "Parâmetros inválidos", content = @Content)
     })
-    public PageResponse<CategoryResponse> getAllCategories(
+    public PageResponse<SubCategoryResponse> getAllSubCategories(
             @Parameter(description = "Paginação e ordenação (page, size, sort)")
             @PageableDefault(
                     page = 0,
@@ -89,24 +89,24 @@ public class CategoryController {
             @ApiResponse(
                     responseCode = "201",
                     description = "Categoria criada",
-                    content = @Content(schema = @Schema(implementation = CategoryResponse.class))
+                    content = @Content(schema = @Schema(implementation = SubCategoryResponse.class))
             ),
             @ApiResponse(responseCode = "400", description = "Dados inválidos", content = @Content),
             @ApiResponse(responseCode = "409", description = "Já existe uma categoria com este nome", content = @Content)
     })
-    public ResponseEntity<CategoryResponse> createCategory(
+    public ResponseEntity<SubCategoryResponse> createSubCategory(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     required = true,
                     description = "Dados para criação da categoria",
-                    content = @Content(schema = @Schema(implementation = CategoryRequest.class))
+                    content = @Content(schema = @Schema(implementation = SubCategoryRequest.class))
             )
-            @Valid @org.springframework.web.bind.annotation.RequestBody CategoryRequest request
+            @Valid @RequestBody SubCategoryRequest request
 
     ) {
-        CategoryResponse createdCategory = service.create(request);
+        SubCategoryResponse createdSubCategory = service.create(request);
         URI uri = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}")
-                .buildAndExpand(createdCategory.id()).toUri();
-        return ResponseEntity.created(uri).body(createdCategory);
+                .buildAndExpand(createdSubCategory.id()).toUri();
+        return ResponseEntity.created(uri).body(createdSubCategory);
     }
 
     @PatchMapping("/{id}")
@@ -118,26 +118,26 @@ public class CategoryController {
             @ApiResponse(
                     responseCode = "200",
                     description = "Categoria atualizada",
-                    content = @Content(schema = @Schema(implementation = CategoryResponse.class))
+                    content = @Content(schema = @Schema(implementation = SubCategoryResponse.class))
             ),
             @ApiResponse(responseCode = "400", description = "Dados inválidos", content = @Content),
             @ApiResponse(responseCode = "404", description = "Categoria não encontrada", content = @Content),
             @ApiResponse(responseCode = "409", description = "Já existe uma categoria com este nome", content = @Content)
     })
-    public ResponseEntity<CategoryResponse> updateCategory(
+    public ResponseEntity<SubCategoryResponse> updateSubCategory(
             @Parameter(description = "ID da categoria", example = "1", required = true)
             @PathVariable Long id,
 
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     required = true,
                     description = "Campos para atualização parcial",
-                    content = @Content(schema = @Schema(implementation = CategoryUpdateRequest.class))
+                    content = @Content(schema = @Schema(implementation = SubCategoryUpdateRequest.class))
             )
-            @Valid @org.springframework.web.bind.annotation.RequestBody CategoryUpdateRequest request
+            @Valid @RequestBody SubCategoryUpdateRequest request
 
     ) {
-        CategoryResponse updatedCategory = service.update(id, request);
-        return ResponseEntity.ok(updatedCategory);
+        SubCategoryResponse updatedSubCategory = service.update(id, request);
+        return ResponseEntity.ok(updatedSubCategory);
     }
 
     @DeleteMapping("/{id}")
@@ -150,7 +150,7 @@ public class CategoryController {
             @ApiResponse(responseCode = "404", description = "Categoria não encontrada", content = @Content),
             @ApiResponse(responseCode = "409", description = "Categoria possui movimentações vinculadas", content = @Content)
     })
-    public ResponseEntity<Void> deleteCategory(
+    public ResponseEntity<Void> deleteSubCategory(
             @Parameter(description = "ID da categoria", example = "1", required = true)
             @PathVariable Long id
     ) {
