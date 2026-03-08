@@ -1,7 +1,4 @@
-version: '3.9'
-
 services:
-
   meufluxo_db_prod:
     image: postgres:16-alpine
     profiles: ["prod"]
@@ -62,6 +59,33 @@ services:
       - "${SERVER_PORT:-8080}:8080"
     restart: no
 #    restart: unless-stopped
+
+  kafka:
+    image: apache/kafka:latest
+    container_name: meufluxo_kafka
+    ports:
+      - "9092:9092"
+    environment:
+      - CLUSTER_ID=5L6g3nShT-eMCtK--X86sw
+      - KAFKA_NODE_ID=1
+      - KAFKA_PROCESS_ROLES=broker,controller
+      - KAFKA_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
+      - KAFKA_LISTENERS=PLAINTEXT://:29092,EXTERNAL://:9092,CONTROLLER://:9093
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:29092,EXTERNAL://localhost:9092
+      - KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+      - KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+
+  kafka_ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: meufluxo_kafka_ui
+    ports:
+      - "8088:8080"
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=meufluxo
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:29092
+    depends_on:
+      - kafka
 
 volumes:
   postgres_prod_data:
