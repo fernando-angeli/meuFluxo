@@ -1,32 +1,20 @@
 package com.meufluxo.mapper;
 
 import com.meufluxo.dto.BaseResponse;
-import com.meufluxo.dto.account.AccountRequest;
-import com.meufluxo.dto.account.AccountResponse;
-import com.meufluxo.enums.AccountType;
-import com.meufluxo.model.Account;
+import com.meufluxo.dto.creditCard.CreditCardRequest;
+import com.meufluxo.dto.creditCard.CreditCardResponse;
+import com.meufluxo.model.CreditCard;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
 @Mapper(componentModel = "spring")
-public interface AccountMapper {
+public interface CreditCardMapper {
 
-    @Mapping(target = "currentBalance", ignore = true)
-    @Mapping(target = "balanceUpdatedAt", ignore = true)
-    Account toEntity(AccountRequest accountCreateRequest);
+    CreditCard toEntity(CreditCardRequest request);
 
     @Mapping(target = "meta", source = ".")
-    AccountResponse toResponse(Account account);
+    CreditCardResponse toResponse(CreditCard creditCard);
 
-    BaseResponse toBaseResponse(Account account);
-
-    default AccountType map(String value) {
-        if (value == null) return null;
-        try {
-            return AccountType.valueOf(value);
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Tipo inválido para AccountType: " + value);
-        }
-    }
+    BaseResponse toBaseResponse(CreditCard creditCard);
 
 }
