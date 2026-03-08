@@ -3,7 +3,7 @@ package com.meufluxo.messaging.events;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-public record CashMovementEventDto(
+public record CashMovementEvent(
         String eventId,          // UUID
         String eventType,        // CREATED | UPDATED | DELETED
         LocalDateTime occurredAt,
