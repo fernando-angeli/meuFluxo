@@ -4,6 +4,8 @@ import com.meufluxo.common.dto.PageResponse;
 import com.meufluxo.dto.cashMovement.CashMovementRequest;
 import com.meufluxo.dto.cashMovement.CashMovementResponse;
 import com.meufluxo.dto.cashMovement.CashMovementUpdateRequest;
+import com.meufluxo.enums.MovementType;
+import com.meufluxo.enums.PaymentMethod;
 import com.meufluxo.service.CashMovementService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -19,8 +21,10 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import org.springframework.format.annotation.DateTimeFormat;
 
 import java.net.URI;
+import java.time.LocalDate;
 
 @RestController
 @RequestMapping(value = "/cash-movement")
@@ -87,7 +91,7 @@ public class CashMovementController {
     @GetMapping()
     @Operation(
             summary = "Listar movimentações por filtros",
-            description = "Lista movimentações com paginação, ordenação e filtros opcionais por conta e categoria."
+            description = "Lista movimentações com paginação, ordenação e filtros opcionais por conta, categoria, subcategoria, período, método de pagamento e tipo de movimento."
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso"),
@@ -101,6 +105,23 @@ public class CashMovementController {
             @Parameter(description = "Filtrar pelo ID da categoria (opcional)", example = "3")
             @RequestParam(required = false) Long categoryId,
 
+            @Parameter(description = "Filtrar pelo ID da subcategoria (opcional)", example = "3")
+            @RequestParam(required = false) Long subCategoryId,
+
+            @Parameter(description = "Data inicial (inclusive), formato yyyy-MM-dd", example = "2026-03-01")
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+
+            @Parameter(description = "Data final (inclusive), formato yyyy-MM-dd", example = "2026-03-31")
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+
+            @Parameter(description = "Filtrar pelo método de pagamento (opcional)", example = "PIX")
+            @RequestParam(required = false) PaymentMethod paymentMethod,
+
+            @Parameter(description = "Filtrar pelo tipo de movimento (opcional)", example = "EXPENSE")
+            @RequestParam(required = false) MovementType movementType,
+
             @Parameter(description = "Paginação e ordenação (page, size, sort)")
             @PageableDefault(
                     page = 0,
@@ -110,7 +131,16 @@ public class CashMovementController {
             )
             Pageable pageable
     ) {
-        return service.findByFilters(accountId, categoryId, pageable);
+        return service.findByFilters(
+                accountId,
+                categoryId,
+                subCategoryId,
+                startDate,
+                endDate,
+                paymentMethod,
+                movementType,
+                pageable
+        );
     }
 
     @PatchMapping("/{id}")

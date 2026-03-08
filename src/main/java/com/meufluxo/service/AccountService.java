@@ -16,41 +16,44 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class AccountService {
+public class AccountService extends BaseUserService{
 
     private final AccountRepository accountRepository;
     private final CashMovementRepository cashMovementRepository;
     private final AccountMapper accountMapper;
 
     public AccountService(
+            CurrentUserService currentUserService,
             AccountRepository accountRepository,
             CashMovementRepository cashMovementRepository,
             AccountMapper accountMapper
     ) {
+        super(currentUserService);
         this.accountRepository = accountRepository;
         this.cashMovementRepository = cashMovementRepository;
         this.accountMapper = accountMapper;
     }
 
     public AccountResponse getById(Long id) {
-        Account account = accountRepository.findById(id)
+        Account account = accountRepository.findByIdAndUserId(id, getCurrentUserId())
                 .orElseThrow(() -> new NotFoundException("Conta não encontrada com ID: " + id));
         return accountMapper.toResponse(account);
     }
 
     public PageResponse<AccountResponse> getAll(Pageable pageable) {
-        Page<Account> categories = accountRepository.findAll(pageable);
+        Page<Account> categories = accountRepository.findAllByUserId(getCurrentUserId(), pageable);
         Page<AccountResponse> responsePage = categories.map(accountMapper::toResponse);
         return PageResponse.toPageResponse(responsePage);
     }
 
     @Transactional
     public AccountResponse create(AccountRequest request) {
-        if (accountRepository.existsByName(request.name())) {
-            throw new BusinessException("Já existe uma conta com este nome");
+        if (accountRepository.existsByNameAndUserId(request.name(), getCurrentUserId())) {
+            throw new BusinessException("Já existe uma conta com este nome.");
         }
         Account newAccount = accountMapper.toEntity(request);
         newAccount.initializeBalance();
+        newAccount.setUser(getCurrentUser());
         newAccount = accountRepository.save(newAccount);
         return accountMapper.toResponse(newAccount);
     }
@@ -65,7 +68,7 @@ public class AccountService {
             String newName = request.name().trim();
             if (newName.isBlank())
                 throw new BusinessException("Nome não pode ser vazio.");
-            if (!newName.equals(existingAccount.getName()) && accountRepository.existsByNameAndIdNot(request.name(), id))
+            if (!newName.equals(existingAccount.getName()) && accountRepository.existsByNameAndUserIdAndIdNot(request.name(), getCurrentUserId(), id))
                 throw new BusinessException("Já existe uma conta com este nome");
             existingAccount.setName(newName);
         }
@@ -86,12 +89,12 @@ public class AccountService {
     }
 
     public Account findByIdOrThrow(Long id) {
-        return accountRepository.findById(id)
+        return accountRepository.findByIdAndUserId(id, getCurrentUserId())
                 .orElseThrow(() -> new NotFoundException("Conta não encontrada com ID: " + id));
     }
 
     public void existsId(Long id) {
-        accountRepository.findById(id)
+        accountRepository.findByIdAndUserId(id, getCurrentUserId())
                 .orElseThrow(() -> new NotFoundException("Conta não encontrada com ID: " + id));
     }
 

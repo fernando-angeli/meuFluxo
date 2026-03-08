@@ -17,7 +17,7 @@ public record CashMovementUpdateRequest(
 
         PaymentMethod paymentMethod,
 
-        Long categoryId,
+        Long subCategoryId,
 
         Long accountId,
 
