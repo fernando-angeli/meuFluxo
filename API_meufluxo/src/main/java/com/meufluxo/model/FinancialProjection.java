@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @Table(name = "financial_projections")
-public class FinancialProjection extends BaseModel {
+public class FinancialProjection extends UserOwnedEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

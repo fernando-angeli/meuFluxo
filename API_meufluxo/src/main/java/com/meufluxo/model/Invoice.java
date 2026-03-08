@@ -1,6 +1,6 @@
 package com.meufluxo.model;
 
-import com.meufluxo.enums.InvoiceStatus;
+import com.meufluxo.enums.CreditCardInvoiceStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -12,7 +12,7 @@ import java.time.LocalDate;
 @Getter
 @Setter
 @Table(name = "invoices")
-public class Invoice extends BaseModel {
+public class Invoice extends UserOwnedEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -32,7 +32,7 @@ public class Invoice extends BaseModel {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private InvoiceStatus status = InvoiceStatus.OPEN;
+    private CreditCardInvoiceStatus status = CreditCardInvoiceStatus.OPEN;
 
     private LocalDate dueDate;
     private LocalDate paidAt;

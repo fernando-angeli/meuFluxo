@@ -1,15 +1,13 @@
 package com.meufluxo.enums;
 
-public enum CreditCardInvoiceStatus {
-    OPEN("Aberta"),
-    CLOSED("Fechada"),
-    PAID("Paga"),
-    PARTIALLY_PAID("Pagamento parcial"),
-    OVERDUE("Atrasada");
+public enum CreditCardTransactionStatus {
+    ACTIVE("Ativa"),
+    CANCELED("Cancelada"),
+    REVERSED("Revertida");
 
     private final String labelPtBr;
 
-    CreditCardInvoiceStatus(String labelPtBr) {
+    CreditCardTransactionStatus(String labelPtBr) {
         this.labelPtBr = labelPtBr;
     }
 
