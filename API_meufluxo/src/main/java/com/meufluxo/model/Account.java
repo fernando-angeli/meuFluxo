@@ -12,8 +12,13 @@ import java.time.LocalDateTime;
 @Entity
 @Getter
 @Setter
-@Table(name = "accounts")
-public class Account extends BaseModel {
+@Table(
+        name = "accounts",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_account_user_name", columnNames = {"user_id", "name"})
+        }
+)
+public class Account extends UserOwnedEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

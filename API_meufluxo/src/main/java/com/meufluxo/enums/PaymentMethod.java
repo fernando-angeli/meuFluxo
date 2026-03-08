@@ -2,15 +2,13 @@ package com.meufluxo.enums;
 
 public enum PaymentMethod {
 
-    CREDIT_CARD("Cartão de Crédito"),
-    DEBIT_CARD("Cartão de Débito"),
-    DEBIT("Débito em conta"),
     PIX("PIX"),
-    BOLETO("Boleto"),
+    DEBIT("Débito em conta"),
     CASH("Dinheiro"),
     TRANSFER("Transferência"),
+    BOLETO("Boleto"),
     VA("Vale Alimentação"),
-    ADJUSTMENT ("Ajustes");
+    INVOICE_CREDIT_CARD("Fatura de cartão de crédito");
 
     private final String labelPtBr;
 

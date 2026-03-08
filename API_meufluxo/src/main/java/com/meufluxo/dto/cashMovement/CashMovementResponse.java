@@ -2,7 +2,7 @@ package com.meufluxo.dto.cashMovement;
 
 import com.meufluxo.dto.BaseResponse;
 import com.meufluxo.dto.account.AccountSimpleResponse;
-import com.meufluxo.dto.category.CategorySimpleResponse;
+import com.meufluxo.dto.subCategory.SubCategoryResponse;
 import com.meufluxo.enums.MovementType;
 import com.meufluxo.enums.PaymentMethod;
 
@@ -19,7 +19,7 @@ public record CashMovementResponse(
         String referenceMonth,
         MovementType movementType,
         AccountSimpleResponse account,
-        CategorySimpleResponse category,
+        SubCategoryResponse subCategory,
         BaseResponse meta
 ) {
 }
