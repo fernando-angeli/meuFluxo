@@ -8,14 +8,19 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 
 public interface SubCategoryRepository extends JpaRepository<SubCategory, Long> {
-    boolean existsByNameAndCategoryIdAndUserId(String categoryName, Long categoryId, Long userId);
+    boolean existsByNameAndCategoryIdAndWorkspaceId(String categoryName, Long categoryId, Long workspaceId);
 
-    boolean existsByNameAndIdNot(String categoryName, Long categoryId);
+    boolean existsByNameAndCategoryIdAndWorkspaceIdAndIdNot(
+            String categoryName,
+            Long categoryId,
+            Long workspaceId,
+            Long id
+    );
 
     boolean existsByCategoryId(Long categoryId);
 
-    Optional<SubCategory> findByIdAndUserId(Long id, Long currentUserId);
+    Optional<SubCategory> findByIdAndWorkspaceId(Long id, Long currentWorkspaceId);
 
-    Page<SubCategory> findAllByUserId(Long currentUserId, Pageable pageable);
+    Page<SubCategory> findAllByWorkspaceId(Long currentWorkspaceId, Pageable pageable);
 
 }

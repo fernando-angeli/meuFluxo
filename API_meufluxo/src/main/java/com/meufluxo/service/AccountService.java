@@ -35,25 +35,25 @@ public class AccountService extends BaseUserService{
     }
 
     public AccountResponse getById(Long id) {
-        Account account = accountRepository.findByIdAndUserId(id, getCurrentUserId())
+        Account account = accountRepository.findByIdAndWorkspaceId(id, getCurrentWorkspaceId())
                 .orElseThrow(() -> new NotFoundException("Conta não encontrada com ID: " + id));
         return accountMapper.toResponse(account);
     }
 
     public PageResponse<AccountResponse> getAll(Pageable pageable) {
-        Page<Account> categories = accountRepository.findAllByUserId(getCurrentUserId(), pageable);
+        Page<Account> categories = accountRepository.findAllByWorkspaceId(getCurrentWorkspaceId(), pageable);
         Page<AccountResponse> responsePage = categories.map(accountMapper::toResponse);
         return PageResponse.toPageResponse(responsePage);
     }
 
     @Transactional
     public AccountResponse create(AccountRequest request) {
-        if (accountRepository.existsByNameAndUserId(request.name(), getCurrentUserId())) {
+        if (accountRepository.existsByNameAndWorkspaceId(request.name(), getCurrentWorkspaceId())) {
             throw new BusinessException("Já existe uma conta com este nome.");
         }
         Account newAccount = accountMapper.toEntity(request);
         newAccount.initializeBalance();
-        newAccount.setUser(getCurrentUser());
+        newAccount.setWorkspace(getCurrentWorkspace());
         newAccount = accountRepository.save(newAccount);
         return accountMapper.toResponse(newAccount);
     }
@@ -68,7 +68,7 @@ public class AccountService extends BaseUserService{
             String newName = request.name().trim();
             if (newName.isBlank())
                 throw new BusinessException("Nome não pode ser vazio.");
-            if (!newName.equals(existingAccount.getName()) && accountRepository.existsByNameAndUserIdAndIdNot(request.name(), getCurrentUserId(), id))
+            if (!newName.equals(existingAccount.getName()) && accountRepository.existsByNameAndWorkspaceIdAndIdNot(request.name(), getCurrentWorkspaceId(), id))
                 throw new BusinessException("Já existe uma conta com este nome");
             existingAccount.setName(newName);
         }
@@ -89,12 +89,12 @@ public class AccountService extends BaseUserService{
     }
 
     public Account findByIdOrThrow(Long id) {
-        return accountRepository.findByIdAndUserId(id, getCurrentUserId())
+        return accountRepository.findByIdAndWorkspaceId(id, getCurrentWorkspaceId())
                 .orElseThrow(() -> new NotFoundException("Conta não encontrada com ID: " + id));
     }
 
     public void existsId(Long id) {
-        accountRepository.findByIdAndUserId(id, getCurrentUserId())
+        accountRepository.findByIdAndWorkspaceId(id, getCurrentWorkspaceId())
                 .orElseThrow(() -> new NotFoundException("Conta não encontrada com ID: " + id));
     }
 

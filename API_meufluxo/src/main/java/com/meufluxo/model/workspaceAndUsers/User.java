@@ -1,5 +1,6 @@
-package com.meufluxo.model;
+package com.meufluxo.model.workspaceAndUsers;
 
+import com.meufluxo.model.BaseModel;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -8,7 +9,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @Table(name = "users")
-public class User extends BaseModel{
+public class User extends BaseModel {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

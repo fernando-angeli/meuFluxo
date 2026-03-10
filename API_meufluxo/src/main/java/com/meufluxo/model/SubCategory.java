@@ -10,7 +10,7 @@ import lombok.Setter;
 @Table(
         name = "sub_categories",
         uniqueConstraints = {
-                @UniqueConstraint(name = "uk_subcategory_user_category_name", columnNames = {"user_id", "category_id", "name"})
+                @UniqueConstraint(name = "uk_subcategory_workspace_category_name", columnNames = {"workspace_id", "category_id", "name"})
         }
 )
 public class SubCategory extends UserOwnedEntity {
