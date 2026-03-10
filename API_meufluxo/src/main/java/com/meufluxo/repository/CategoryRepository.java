@@ -8,13 +8,13 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 
 public interface CategoryRepository extends JpaRepository<Category, Long> {
-    Optional<Category> findByIdAndUserId(Long id, Long userId);
+    Optional<Category> findByIdAndWorkspaceId(Long id, Long workspaceId);
 
-    Page<Category> findAllByUserId(Long userId, Pageable pageable);
+    Page<Category> findAllByWorkspaceId(Long workspaceId, Pageable pageable);
 
-    boolean existsByNameAndUserId(String categoryName, Long userId);
+    boolean existsByNameAndWorkspaceId(String categoryName, Long workspaceId);
 
-    boolean existsByNameAndIdNot(String categoryName, Long categoryId);
+    boolean existsByNameAndWorkspaceIdAndIdNot(String categoryName, Long workspaceId, Long categoryId);
 
     Long findIdByName(String name);
 

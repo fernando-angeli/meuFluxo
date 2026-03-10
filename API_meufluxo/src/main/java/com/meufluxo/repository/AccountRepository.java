@@ -12,20 +12,20 @@ import java.util.List;
 import java.util.Optional;
 
 public interface AccountRepository extends JpaRepository<Account, Long> {
-    Optional<Account> findByIdAndUserId(Long accountId, Long userId);
+    Optional<Account> findByIdAndWorkspaceId(Long accountId, Long workspaceId);
 
-    Page<Account> findAllByUserId(Long userId, Pageable pageable);
+    Page<Account> findAllByWorkspaceId(Long workspaceId, Pageable pageable);
 
-    boolean existsByNameAndUserId(String name, Long userId);
+    boolean existsByNameAndWorkspaceId(String name, Long workspaceId);
 
-    boolean existsByNameAndUserIdAndIdNot(String name, Long userId, Long id);
+    boolean existsByNameAndWorkspaceIdAndIdNot(String name, Long workspaceId, Long id);
 
-    @Query("SELECT COALESCE(SUM(a.currentBalance), 0) FROM Account a WHERE a.id IN :accountIds AND a.user.id = :userId")
-    BigDecimal sumBalanceByAccountIdsAndUserId(
+    @Query("SELECT COALESCE(SUM(a.currentBalance), 0) FROM Account a WHERE a.id IN :accountIds AND a.workspace.id = :workspaceId")
+    BigDecimal sumBalanceByAccountIdsAndWorkspaceId(
             @Param("accountIds") List<Long> accountIds,
-            @Param("userId") Long userId
+            @Param("workspaceId") Long workspaceId
     );
 
-    @Query("SELECT a.id FROM Account a WHERE a.user.id = :userId")
-    List<Long> findAllAccountIds(@Param("userId") Long userId);
+    @Query("SELECT a.id FROM Account a WHERE a.workspace.id = :workspaceId")
+    List<Long> findAllAccountIds(@Param("workspaceId") Long workspaceId);
 }

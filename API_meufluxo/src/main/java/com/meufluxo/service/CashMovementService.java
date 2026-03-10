@@ -67,7 +67,7 @@ public class CashMovementService extends BaseUserService{
     }
 
     public CashMovementResponse findById(Long id) {
-        CashMovement cashMovement = repository.findByIdAndUserId(id, getCurrentUserId())
+        CashMovement cashMovement = repository.findByIdAndWorkspaceId(id, getCurrentWorkspaceId())
                 .orElseThrow(() -> new NotFoundException("Conta não encontrada com ID: " + id));
         return cashMovementMapper.toResponse(cashMovement);
     }
@@ -87,10 +87,10 @@ public class CashMovementService extends BaseUserService{
         Optional.ofNullable(subCategoryId).ifPresent(subCategoryService::existsId);
         validateDateRange(startDate, endDate);
 
-        Long userId = getCurrentUserId();
+        Long workspaceId = getCurrentWorkspaceId();
         Specification<CashMovement> specification = (root, query, cb) -> {
             List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
-            predicates.add(cb.equal(root.get("user").get("id"), userId));
+            predicates.add(cb.equal(root.get("workspace").get("id"), workspaceId));
 
             if (accountId != null) {
                 predicates.add(cb.equal(root.get("account").get("id"), accountId));
@@ -137,7 +137,7 @@ public class CashMovementService extends BaseUserService{
                         category.getMovementType()
         );
         movement.setMovementType(movementType);
-        movement.setUser(getCurrentUser());
+        movement.setWorkspace(getCurrentWorkspace());
         accountMovementService.applyAccountMovement(account, request.amount(), movementType);
         movement = repository.save(movement);
         // publica evento (após salvar)
@@ -211,7 +211,7 @@ public class CashMovementService extends BaseUserService{
     }
 
     public CashMovement findByIdOrThrow(Long id) {
-        return repository.findByIdAndUserId(id, getCurrentUserId())
+        return repository.findByIdAndWorkspaceId(id, getCurrentWorkspaceId())
                 .orElseThrow(() -> new NotFoundException("Movimento não encontrada com ID: " + id));
     }
 

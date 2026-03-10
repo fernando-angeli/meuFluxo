@@ -1,5 +1,6 @@
 package com.meufluxo.model;
 
+import com.meufluxo.model.workspaceAndUsers.Workspace;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -13,7 +14,7 @@ import lombok.Setter;
 public abstract class UserOwnedEntity extends BaseModel{
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    @JoinColumn(name = "workspace_id", nullable = false)
+    private Workspace workspace;
 
 }
