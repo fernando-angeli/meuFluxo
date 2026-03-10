@@ -1,6 +1,6 @@
 package com.meufluxo.service;
 
-import com.meufluxo.model.User;
+import com.meufluxo.model.workspaceAndUsers.Workspace;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
@@ -8,11 +8,11 @@ public abstract class BaseUserService {
 
     protected final CurrentUserService currentUserService;
 
-    protected User getCurrentUser(){
-        return currentUserService.getCurrentUser();
+    protected Workspace getCurrentWorkspace() {
+        return currentUserService.getCurrentWorkspace();
     }
 
-    protected Long getCurrentUserId(){
-        return currentUserService.getCurrentUserId();
+    protected Long getCurrentWorkspaceId() {
+        return currentUserService.getCurrentWorkspaceId();
     }
 }

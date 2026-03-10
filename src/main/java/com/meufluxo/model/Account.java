@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 @Table(
         name = "accounts",
         uniqueConstraints = {
-                @UniqueConstraint(name = "uk_account_user_name", columnNames = {"user_id", "name"})
+                @UniqueConstraint(name = "uk_account_workspace_name", columnNames = {"workspace_id", "name"})
         }
 )
 public class Account extends UserOwnedEntity {
@@ -24,7 +24,7 @@ public class Account extends UserOwnedEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String name;
 
     @Enumerated(EnumType.STRING)

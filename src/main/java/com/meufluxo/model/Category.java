@@ -14,7 +14,7 @@ import java.util.List;
 @Table(
         name = "categories",
         uniqueConstraints = {
-                @UniqueConstraint(name = "uk_category_user_name", columnNames = {"user_id", "name"})
+                @UniqueConstraint(name = "uk_category_workspace_name", columnNames = {"workspace_id", "name"})
         }
 )
 public class Category extends UserOwnedEntity {
@@ -30,10 +30,6 @@ public class Category extends UserOwnedEntity {
     @Column(nullable = false)
     private MovementType movementType;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "category_id")
-    private Category category;
-
     @OneToMany(mappedBy = "category")
-    private List<Category> subCategories = new ArrayList<>();
+    private List<SubCategory> subCategories = new ArrayList<>();
 }

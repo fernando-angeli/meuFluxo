@@ -39,26 +39,26 @@ public class SubCategoryService extends BaseUserService {
     }
 
     public SubCategoryResponse findById(Long id) {
-        SubCategory subCategory = subCategoryRepository.findByIdAndUserId(id, getCurrentUserId())
+        SubCategory subCategory = subCategoryRepository.findByIdAndWorkspaceId(id, getCurrentWorkspaceId())
                 .orElseThrow(() -> new NotFoundException("SubCategoria não encontrada com ID: " + id));
         return subCategoryMapper.toResponse(subCategory);
     }
 
     public PageResponse<SubCategoryResponse> findAll(Pageable pageable) {
-        Page<SubCategory> categories = subCategoryRepository.findAllByUserId(getCurrentUserId(), pageable);
+        Page<SubCategory> categories = subCategoryRepository.findAllByWorkspaceId(getCurrentWorkspaceId(), pageable);
         Page<SubCategoryResponse> responsePage = categories.map(subCategoryMapper::toResponse);
         return PageResponse.toPageResponse(responsePage);
     }
 
     @Transactional
     public SubCategoryResponse create(SubCategoryRequest request) {
-        if (subCategoryRepository.existsByNameAndCategoryIdAndUserId(request.name(), request.categoryId(), getCurrentUserId())) {
+        if (subCategoryRepository.existsByNameAndCategoryIdAndWorkspaceId(request.name(), request.categoryId(), getCurrentWorkspaceId())) {
             throw new BusinessException("Já existe uma subcategoria com este nome");
         }
         Category category = categoryService.findByIdOrThrow(request.categoryId());
         SubCategory newSubCategory = subCategoryMapper.toEntity(request);
         newSubCategory.setCategory(category);
-        newSubCategory.setUser(getCurrentUser());
+        newSubCategory.setWorkspace(getCurrentWorkspace());
         newSubCategory = subCategoryRepository.save(newSubCategory);
         return subCategoryMapper.toResponse(newSubCategory);
     }
@@ -69,14 +69,13 @@ public class SubCategoryService extends BaseUserService {
             SubCategoryUpdateRequest request
     ) {
         SubCategory existingSubCategory = findByIdOrThrow(id);
+        String targetName = request.name() != null ? request.name().trim() : existingSubCategory.getName();
+        Long targetCategoryId = request.categoryId() != null ? request.categoryId() : existingSubCategory.getCategory().getId();
+
         if (request.name() != null) {
-            String newName = request.name().trim();
-            if (newName.isBlank())
+            if (targetName.isBlank())
                 throw new BusinessException("Nome não pode ser vazio.");
-            if (!newName.equals(existingSubCategory.getName()) && subCategoryRepository.existsByNameAndIdNot(request.name(), id)) {
-                throw new BusinessException("Já existe uma categoria com este nome");
-            }
-            existingSubCategory.setName(newName);
+            existingSubCategory.setName(targetName);
         }
         if (request.categoryId() != null) {
             Category newCategory = categoryService.findByIdOrThrow(request.categoryId());
@@ -86,6 +85,16 @@ public class SubCategoryService extends BaseUserService {
             }
             existingSubCategory.setCategory(newCategory);
         }
+
+        if (subCategoryRepository.existsByNameAndCategoryIdAndWorkspaceIdAndIdNot(
+                targetName,
+                targetCategoryId,
+                getCurrentWorkspaceId(),
+                id
+        )) {
+            throw new BusinessException("Já existe uma categoria com este nome");
+        }
+
         if (request.active() != null) {
             existingSubCategory.setActive(request.active());
         }
@@ -96,19 +105,19 @@ public class SubCategoryService extends BaseUserService {
     @Transactional
     public void delete(Long id) {
         SubCategory subCategory = findByIdOrThrow(id);
-        if (cashMovementRepository.existsBySubCategoryIdAndUserId(id, getCurrentUserId())) {
+        if (cashMovementRepository.existsBySubCategoryIdAndWorkspaceId(id, getCurrentWorkspaceId())) {
             throw new BusinessException("Não é possível excluir a categoria pois existem registros vinculados, só é possível inativa-la.");
         }
         subCategoryRepository.delete(subCategory);
     }
 
     public SubCategory findByIdOrThrow(Long id) {
-        return subCategoryRepository.findByIdAndUserId(id, getCurrentUserId())
+        return subCategoryRepository.findByIdAndWorkspaceId(id, getCurrentWorkspaceId())
                 .orElseThrow(() -> new NotFoundException("SubCategoria não encontrada com ID: " + id));
     }
 
     public void existsId(Long id) {
-        subCategoryRepository.findByIdAndUserId(id, getCurrentUserId())
+        subCategoryRepository.findByIdAndWorkspaceId(id, getCurrentWorkspaceId())
                 .orElseThrow(() -> new NotFoundException("SubCategoria não encontrada com ID: " + id));
     }
 

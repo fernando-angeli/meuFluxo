@@ -11,17 +11,17 @@ import java.util.Optional;
 public interface CashMovementRepository extends JpaRepository<CashMovement, Long>, JpaSpecificationExecutor<CashMovement> {
     boolean existsByAccountId(Long accountId);
 
-    boolean existsBySubCategoryCategoryIdAndUserId(Long categoryId, Long userId);
+    boolean existsBySubCategoryCategoryIdAndWorkspaceId(Long categoryId, Long workspaceId);
 
-    boolean existsBySubCategoryIdAndUserId(Long subCategoryId, Long userId);
+    boolean existsBySubCategoryIdAndWorkspaceId(Long subCategoryId, Long workspaceId);
 
-    Optional<CashMovement> findByIdAndUserId(Long accountId, Long userId);
+    Optional<CashMovement> findByIdAndWorkspaceId(Long accountId, Long workspaceId);
 
-    Page<CashMovement> findByAccountIdAndUserId(Long accountId, Long userId, Pageable pageable);
+    Page<CashMovement> findByAccountIdAndWorkspaceId(Long accountId, Long workspaceId, Pageable pageable);
 
-    Page<CashMovement> findBySubCategoryCategoryIdAndUserId(Long categoryId, Long userId, Pageable pageable);
+    Page<CashMovement> findBySubCategoryCategoryIdAndWorkspaceId(Long categoryId, Long workspaceId, Pageable pageable);
 
-    Page<CashMovement> findByAccountIdAndSubCategoryCategoryIdAndUserId(Long accountId, Long categoryId, Long userId, Pageable pageable);
+    Page<CashMovement> findByAccountIdAndSubCategoryCategoryIdAndWorkspaceId(Long accountId, Long categoryId, Long workspaceId, Pageable pageable);
 
 
 }

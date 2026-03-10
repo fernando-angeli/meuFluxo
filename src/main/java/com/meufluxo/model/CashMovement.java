@@ -3,6 +3,7 @@ package com.meufluxo.model;
 import com.meufluxo.common.exception.BusinessException;
 import com.meufluxo.enums.MovementType;
 import com.meufluxo.enums.PaymentMethod;
+import com.meufluxo.model.workspaceAndUsers.WorkspaceUser;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -20,6 +21,14 @@ public class CashMovement extends UserOwnedEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by")
+    private WorkspaceUser createdBy;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "account_id")
+    private Account account;
+
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal amount;
 
@@ -34,10 +43,6 @@ public class CashMovement extends UserOwnedEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "subcategory_id", nullable = false)
     private SubCategory subCategory;
-
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "account_id")
-    private Account account;
 
     @Column(name = "occurred_at", nullable = false)
     private LocalDate occurredAt;
