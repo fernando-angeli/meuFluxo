@@ -32,8 +32,11 @@ public class KpiController {
                     
                     The endpoint supports filtering by:
                     - Date range
-                    - Accounts
-                    - Categories
+                    - Account
+                    - Category
+                    - Subcategory
+                    - Payment method
+                    - Movement type
                     
                     If no filters are provided, the KPIs are calculated considering all data.
                     """
@@ -55,14 +58,29 @@ public class KpiController {
                     example = "2026-01-31"
             ),
             @Parameter(
-                    name = "accountId",
-                    description = "List of account IDs used to filter the dashboard",
-                    example = "1"
+                    name = "accountIds",
+                    description = "Multiple account IDs (comma-separated or repeated query param)",
+                    example = "1,2,3"
             ),
             @Parameter(
-                    name = "categoryId",
-                    description = "List of category IDs used to filter the dashboard",
-                    example = "5"
+                    name = "categoryIds",
+                    description = "Multiple category IDs (comma-separated or repeated query param)",
+                    example = "5,6"
+            ),
+            @Parameter(
+                    name = "subCategoryIds",
+                    description = "Multiple subcategory IDs (comma-separated or repeated query param)",
+                    example = "16,17"
+            ),
+            @Parameter(
+                    name = "paymentMethod",
+                    description = "Payment method used to filter the dashboard",
+                    example = "PIX"
+            ),
+            @Parameter(
+                    name = "movementType",
+                    description = "Movement type used to filter the dashboard",
+                    example = "EXPENSE"
             )
     })
     @GetMapping("/dashboard")
