@@ -1,5 +1,7 @@
 package com.meufluxo.dto.kpi;
 
+import com.meufluxo.enums.MovementType;
+import com.meufluxo.enums.PaymentMethod;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDate;
@@ -14,10 +16,19 @@ public record DashboardKpiRequest(
         @Schema(description = "End date of the analysis period", example = "2026-01-31")
         LocalDate endDate,
 
-        @Schema(description = "List of account IDs to filter", example = "[1,2]")
+        @Schema(description = "Multiple account IDs used to filter (comma-separated or repeated query param)", example = "1,2,3")
         List<Long> accountIds,
 
-        @Schema(description = "List of category IDs to filter", example = "[3,5]")
-        List<Long> categoryIds
+        @Schema(description = "Multiple category IDs used to filter (comma-separated or repeated query param)", example = "5,6")
+        List<Long> categoryIds,
+
+        @Schema(description = "Multiple subcategory IDs used to filter (comma-separated or repeated query param)", example = "16,17")
+        List<Long> subCategoryIds,
+
+        @Schema(description = "Payment method used to filter", example = "PIX")
+        PaymentMethod paymentMethod,
+
+        @Schema(description = "Movement type used to filter", example = "EXPENSE")
+        MovementType movementType
 
 ) {}
