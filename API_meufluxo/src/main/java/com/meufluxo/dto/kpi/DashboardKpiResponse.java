@@ -9,10 +9,14 @@ public record DashboardKpiResponse(
         LocalDate endDate,
         List<Long> accountIds,
         List<Long> categoryIds,
+        List<Long> subCategoryIds,
+        String paymentMethod,
+        String movementType,
         BigDecimal currentBalance,
         BigDecimal totalIncome,
         BigDecimal totalExpense,
         BigDecimal netBalance,
-        List<CategoryGroupedKpiResponse> expensesByCategory
+        List<CategoryGroupedKpiResponse> expensesByCategory,
+        List<CategoryGroupedKpiResponse> incomesByCategory
 ) {
 }
