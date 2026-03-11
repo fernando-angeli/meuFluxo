@@ -1,0 +1,9 @@
+{
+  "name": "mobile",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "typecheck": "echo \"Mobile ainda não inicializado\""
+  }
+}
+
