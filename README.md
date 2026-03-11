@@ -1,14 +1,25 @@
-# APP_meufluxo (Frontend)
+# APP_meufluxo (Frontend) — Monorepo
 
-Este diretório contém o projeto de **frontend** do meuFluxo.
+Este diretório contém o **monorepo frontend** do meuFluxo, com foco principal no **app web**, mas preparado para **mobile** e compartilhamento de código.
+
+## Stack
+
+- Turborepo + pnpm workspaces
+- Web: Next.js (App Router) + Tailwind + shadcn/ui
+- Mobile: Expo + React Native (base)
+- TypeScript, ESLint, Prettier
 
 ## Estrutura
 
-- **API_meufluxo**: backend (Spring Boot)
-- **APP_meufluxo**: frontend (a definir)
-
-## Próximos passos
-
-- Inicializar o projeto (ex.: Vue 3 + TypeScript ou outra stack)
-- Configurar variáveis de ambiente e integração com a API
+```
+APP_meufluxo/
+  apps/
+    web/
+    mobile/
+  packages/
+    api-client/
+    types/
+    utils/
+    config/
+```
 
