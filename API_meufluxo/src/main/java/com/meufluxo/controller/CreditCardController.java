@@ -5,6 +5,7 @@ import com.meufluxo.dto.creditCard.CreditCardRequest;
 import com.meufluxo.dto.creditCard.CreditCardResponse;
 import com.meufluxo.service.CreditCardService;
 import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,7 +24,8 @@ public class CreditCardController {
         this.service = service;
     }
 
-    public ResponseEntity<CreditCardResponse> CreditCardController(@Valid @RequestBody CreditCardRequest request) {
+    @PostMapping
+    public ResponseEntity<CreditCardResponse> create(@Valid @RequestBody CreditCardRequest request) {
         CreditCardResponse newCreditCard = service.create(request);
         URI uri = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}")
                 .buildAndExpand(newCreditCard.id()).toUri();

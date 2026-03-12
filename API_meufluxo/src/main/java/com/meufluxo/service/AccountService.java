@@ -21,17 +21,20 @@ public class AccountService extends BaseUserService{
     private final AccountRepository accountRepository;
     private final CashMovementRepository cashMovementRepository;
     private final AccountMapper accountMapper;
+    private final WorkspaceSyncStateService workspaceSyncStateService;
 
     public AccountService(
             CurrentUserService currentUserService,
             AccountRepository accountRepository,
             CashMovementRepository cashMovementRepository,
-            AccountMapper accountMapper
+            AccountMapper accountMapper,
+            WorkspaceSyncStateService workspaceSyncStateService
     ) {
         super(currentUserService);
         this.accountRepository = accountRepository;
         this.cashMovementRepository = cashMovementRepository;
         this.accountMapper = accountMapper;
+        this.workspaceSyncStateService = workspaceSyncStateService;
     }
 
     public AccountResponse getById(Long id) {
@@ -55,6 +58,7 @@ public class AccountService extends BaseUserService{
         newAccount.initializeBalance();
         newAccount.setWorkspace(getCurrentWorkspace());
         newAccount = accountRepository.save(newAccount);
+        workspaceSyncStateService.incrementAccountsVersion(getCurrentWorkspaceId());
         return accountMapper.toResponse(newAccount);
     }
 
@@ -76,6 +80,7 @@ public class AccountService extends BaseUserService{
             existingAccount.setActive(request.active());
         }
         existingAccount = accountRepository.save(existingAccount);
+        workspaceSyncStateService.incrementAccountsVersion(getCurrentWorkspaceId());
         return accountMapper.toResponse(existingAccount);
     }
 
@@ -86,6 +91,7 @@ public class AccountService extends BaseUserService{
             throw new BusinessException("Não é possível excluir a conta pois existem registros vinculados, só é possível inativa-la.");
         }
         accountRepository.delete(account);
+        workspaceSyncStateService.incrementAccountsVersion(getCurrentWorkspaceId());
     }
 
     public Account findByIdOrThrow(Long id) {

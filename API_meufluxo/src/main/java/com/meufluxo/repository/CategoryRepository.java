@@ -6,6 +6,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
+import java.util.List;
 
 public interface CategoryRepository extends JpaRepository<Category, Long> {
     Optional<Category> findByIdAndWorkspaceId(Long id, Long workspaceId);
@@ -15,6 +16,8 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
     boolean existsByNameAndWorkspaceId(String categoryName, Long workspaceId);
 
     boolean existsByNameAndWorkspaceIdAndIdNot(String categoryName, Long workspaceId, Long categoryId);
+
+    List<Category> findAllByWorkspaceIdOrderByIdAsc(Long workspaceId);
 
     Long findIdByName(String name);
 
