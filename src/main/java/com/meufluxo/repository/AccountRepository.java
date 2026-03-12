@@ -16,6 +16,8 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
 
     Page<Account> findAllByWorkspaceId(Long workspaceId, Pageable pageable);
 
+    List<Account> findAllByWorkspaceIdOrderByIdAsc(Long workspaceId);
+
     boolean existsByNameAndWorkspaceId(String name, Long workspaceId);
 
     boolean existsByNameAndWorkspaceIdAndIdNot(String name, Long workspaceId, Long id);

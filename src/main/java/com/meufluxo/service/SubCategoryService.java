@@ -23,19 +23,22 @@ public class SubCategoryService extends BaseUserService {
     private final CashMovementRepository cashMovementRepository;
     private final SubCategoryMapper subCategoryMapper;
     private final CategoryService categoryService;
+    private final WorkspaceSyncStateService workspaceSyncStateService;
 
     public SubCategoryService(
             CurrentUserService currentUserService,
             SubCategoryRepository subCategoryRepository,
             CashMovementRepository cashMovementRepository,
             SubCategoryMapper subCategoryMapper,
-            CategoryService categoryService
+            CategoryService categoryService,
+            WorkspaceSyncStateService workspaceSyncStateService
     ) {
         super(currentUserService);
         this.subCategoryRepository = subCategoryRepository;
         this.cashMovementRepository = cashMovementRepository;
         this.subCategoryMapper = subCategoryMapper;
         this.categoryService = categoryService;
+        this.workspaceSyncStateService = workspaceSyncStateService;
     }
 
     public SubCategoryResponse findById(Long id) {
@@ -60,6 +63,7 @@ public class SubCategoryService extends BaseUserService {
         newSubCategory.setCategory(category);
         newSubCategory.setWorkspace(getCurrentWorkspace());
         newSubCategory = subCategoryRepository.save(newSubCategory);
+        workspaceSyncStateService.incrementCategoriesVersion(getCurrentWorkspaceId());
         return subCategoryMapper.toResponse(newSubCategory);
     }
 
@@ -99,6 +103,7 @@ public class SubCategoryService extends BaseUserService {
             existingSubCategory.setActive(request.active());
         }
         existingSubCategory = subCategoryRepository.saveAndFlush(existingSubCategory);
+        workspaceSyncStateService.incrementCategoriesVersion(getCurrentWorkspaceId());
         return subCategoryMapper.toResponse(existingSubCategory);
     }
 
@@ -109,6 +114,7 @@ public class SubCategoryService extends BaseUserService {
             throw new BusinessException("Não é possível excluir a categoria pois existem registros vinculados, só é possível inativa-la.");
         }
         subCategoryRepository.delete(subCategory);
+        workspaceSyncStateService.incrementCategoriesVersion(getCurrentWorkspaceId());
     }
 
     public SubCategory findByIdOrThrow(Long id) {

@@ -6,6 +6,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
+import java.util.List;
 
 public interface SubCategoryRepository extends JpaRepository<SubCategory, Long> {
     boolean existsByNameAndCategoryIdAndWorkspaceId(String categoryName, Long categoryId, Long workspaceId);
@@ -22,5 +23,7 @@ public interface SubCategoryRepository extends JpaRepository<SubCategory, Long> 
     Optional<SubCategory> findByIdAndWorkspaceId(Long id, Long currentWorkspaceId);
 
     Page<SubCategory> findAllByWorkspaceId(Long currentWorkspaceId, Pageable pageable);
+
+    List<SubCategory> findAllByWorkspaceIdOrderByIdAsc(Long workspaceId);
 
 }
