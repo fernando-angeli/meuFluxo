@@ -27,6 +27,7 @@ public class WorkspaceUser {
     private User user;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
     private WorkspaceRole role;
 
 }
