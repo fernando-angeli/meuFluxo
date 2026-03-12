@@ -38,6 +38,11 @@ logging:
   level:
     root: INFO
 
+security:
+  jwt:
+    secret: ${JWT_SECRET:meufluxo-super-secret-jwt-key-2026-minimum-32-bytes}
+    expiration: ${JWT_EXPIRATION:3600000}
+
 springdoc:
   api-docs:
     enabled: true
