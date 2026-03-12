@@ -15,13 +15,19 @@ public class User extends BaseModel {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 120)
-    private String fullName;
+    @Column(name = "full_name", nullable = false, length = 120)
+    private String name;
 
     @Column(nullable = false, unique = true, length = 150)
     private String email;
 
     @Column(nullable = false)
     private String password;
+
+    @Column(nullable = false)
+    private boolean enabled = true;
+
+    @OneToOne(mappedBy = "user", fetch = FetchType.LAZY)
+    private UserPreference preference;
 
 }

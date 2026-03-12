@@ -42,14 +42,18 @@ public class RequestContextLoggingFilter extends OncePerRequestFilter {
         MDC.put("path", request.getRequestURI());
         MDC.put("method", request.getMethod());
 
-        Long userId = currentUserService.getCurrentUserId();
-        if (userId != null) {
-            MDC.put("userId", userId.toString());
-        }
+        try {
+            Long userId = currentUserService.getCurrentUserId();
+            if (userId != null) {
+                MDC.put("userId", userId.toString());
+            }
 
-        Long workspaceId = currentUserService.getCurrentWorkspaceId();
-        if (workspaceId != null) {
-            MDC.put("workspaceId", workspaceId.toString());
+            Long workspaceId = currentUserService.getCurrentWorkspaceId();
+            if (workspaceId != null) {
+                MDC.put("workspaceId", workspaceId.toString());
+            }
+        } catch (RuntimeException ignored) {
+            // Requests like login or anonymous access do not have a resolved user/workspace yet.
         }
 
         try {
