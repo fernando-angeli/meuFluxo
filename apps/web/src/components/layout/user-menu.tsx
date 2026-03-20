@@ -2,6 +2,8 @@
 
 import { ChevronDown } from "lucide-react";
 
+import { useAuth } from "@/hooks/useAuth";
+import { useTranslation } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,8 +14,20 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase().slice(0, 2);
+  }
+  return name.slice(0, 2).toUpperCase() || "?";
+}
+
 export function UserMenu() {
-  const initials = "FA";
+  const { t } = useTranslation();
+  const { user, logout } = useAuth();
+  const name = user?.fullName ?? "";
+  const email = user?.email ?? "";
+  const initials = name ? getInitials(name) : "?";
 
   return (
     <DropdownMenu>
@@ -26,23 +40,23 @@ export function UserMenu() {
             {initials}
           </div>
           <div className="hidden flex-col text-left text-xs sm:flex">
-            <span className="font-medium leading-tight">Fernando</span>
-            <span className="text-[11px] text-muted-foreground">Admin • Família</span>
+            <span className="font-medium leading-tight">{name || t("userMenu.guest")}</span>
+            <span className="text-[11px] text-muted-foreground">{email}</span>
           </div>
           <ChevronDown className="hidden h-3 w-3 text-muted-foreground sm:block" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-52">
-        <DropdownMenuLabel>Minha conta</DropdownMenuLabel>
+        <DropdownMenuLabel>{t("userMenu.myAccount")}</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem>Perfil</DropdownMenuItem>
-        <DropdownMenuItem>Preferências</DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <a href="/settings">{t("userMenu.preferences")}</a>
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem className="text-destructive focus:text-destructive">
-          Sair
+        <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => void logout()}>
+          {t("userMenu.logout")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
 }
-

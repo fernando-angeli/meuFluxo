@@ -1,17 +1,28 @@
-import type { ID } from "./index";
+export type MovementType = "INCOME" | "EXPENSE";
 
-export type CategoryType = "INCOME" | "EXPENSE" | "TRANSFER" | "ADJUSTMENT";
-
-export type Category = {
-  id: ID;
-  workspaceId: ID;
-  name: string;
-  type: CategoryType;
-  color?: string; // hex
-  icon?: string; // nome do ícone (ex.: lucide)
-  parentId?: ID; // subcategoria
-  isActive: boolean;
-  createdAt: string; // ISO
-  updatedAt: string; // ISO
+export type EntityMeta = {
+  createdAt: string;
+  updatedAt: string;
+  active: boolean;
 };
 
+export type CategorySummary = {
+  id: string;
+  name: string;
+  movementType: MovementType;
+};
+
+export type Category = {
+  id: string;
+  name: string;
+  movementType: MovementType;
+  meta: EntityMeta;
+};
+
+export type SubCategory = {
+  id: string;
+  name: string;
+  movementType: MovementType;
+  category: CategorySummary;
+  meta: EntityMeta;
+};

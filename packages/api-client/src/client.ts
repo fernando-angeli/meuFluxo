@@ -1,5 +1,6 @@
 import type {
   AuthApi,
+  UsersApi,
   WorkspaceApi,
   AccountsApi,
   CategoriesApi,
@@ -14,6 +15,7 @@ import type {
 import { HttpClient } from "./http";
 import {
   createAuthApi,
+  createUsersApi,
   createWorkspaceApi,
   createAccountsApi,
   createCategoriesApi,
@@ -27,6 +29,7 @@ import {
 
 export type MeuFluxoApi = {
   auth: AuthApi;
+  users: UsersApi;
   workspace: WorkspaceApi;
   accounts: AccountsApi;
   categories: CategoriesApi;
@@ -41,6 +44,7 @@ export type MeuFluxoApi = {
 export function createMeuFluxoApi(http: HttpClient): MeuFluxoApi {
   return {
     auth: createAuthApi(http),
+    users: createUsersApi(http),
     workspace: createWorkspaceApi(http),
     accounts: createAccountsApi(http),
     categories: createCategoriesApi(http),

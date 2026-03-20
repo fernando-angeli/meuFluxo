@@ -10,22 +10,16 @@ import type { MovementTypeFilter } from "./movement-type-select";
 type CategoriesMultiSelectProps = {
   value: string[];
   onChange: (value: string[]) => void;
-  /** Filtrar categorias por tipo de movimento (opcional) */
   movementType?: MovementTypeFilter;
   className?: string;
   triggerClassName?: string;
 };
 
-/** Retorna apenas categorias pai (sem parentId), opcionalmente filtradas por tipo. */
-function getParentCategories(
-  categories: Category[],
-  movementType?: MovementTypeFilter,
-): Category[] {
-  const parents = categories.filter((c) => !c.parentId);
-  if (movementType === "ALL") return parents;
-  if (movementType === "INCOME") return parents.filter((c) => c.type === "INCOME");
-  if (movementType === "EXPENSE") return parents.filter((c) => c.type === "EXPENSE");
-  return parents;
+function getParentCategories(categories: Category[], movementType?: MovementTypeFilter): Category[] {
+  if (movementType === "ALL") return categories;
+  if (movementType === "INCOME") return categories.filter((category) => category.movementType === "INCOME");
+  if (movementType === "EXPENSE") return categories.filter((category) => category.movementType === "EXPENSE");
+  return categories;
 }
 
 export function CategoriesMultiSelect({
@@ -37,12 +31,11 @@ export function CategoriesMultiSelect({
 }: CategoriesMultiSelectProps) {
   const { t } = useTranslation();
   const { data: categories = [], isLoading } = useCategories();
-  const parents = getParentCategories(categories, movementType);
+  const filteredCategories = getParentCategories(categories, movementType);
 
-  const options = parents.map((c) => ({
-    value: c.id,
-    label: c.name,
-    color: c.color,
+  const options = filteredCategories.map((category) => ({
+    value: category.id,
+    label: category.name,
   }));
 
   return (

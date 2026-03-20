@@ -27,6 +27,11 @@ export const ptBR = {
   // Topbar
   "topbar.notifications": "Notificações",
 
+  "userMenu.guest": "Usuário",
+  "userMenu.myAccount": "Minha conta",
+  "userMenu.preferences": "Preferências",
+  "userMenu.logout": "Sair",
+
   // Tema
   "theme.toggle": "Alternar tema",
 
@@ -36,6 +41,7 @@ export const ptBR = {
   "workspace.list": "Workspaces",
   "workspace.addSoon": "Adicionar workspace (em breve)",
   "workspace.family": "Família",
+  "workspace.none": "Nenhum",
 
   // Dashboard
   "dashboard.title": "Dashboard",
@@ -58,6 +64,8 @@ export const ptBR = {
   // Filtros
   "filters.period": "Período",
   "filters.type": "Tipo",
+  "filters.year": "Ano",
+  "filters.quickMonths": "Atalhos de mês",
   "filters.accounts": "Contas",
   "filters.categories": "Categorias",
   "filters.subcategories": "Subcategorias",

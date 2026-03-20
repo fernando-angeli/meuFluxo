@@ -5,9 +5,18 @@ import { cn } from "@/lib/utils";
 export function SimpleTable({
   columns,
   rows,
+  onRowClick,
+  getRowKey,
 }: {
-  columns: Array<{ key: string; header: string; className?: string }>;
-  rows: Array<Record<string, React.ReactNode>>;
+  columns: Array<{
+    key: string;
+    header: string;
+    className?: string;
+    render?: (row: Record<string, unknown>) => React.ReactNode;
+  }>;
+  rows: Array<Record<string, unknown>>;
+  onRowClick?: (row: Record<string, unknown>, rowIndex: number) => void;
+  getRowKey?: (row: Record<string, unknown>, rowIndex: number) => React.Key;
 }) {
   return (
     <div className="overflow-x-auto rounded-xl border bg-card">
@@ -29,10 +38,14 @@ export function SimpleTable({
         </thead>
         <tbody>
           {rows.map((row, idx) => (
-            <tr key={idx} className="hover:bg-accent/40">
+            <tr
+              key={getRowKey ? getRowKey(row, idx) : idx}
+              className={cn("hover:bg-accent/40", onRowClick && "cursor-pointer")}
+              onClick={() => onRowClick?.(row, idx)}
+            >
               {columns.map((c) => (
                 <td key={c.key} className={cn("border-b px-3 py-2 text-sm", c.className)}>
-                  {row[c.key] ?? null}
+                  {c.render ? c.render(row) : (row[c.key] as React.ReactNode) ?? null}
                 </td>
               ))}
             </tr>

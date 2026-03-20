@@ -29,9 +29,9 @@ export default function DashboardPage() {
     endDate,
   });
 
-  if (isLoading) return <DashboardSkeleton />;
-
   const { t } = useTranslation();
+
+  if (isLoading) return <DashboardSkeleton />;
 
   if (isError) {
     const message =
