@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import { ChevronDown } from "lucide-react";
 
 import { useSidebar } from "./sidebar-context";
@@ -15,12 +14,10 @@ import {
 import { useTranslation } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
-const WORKSPACE_IDS = ["family"] as const;
 export function WorkspaceSwitcher() {
   const { t } = useTranslation();
   const { expanded } = useSidebar();
-  const [currentId, setCurrentId] = React.useState<(typeof WORKSPACE_IDS)[number]>("family");
-  const currentName = currentId === "family" ? t("workspace.family") : currentId;
+  const currentName = t("workspace.label");
 
   return (
     <DropdownMenu>
@@ -35,23 +32,14 @@ export function WorkspaceSwitcher() {
           )}
           aria-label={t("workspace.switch")}
         >
-          <div
-            className={cn(
-              "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted text-sm font-medium text-muted-foreground",
-            )}
-            aria-hidden
-          >
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted text-sm font-medium text-muted-foreground" aria-hidden>
             {currentName.charAt(0).toUpperCase()}
           </div>
           {expanded && (
             <>
               <div className="min-w-0 flex-1">
-                <div className="truncate text-xs font-medium text-muted-foreground">
-                  {t("workspace.label")}
-                </div>
-                <div className="truncate text-sm font-semibold text-foreground">
-                  {currentName}
-                </div>
+                <div className="truncate text-xs font-medium text-muted-foreground">{t("workspace.label")}</div>
+                <div className="truncate text-sm font-semibold text-foreground">{currentName}</div>
               </div>
               <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
             </>
@@ -60,15 +48,6 @@ export function WorkspaceSwitcher() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-[--radix-dropdown-menu-trigger-width] min-w-48">
         <DropdownMenuLabel>{t("workspace.list")}</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        {WORKSPACE_IDS.map((id) => (
-          <DropdownMenuItem
-            key={id}
-            onClick={() => setCurrentId(id)}
-          >
-            {id === "family" ? t("workspace.family") : id}
-          </DropdownMenuItem>
-        ))}
         <DropdownMenuSeparator />
         <DropdownMenuItem disabled>{t("workspace.addSoon")}</DropdownMenuItem>
       </DropdownMenuContent>

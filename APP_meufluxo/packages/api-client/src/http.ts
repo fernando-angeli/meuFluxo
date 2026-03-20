@@ -9,21 +9,31 @@ export type HttpError = {
 export type HttpClientOptions = {
   baseUrl: string;
   getAuthToken?: () => string | null | undefined;
+  /** Chamado quando a API retorna 401. Deve tentar refresh e retornar novo token; se falhar retorna null. */
+  on401Retry?: () => Promise<string | null>;
+  /** Chamado quando 401 e on401Retry retornou null ou não existe. */
+  onUnauthorized?: () => void;
   defaultHeaders?: Record<string, string>;
 };
+
+const REFRESH_PATH = "/auth/refresh";
 
 export class HttpClient {
   private baseUrl: string;
   private getAuthToken?: () => string | null | undefined;
+  private on401Retry?: () => Promise<string | null>;
+  private onUnauthorized?: () => void;
   private defaultHeaders?: Record<string, string>;
 
   constructor(options: HttpClientOptions) {
     this.baseUrl = options.baseUrl.replace(/\/+$/, "");
     this.getAuthToken = options.getAuthToken;
+    this.on401Retry = options.on401Retry;
+    this.onUnauthorized = options.onUnauthorized;
     this.defaultHeaders = options.defaultHeaders;
   }
 
-  async request<TResponse>(
+  private async doRequest<TResponse>(
     path: string,
     init: {
       method: HttpMethod;
@@ -32,7 +42,8 @@ export class HttpClient {
       headers?: Record<string, string>;
       signal?: AbortSignal;
     },
-  ): Promise<TResponse> {
+    token: string | null | undefined,
+  ): Promise<{ response: TResponse; status: number }> {
     const url = new URL(this.baseUrl + path);
     if (init.query) {
       for (const [k, v] of Object.entries(init.query)) {
@@ -41,7 +52,6 @@ export class HttpClient {
       }
     }
 
-    const token = this.getAuthToken?.();
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
       ...this.defaultHeaders,
@@ -56,6 +66,7 @@ export class HttpClient {
         headers,
         body: init.body === undefined ? undefined : JSON.stringify(init.body),
         signal: init.signal,
+        credentials: "include",
       });
     } catch (e) {
       const isNetworkError =
@@ -88,7 +99,41 @@ export class HttpClient {
       throw err;
     }
 
-    return payload as TResponse;
+    return { response: payload as TResponse, status: res.status };
+  }
+
+  async request<TResponse>(
+    path: string,
+    init: {
+      method: HttpMethod;
+      query?: Record<string, string | number | boolean | null | undefined>;
+      body?: unknown;
+      headers?: Record<string, string>;
+      signal?: AbortSignal;
+    },
+    isRetry = false,
+  ): Promise<TResponse> {
+    const token = this.getAuthToken?.();
+
+    try {
+      const { response } = await this.doRequest<TResponse>(path, init, token);
+      return response;
+    } catch (e) {
+      const err = e as HttpError;
+      const status = err?.status ?? 0;
+
+      if (status === 401 && this.on401Retry && !isRetry && path !== REFRESH_PATH) {
+        const newToken = await this.on401Retry();
+        if (newToken) {
+          return this.request<TResponse>(path, init, true);
+        }
+        this.onUnauthorized?.();
+      } else if ((status === 401 || status === 403) && !isRetry) {
+        this.onUnauthorized?.();
+      }
+
+      throw e;
+    }
   }
 }
 

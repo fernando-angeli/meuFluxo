@@ -25,6 +25,11 @@ export const en: Record<PtBRKeys, string> = {
 
   "topbar.notifications": "Notifications",
 
+  "userMenu.guest": "User",
+  "userMenu.myAccount": "My account",
+  "userMenu.preferences": "Preferences",
+  "userMenu.logout": "Sign out",
+
   "theme.toggle": "Toggle theme",
 
   "workspace.label": "Workspace",
@@ -32,6 +37,7 @@ export const en: Record<PtBRKeys, string> = {
   "workspace.list": "Workspaces",
   "workspace.addSoon": "Add workspace (coming soon)",
   "workspace.family": "Family",
+  "workspace.none": "None",
 
   "dashboard.title": "Dashboard",
   "dashboard.errorSummary": "Financial summary for the period.",
@@ -52,6 +58,8 @@ export const en: Record<PtBRKeys, string> = {
 
   "filters.period": "Period",
   "filters.type": "Type",
+  "filters.year": "Year",
+  "filters.quickMonths": "Month shortcuts",
   "filters.accounts": "Accounts",
   "filters.categories": "Categories",
   "filters.subcategories": "Subcategories",

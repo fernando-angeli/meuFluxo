@@ -12,6 +12,9 @@ import {
 } from "lucide-react";
 import type { TranslationKey } from "@/lib/i18n";
 
+/** Rota da página inicial após login. Altere aqui quando quiser outra home. */
+export const HOME_PATH = "/dashboard";
+
 export type NavItem = {
   /** Chave do dicionário i18n (ex: nav.dashboard) */
   titleKey: TranslationKey;
