@@ -18,7 +18,8 @@ export function AccountsMultiSelect({
   triggerClassName,
 }: AccountsMultiSelectProps) {
   const { t } = useTranslation();
-  const { data: accounts = [], isLoading } = useAccounts();
+  const { data, isLoading } = useAccounts();
+  const accounts = Array.isArray(data) ? data : [];
 
   const options = accounts.map((a) => ({
     value: a.id,

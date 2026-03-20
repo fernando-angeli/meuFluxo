@@ -1,4 +1,4 @@
-/** Contratos de auth para integração com API externa (genéricos, sem acoplar a backend). */
+/** Contratos de auth para integração com a API. */
 
 export type LoginRequest = {
   email: string;
@@ -6,19 +6,23 @@ export type LoginRequest = {
 };
 
 export type User = {
-  id: string;
+  id: number;
+  fullName: string;
   email: string;
-  name?: string;
 };
 
+export type UserPreferences = {
+  theme?: "light" | "dark" | "system";
+  language?: string;
+  [key: string]: unknown;
+};
+
+/** Resposta de POST /auth/login — apenas token. Dados do usuário vêm de GET /users/me. */
 export type LoginResponse = {
-  token: string;
-  user?: User;
-  expiresAt?: string; // ISO
+  accessToken: string;
+  expiresIn?: number;
+  tokenType?: string;
 };
 
-export type Session = {
-  user: User;
-  token: string;
-  expiresAt?: string;
-};
+/** Resposta de POST /auth/refresh — apenas token. Dados do usuário vêm de GET /users/me. */
+export type RefreshResponse = LoginResponse;

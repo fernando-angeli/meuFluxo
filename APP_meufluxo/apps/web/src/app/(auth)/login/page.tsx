@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 
@@ -9,21 +8,20 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useAuth } from "@/hooks/useAuth";
 import { loginSchema, type LoginInput } from "@/features/auth/schemas/auth";
 import { useTranslation } from "@/lib/i18n";
 
 export default function LoginPage() {
   const { t } = useTranslation();
-  const router = useRouter();
+  const { login, error } = useAuth();
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: "", password: "" },
   });
 
   async function onSubmit(values: LoginInput) {
-    await new Promise((r) => setTimeout(r, 600));
-    console.log("mock-login", values);
-    router.push("/dashboard");
+    await login(values.email, values.password);
   }
 
   const {
@@ -51,6 +49,8 @@ export default function LoginPage() {
             {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
           </div>
 
+          {error && <p className="text-sm text-destructive">{error}</p>}
+
           <Button type="submit" className="w-full" disabled={isSubmitting}>
             {isSubmitting ? t("auth.entering") : t("auth.login")}
           </Button>
@@ -66,4 +66,5 @@ export default function LoginPage() {
     </Card>
   );
 }
+
 

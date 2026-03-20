@@ -6,11 +6,13 @@ import { PageHeader } from "@/components/layout/page-header";
 import { SimpleTable } from "@/components/tables/simple-table";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { mockCreditCards } from "@/features/credit-cards/mocks/credit-cards";
+import { useCreditCards } from "@/hooks/api";
 import { useTranslation } from "@/lib/i18n";
 
 export default function CreditCardsPage() {
   const { t } = useTranslation();
+  const { data: creditCards = [] } = useCreditCards();
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -36,11 +38,11 @@ export default function CreditCardsPage() {
               { key: "cycle", header: "Ciclo" },
               { key: "status", header: t("table.status") },
             ]}
-            rows={mockCreditCards.map((c) => ({
-              name: c.name,
-              brand: c.brand ?? "—",
-              cycle: `Fecha dia ${c.statementDay} • Vence dia ${c.dueDay}`,
-              status: c.isActive ? t("status.active") : t("status.inactive"),
+            rows={creditCards.map((creditCard) => ({
+              name: creditCard.name,
+              brand: creditCard.brandCard ?? "—",
+              cycle: `Fecha dia ${creditCard.closingDay} • Vence dia ${creditCard.dueDay}`,
+              status: creditCard.meta.active ? t("status.active") : t("status.inactive"),
             }))}
           />
         </CardContent>
@@ -48,4 +50,3 @@ export default function CreditCardsPage() {
     </div>
   );
 }
-

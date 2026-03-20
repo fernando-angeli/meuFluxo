@@ -75,34 +75,34 @@ export function DateRangePicker({
     to?: Date;
   } | null>(null);
 
-  const committedRange = React.useMemo(() => {
+  const committedRange = (() => {
     if (!value) return undefined;
     const from = toDate(value.startDate);
     const to =
       value.startDate === value.endDate ? undefined : toDate(value.endDate);
     return { from, to };
-  }, [value?.startDate, value?.endDate]);
+  })();
 
   const displayRange = open ? (pendingRange ?? committedRange) : committedRange;
 
-  const previewRange = React.useMemo(() => {
-    if (
-      !pendingRange?.from ||
-      pendingRange.to !== undefined ||
-      !hoverDate
-    ) {
+  const previewRange = (() => {
+    if (!pendingRange?.from || pendingRange.to !== undefined || !hoverDate) {
       return undefined;
     }
     const from = startOfDay(pendingRange.from);
     const to = startOfDay(hoverDate);
     if (to.getTime() < from.getTime()) return undefined;
     return { from, to };
-  }, [pendingRange?.from, pendingRange?.to, hoverDate]);
+  })();
 
   const selectedRange = previewRange ?? displayRange;
   const prevOpenRef = React.useRef(false);
   const committedRef = React.useRef(committedRange);
-  committedRef.current = committedRange;
+
+  React.useEffect(() => {
+    // Keep ref in sync outside of render to avoid React ref-write warnings.
+    committedRef.current = committedRange;
+  }, [committedRange]);
 
   React.useEffect(() => {
     const wasOpen = prevOpenRef.current;
@@ -159,26 +159,25 @@ export function DateRangePicker({
     [pendingRange, onChange],
   );
 
-  const disabled = React.useMemo(() => {
+  const pendingFromTime = pendingRange?.from
+    ? pendingRange.from.getTime()
+    : undefined;
+  const pendingTo = pendingRange?.to;
+
+  const disabled = (() => {
     const matchers: Array<(date: Date) => boolean> = [];
     if (minDate) matchers.push((d) => isBefore(d, minDate));
     if (maxDate) matchers.push((d) => isAfter(d, maxDate));
-    if (
-      pendingRange?.from &&
-      pendingRange.to === undefined
-    ) {
-      const from = pendingRange.from.getTime();
-      matchers.push((d) => d.getTime() < from);
+    if (pendingFromTime !== undefined && pendingTo === undefined) {
+      matchers.push((d) => d.getTime() < pendingFromTime);
     }
     if (matchers.length === 0) return undefined;
     return (date: Date) => matchers.some((m) => m(date));
-  }, [minDate, maxDate, pendingRange?.from?.getTime(), pendingRange?.to]);
+  })();
 
-  const defaultMonth = React.useMemo(() => {
-    if (displayRange?.from) return displayRange.from;
-    if (value?.startDate) return toDate(value.startDate);
-    return new Date();
-  }, [displayRange?.from, value?.startDate]);
+  const defaultMonth =
+    displayRange?.from ??
+    (value?.startDate ? toDate(value.startDate) : new Date());
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>

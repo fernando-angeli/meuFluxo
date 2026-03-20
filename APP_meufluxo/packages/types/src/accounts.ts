@@ -1,17 +1,18 @@
-import type { ID } from "./index";
+import type { EntityMeta } from "./categories";
 
-export type AccountType = "BANK" | "WALLET" | "CASH" | "INVESTMENT";
+export type AccountType =
+  | "CHECKING"
+  | "CREDIT_CARD"
+  | "CASH"
+  | "INVESTMENT"
+  | "SAVING"
+  | "BENEFIT_CARD";
 
 export type Account = {
-  id: ID;
-  workspaceId: ID;
+  id: string;
   name: string;
-  type: AccountType;
-  institution?: string;
-  balance: number; // usar centavos no futuro (Money). Por agora, mock simples.
-  currency: "BRL" | "USD" | "EUR";
-  isActive: boolean;
-  createdAt: string; // ISO
-  updatedAt: string; // ISO
+  accountType: AccountType;
+  currentBalance: number;
+  balanceUpdatedAt: string;
+  meta: EntityMeta;
 };
-

@@ -38,10 +38,7 @@ export function TemporalEvolutionChart({
   empty: forceEmpty,
 }: TemporalEvolutionChartProps) {
   const { t } = useTranslation();
-  const chartData = React.useMemo(
-    () => buildChartData(data),
-    [data.labels, data.income, data.expenses],
-  );
+  const chartData = buildChartData(data);
 
   const hasData = chartData.some(
     (d) => (d.entradas ?? 0) > 0 || (d.saídas ?? 0) > 0,
