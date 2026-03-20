@@ -6,6 +6,6 @@ public record CategorySimpleResponse(
 
         Long id,
         String name,
-        MovementType types
+        MovementType movementType
 ) {
 }

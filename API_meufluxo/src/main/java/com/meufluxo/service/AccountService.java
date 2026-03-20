@@ -10,6 +10,8 @@ import com.meufluxo.mapper.AccountMapper;
 import com.meufluxo.model.Account;
 import com.meufluxo.repository.AccountRepository;
 import com.meufluxo.repository.CashMovementRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -17,6 +19,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AccountService extends BaseUserService{
+
+    private static final Logger log = LoggerFactory.getLogger(AccountService.class);
 
     private final AccountRepository accountRepository;
     private final CashMovementRepository cashMovementRepository;
@@ -58,7 +62,7 @@ public class AccountService extends BaseUserService{
         newAccount.initializeBalance();
         newAccount.setWorkspace(getCurrentWorkspace());
         newAccount = accountRepository.save(newAccount);
-        workspaceSyncStateService.incrementAccountsVersion(getCurrentWorkspaceId());
+        tryIncrementAccountsVersion();
         return accountMapper.toResponse(newAccount);
     }
 
@@ -80,7 +84,7 @@ public class AccountService extends BaseUserService{
             existingAccount.setActive(request.active());
         }
         existingAccount = accountRepository.save(existingAccount);
-        workspaceSyncStateService.incrementAccountsVersion(getCurrentWorkspaceId());
+        tryIncrementAccountsVersion();
         return accountMapper.toResponse(existingAccount);
     }
 
@@ -91,7 +95,7 @@ public class AccountService extends BaseUserService{
             throw new BusinessException("Não é possível excluir a conta pois existem registros vinculados, só é possível inativa-la.");
         }
         accountRepository.delete(account);
-        workspaceSyncStateService.incrementAccountsVersion(getCurrentWorkspaceId());
+        tryIncrementAccountsVersion();
     }
 
     public Account findByIdOrThrow(Long id) {
@@ -102,6 +106,14 @@ public class AccountService extends BaseUserService{
     public void existsId(Long id) {
         accountRepository.findByIdAndWorkspaceId(id, getCurrentWorkspaceId())
                 .orElseThrow(() -> new NotFoundException("Conta não encontrada com ID: " + id));
+    }
+
+    private void tryIncrementAccountsVersion() {
+        try {
+            workspaceSyncStateService.incrementAccountsVersion(getCurrentWorkspaceId());
+        } catch (RuntimeException exception) {
+            log.warn("Failed to increment account sync version for workspaceId={}. Keeping account operation successful.", getCurrentWorkspaceId(), exception);
+        }
     }
 
 }

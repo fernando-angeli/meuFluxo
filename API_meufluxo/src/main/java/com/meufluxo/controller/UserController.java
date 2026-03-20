@@ -1,7 +1,7 @@
 package com.meufluxo.controller;
 
-import com.meufluxo.dto.user.AuthenticatedUserResponse;
-import com.meufluxo.service.AuthService;
+import com.meufluxo.dto.user.AuthenticatedSessionResponse;
+import com.meufluxo.service.AuthenticatedSessionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -18,20 +18,23 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Usuários", description = "Operações do usuário autenticado")
 public class UserController {
 
-    private final AuthService authService;
+    private final AuthenticatedSessionService authenticatedSessionService;
 
-    public UserController(AuthService authService) {
-        this.authService = authService;
+    public UserController(AuthenticatedSessionService authenticatedSessionService) {
+        this.authenticatedSessionService = authenticatedSessionService;
     }
 
     @GetMapping("/me")
-    @Operation(summary = "Buscar usuário autenticado", description = "Retorna os dados básicos do usuário logado.")
+    @Operation(
+            summary = "Buscar sessão autenticada",
+            description = "Retorna o payload unificado para inicialização da aplicação autenticada com base no workspace ativo."
+    )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Usuário autenticado retornado com sucesso",
-                    content = @Content(schema = @Schema(implementation = AuthenticatedUserResponse.class))),
+            @ApiResponse(responseCode = "200", description = "Sessão autenticada retornada com sucesso",
+                    content = @Content(schema = @Schema(implementation = AuthenticatedSessionResponse.class))),
             @ApiResponse(responseCode = "401", description = "Token inválido ou ausente", content = @Content)
     })
-    public ResponseEntity<AuthenticatedUserResponse> me() {
-        return ResponseEntity.ok(authService.getAuthenticatedUser());
+    public ResponseEntity<AuthenticatedSessionResponse> me() {
+        return ResponseEntity.ok(authenticatedSessionService.getAuthenticatedSession());
     }
 }

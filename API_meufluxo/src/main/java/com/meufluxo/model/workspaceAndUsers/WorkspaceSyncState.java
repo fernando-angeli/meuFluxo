@@ -24,6 +24,9 @@ public class WorkspaceSyncState {
     private Long categoriesVersion = 1L;
 
     @Column(nullable = false)
+    private Long subCategoriesVersion = 1L;
+
+    @Column(nullable = false)
     private Long accountsVersion = 1L;
 
     @Column(nullable = false)

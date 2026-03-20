@@ -63,7 +63,7 @@ public class SubCategoryService extends BaseUserService {
         newSubCategory.setCategory(category);
         newSubCategory.setWorkspace(getCurrentWorkspace());
         newSubCategory = subCategoryRepository.save(newSubCategory);
-        workspaceSyncStateService.incrementCategoriesVersion(getCurrentWorkspaceId());
+        workspaceSyncStateService.incrementSubCategoriesVersion(getCurrentWorkspaceId());
         return subCategoryMapper.toResponse(newSubCategory);
     }
 
@@ -103,7 +103,7 @@ public class SubCategoryService extends BaseUserService {
             existingSubCategory.setActive(request.active());
         }
         existingSubCategory = subCategoryRepository.saveAndFlush(existingSubCategory);
-        workspaceSyncStateService.incrementCategoriesVersion(getCurrentWorkspaceId());
+        workspaceSyncStateService.incrementSubCategoriesVersion(getCurrentWorkspaceId());
         return subCategoryMapper.toResponse(existingSubCategory);
     }
 
@@ -114,7 +114,7 @@ public class SubCategoryService extends BaseUserService {
             throw new BusinessException("Não é possível excluir a categoria pois existem registros vinculados, só é possível inativa-la.");
         }
         subCategoryRepository.delete(subCategory);
-        workspaceSyncStateService.incrementCategoriesVersion(getCurrentWorkspaceId());
+        workspaceSyncStateService.incrementSubCategoriesVersion(getCurrentWorkspaceId());
     }
 
     public SubCategory findByIdOrThrow(Long id) {

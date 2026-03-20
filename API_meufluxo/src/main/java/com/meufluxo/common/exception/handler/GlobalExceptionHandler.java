@@ -10,6 +10,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.AuthenticationException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -20,6 +22,8 @@ import java.util.stream.Collectors;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     private ResponseEntity<StandardError> buildError(
             HttpStatus status,
@@ -121,6 +125,7 @@ public class GlobalExceptionHandler {
             DataIntegrityViolationException e,
             HttpServletRequest request
     ) {
+        log.error("Data integrity error on {} {}", request.getMethod(), request.getRequestURI(), e);
         return buildError(
                 HttpStatus.CONFLICT,
                 "Conflict",
@@ -138,6 +143,7 @@ public class GlobalExceptionHandler {
             Exception e,
             HttpServletRequest request
     ) {
+        log.error("Unexpected error on {} {}", request.getMethod(), request.getRequestURI(), e);
         return buildError(
                 HttpStatus.INTERNAL_SERVER_ERROR,
                 "Internal server error",
