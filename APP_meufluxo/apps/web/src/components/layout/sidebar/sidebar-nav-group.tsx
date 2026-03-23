@@ -6,7 +6,6 @@ import type { NavGroup } from "@/lib/navigation";
 import { useTranslation } from "@/lib/i18n";
 import { SidebarNavItem } from "./sidebar-nav-item";
 import { useSidebar } from "./sidebar-context";
-import { cn } from "@/lib/utils";
 
 type SidebarNavGroupProps = {
   group: NavGroup;
@@ -17,15 +16,10 @@ export function SidebarNavGroup({ group }: SidebarNavGroupProps) {
   const { t } = useTranslation();
 
   return (
-    <div className="space-y-0.5">
-      {expanded && (
-        <div
-          className="px-2 pb-1 pt-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
-          role="presentation"
-        >
-          {t(group.labelKey)}
-        </div>
-      )}
+    <section
+      className="rounded-xl border border-border/40 bg-muted/20 p-1.5 dark:bg-muted/10"
+      aria-label={t(group.labelKey)}
+    >
       <ul className="space-y-0.5" role="list">
         {group.items.map((item) => (
           <li key={item.href}>
@@ -33,6 +27,6 @@ export function SidebarNavGroup({ group }: SidebarNavGroupProps) {
           </li>
         ))}
       </ul>
-    </div>
+    </section>
   );
 }
