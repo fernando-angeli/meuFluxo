@@ -18,6 +18,27 @@ export type HttpClientOptions = {
 
 const REFRESH_PATH = "/auth/refresh";
 
+/** 401 em login não é "sessão expirada" — não deve tentar refresh nem logout global. */
+const AUTH_PATHS_SKIP_UNAUTHORIZED_HANDLER = new Set<string>(["/auth/login", "/auth/logout"]);
+
+function normalizePath(path: string): string {
+  if (!path) return "/";
+  return path.startsWith("/") ? path : `/${path}`;
+}
+
+function errorMessageFromPayload(
+  payload: unknown,
+  statusText: string,
+): string {
+  if (payload && typeof payload === "object") {
+    const p = payload as Record<string, unknown>;
+    if (typeof p.detail === "string" && p.detail.trim()) return p.detail;
+    if (typeof p.message === "string" && p.message.trim()) return p.message;
+    if (typeof p.title === "string" && p.title.trim()) return p.title;
+  }
+  return statusText || "Erro de requisição";
+}
+
 export class HttpClient {
   private baseUrl: string;
   private getAuthToken?: () => string | null | undefined;
@@ -44,7 +65,8 @@ export class HttpClient {
     },
     token: string | null | undefined,
   ): Promise<{ response: TResponse; status: number }> {
-    const url = new URL(this.baseUrl + path);
+    const normalizedPath = normalizePath(path);
+    const url = new URL(this.baseUrl + normalizedPath);
     if (init.query) {
       for (const [k, v] of Object.entries(init.query)) {
         if (v === null || v === undefined) continue;
@@ -113,22 +135,30 @@ export class HttpClient {
     },
     isRetry = false,
   ): Promise<TResponse> {
+    const normalizedPath = normalizePath(path);
     const token = this.getAuthToken?.();
 
     try {
-      const { response } = await this.doRequest<TResponse>(path, init, token);
+      const { response } = await this.doRequest<TResponse>(normalizedPath, init, token);
       return response;
     } catch (e) {
       const err = e as HttpError;
       const status = err?.status ?? 0;
+      const skipUnauthorizedHandler = AUTH_PATHS_SKIP_UNAUTHORIZED_HANDLER.has(normalizedPath);
 
-      if (status === 401 && this.on401Retry && !isRetry && path !== REFRESH_PATH) {
+      if (
+        status === 401 &&
+        this.on401Retry &&
+        !isRetry &&
+        normalizedPath !== REFRESH_PATH &&
+        !skipUnauthorizedHandler
+      ) {
         const newToken = await this.on401Retry();
         if (newToken) {
-          return this.request<TResponse>(path, init, true);
+          return this.request<TResponse>(normalizedPath, init, true);
         }
         this.onUnauthorized?.();
-      } else if ((status === 401 || status === 403) && !isRetry) {
+      } else if ((status === 401 || status === 403) && !isRetry && !skipUnauthorizedHandler) {
         this.onUnauthorized?.();
       }
 
