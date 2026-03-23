@@ -60,12 +60,13 @@ export function getAccountsTableColumns({
       sortKey: "balanceUpdatedAt",
       align: "left",
       render: (acc) => {
+        if (!acc.balanceUpdatedAt) return "Não informado";
         try {
           return format(parseISO(acc.balanceUpdatedAt), "dd/MM/yyyy HH:mm", {
             locale: ptBR,
           });
         } catch {
-          return acc.balanceUpdatedAt;
+          return "Indisponível no momento";
         }
       },
     },

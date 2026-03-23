@@ -35,6 +35,8 @@ export function DataTable<T>({
   emptyDescription,
   pageSizeOptions,
   className,
+  expandedRowKey,
+  renderExpandedRow,
 }: {
   columns: Array<DataTableColumn<T>>;
   data: T[];
@@ -51,6 +53,9 @@ export function DataTable<T>({
   emptyDescription?: string;
   pageSizeOptions?: number[];
   className?: string;
+  /** Quando definido com `renderExpandedRow`, exibe uma linha extra abaixo da linha correspondente. */
+  expandedRowKey?: React.Key | null;
+  renderExpandedRow?: (row: T) => React.ReactNode;
 }) {
   const colSpan = columns.length;
 
@@ -120,37 +125,70 @@ export function DataTable<T>({
             />
           ) : (
             <tbody>
-              {data.map((row) => (
-                <tr
-                  key={getRowKey(row)}
-                  className={cn(
-                    "transition-colors hover:bg-accent/40",
-                    onRowClick && "cursor-pointer",
-                  )}
-                  onClick={() => onRowClick?.(row)}
-                >
-                  {columns.map((col) => {
-                    const content = col.render
-                      ? col.render(row)
-                      : col.dataIndex
-                        ? ((row as any)[col.dataIndex] as React.ReactNode)
-                        : null;
+              {data.map((row) => {
+                const rowKey = getRowKey(row);
+                const expanded =
+                  expandedRowKey != null &&
+                  renderExpandedRow != null &&
+                  expandedRowKey === rowKey;
 
-                    return (
-                      <td
-                        key={col.key}
-                        className={cn(
-                          "border-b px-3 py-2 text-sm",
-                          alignClass(col.align),
-                          col.cellClassName,
-                        )}
-                      >
-                        {content ?? null}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
+                return (
+                  <React.Fragment key={rowKey}>
+                    <tr
+                      className={cn(
+                        "transition-colors hover:bg-accent/40",
+                        onRowClick && "cursor-pointer",
+                      )}
+                      onClick={() => onRowClick?.(row)}
+                      role={onRowClick ? "button" : undefined}
+                      tabIndex={onRowClick ? 0 : undefined}
+                      onKeyDown={
+                        onRowClick
+                          ? (event) => {
+                              if (event.key === "Enter" || event.key === " ") {
+                                event.preventDefault();
+                                onRowClick(row);
+                              }
+                            }
+                          : undefined
+                      }
+                    >
+                      {columns.map((col) => {
+                        const content = col.render
+                          ? col.render(row)
+                          : col.dataIndex
+                            ? ((row as Record<string, unknown>)[
+                                col.dataIndex as string
+                              ] as React.ReactNode)
+                            : null;
+
+                        return (
+                          <td
+                            key={col.key}
+                            className={cn(
+                              "border-b px-3 py-2 text-sm",
+                              alignClass(col.align),
+                              col.cellClassName,
+                            )}
+                          >
+                            {content ?? null}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                    {expanded ? (
+                      <tr className="bg-muted/20">
+                        <td
+                          colSpan={colSpan}
+                          className="border-b px-3 py-3 text-sm text-muted-foreground"
+                        >
+                          {renderExpandedRow(row)}
+                        </td>
+                      </tr>
+                    ) : null}
+                  </React.Fragment>
+                );
+              })}
             </tbody>
           )}
         </table>
