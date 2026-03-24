@@ -1,4 +1,6 @@
-.PHONY: help dev-up dev-down dev-logs dev-ps dev-restart prod-up prod-down prod-logs prod-ps obs-up obs-down obs-logs all-up all-down
+.DEFAULT_GOAL := menu
+
+.PHONY: menu help dev-up dev-start dev-down dev-stop dev-logs dev-ps dev-restart prod-up prod-down prod-logs prod-ps obs-up obs-down obs-logs all-up all-down
 
 COMPOSE_BASE = docker compose -f docker-compose.yml
 COMPOSE_DEV = $(COMPOSE_BASE) -f docker-compose.dev.yml --profile dev
@@ -6,28 +8,41 @@ COMPOSE_PROD = $(COMPOSE_BASE) -f docker-compose.prod.yml --profile prod
 COMPOSE_PROD_OBS = $(COMPOSE_BASE) -f docker-compose.prod.yml --profile prod --profile obs
 COMPOSE_OBS = docker compose --profile obs
 
+menu:
+	@echo ==============================================
+	@echo MeuFluxo API - Menu de comandos Make
+	@echo ==============================================
+	@$(MAKE) help
+
 help:
-	@echo "Alvos disponiveis:"
-	@echo "  make dev-up        # sobe ambiente de desenvolvimento (API + DB + Kafka)"
-	@echo "  make dev-down      # derruba ambiente de desenvolvimento"
-	@echo "  make dev-logs      # acompanha logs da API dev"
-	@echo "  make dev-ps        # lista status dos containers dev"
-	@echo "  make dev-restart   # reinicia apenas a API dev"
-	@echo "  make prod-up       # sobe ambiente de producao (API + DB) com build"
-	@echo "  make prod-down     # derruba ambiente de producao"
-	@echo "  make prod-logs     # acompanha logs da API prod"
-	@echo "  make prod-ps       # lista status dos containers prod"
-	@echo "  make obs-up        # sobe stack de observabilidade (Loki/Promtail/Grafana)"
-	@echo "  make obs-down      # derruba stack de observabilidade"
-	@echo "  make obs-logs      # acompanha logs da stack observabilidade"
-	@echo "  make all-up        # sobe producao + observabilidade"
-	@echo "  make all-down      # derruba producao + observabilidade"
+	@echo Alvos disponiveis:
+	@echo   make menu          # exibe este menu
+	@echo   make dev-up        # sobe ambiente de desenvolvimento (API + DB + Kafka)
+	@echo   make dev-start     # alias de dev-up
+	@echo   make dev-down      # derruba ambiente de desenvolvimento
+	@echo   make dev-stop      # alias de dev-down
+	@echo   make dev-logs      # acompanha logs da API dev
+	@echo   make dev-ps        # lista status dos containers dev
+	@echo   make dev-restart   # reinicia apenas a API dev
+	@echo   make prod-up       # sobe ambiente de producao (API + DB) com build
+	@echo   make prod-down     # derruba ambiente de producao
+	@echo   make prod-logs     # acompanha logs da API prod
+	@echo   make prod-ps       # lista status dos containers prod
+	@echo   make obs-up        # sobe stack de observabilidade (Loki/Promtail/Grafana)
+	@echo   make obs-down      # derruba stack de observabilidade
+	@echo   make obs-logs      # acompanha logs da stack observabilidade
+	@echo   make all-up        # sobe producao + observabilidade
+	@echo   make all-down      # derruba producao + observabilidade
 
 dev-up:
 	$(COMPOSE_DEV) up -d
 
+dev-start: dev-up
+
 dev-down:
 	$(COMPOSE_DEV) down
+
+dev-stop: dev-down
 
 dev-logs:
 	$(COMPOSE_DEV) logs -f api_dev
