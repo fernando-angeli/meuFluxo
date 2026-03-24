@@ -56,34 +56,76 @@ API REST para controle financeiro, construída com Spring Boot, Java 25, Postgre
 
 ## Como Executar
 
-### 1) Banco em desenvolvimento
+### Atalhos com Makefile
+Se preferir, use os atalhos do `Makefile` para evitar comandos longos de `docker compose`:
+
 ```bash
-docker compose --profile dev up -d
+make dev-up
+make dev-logs
+make dev-down
+make prod-up
+make prod-down
+make obs-up
+make obs-down
+make all-up
+make all-down
 ```
 
-### 2) API local em dev
+Para listar todos os alvos:
 ```bash
-./mvnw spring-boot:run "-Dspring-boot.run.profiles=dev"
+make help
 ```
 
-Se a porta `8080` estiver ocupada:
-```bash
-./mvnw spring-boot:run "-Dspring-boot.run.profiles=dev" "-Dspring-boot.run.arguments=--server.port=8081"
+> No Windows, você pode usar `make` via Git Bash, WSL ou instalar com Chocolatey/Scoop.
+
+### Atalhos com PowerShell (Windows)
+Alternativa sem `make`, usando script:
+
+```powershell
+.\scripts\docker.ps1 dev-up
+.\scripts\docker.ps1 dev-logs
+.\scripts\docker.ps1 dev-down
+.\scripts\docker.ps1 prod-up
+.\scripts\docker.ps1 prod-down
+.\scripts\docker.ps1 obs-up
+.\scripts\docker.ps1 obs-down
+.\scripts\docker.ps1 all-up
+.\scripts\docker.ps1 all-down
 ```
 
-### 3) Produção (API + banco)
-```bash
-docker compose --profile prod up -d --build
+Para ajuda:
+```powershell
+.\scripts\docker.ps1 help
 ```
 
-### 4) Observabilidade (Loki/Promtail/Grafana)
+### 1) Desenvolvimento em container (API + banco + Kafka)
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml --profile dev up -d
+```
+
+Esse comando sobe:
+- `api_dev` (Spring Boot via `mvn spring-boot:run` dentro do container)
+- `meufluxo_db_dev` (PostgreSQL)
+- `kafka` e `kafka_ui`
+
+Para acompanhar logs da API:
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml logs -f api_dev
+```
+
+### 2) Produção (API + banco)
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile prod up -d --build
+```
+
+### 3) Observabilidade (Loki/Promtail/Grafana)
 ```bash
 docker compose --profile obs up -d
 ```
 
 Para subir tudo (produção + observabilidade):
 ```bash
-docker compose --profile prod --profile obs up -d --build
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile prod --profile obs up -d --build
 ```
 
 ## Endpoints úteis

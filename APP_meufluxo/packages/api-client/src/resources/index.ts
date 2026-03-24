@@ -8,7 +8,20 @@ export {
   type AccountUpdateRequest,
   type AccountsListParams,
 } from "./accounts";
-export { createCategoriesApi, type CategoriesApi } from "./categories";
+export {
+  createCategoriesApi,
+  type CategoriesApi,
+  type CategoriesListParams,
+  type CategoryCreateRequest,
+  type CategoryUpdateRequest,
+} from "./categories";
+export {
+  createSubCategoriesApi,
+  type SubCategoriesApi,
+  type SubCategoriesListParams,
+  type SubCategoryCreateRequest,
+  type SubCategoryUpdateRequest,
+} from "./subcategories";
 export {
   createCashMovementsApi,
   type CashMovementsApi,

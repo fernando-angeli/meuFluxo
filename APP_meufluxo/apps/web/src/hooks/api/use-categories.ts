@@ -3,9 +3,8 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { useAuthOptional } from "@/hooks/useAuth";
-import { api } from "@/services/api";
+import { fetchCategoriesListAll } from "@/features/categories/categories.service";
 import { env } from "@/lib/env";
-import { mockCategories } from "@/services/mocks/categories";
 
 export const categoriesQueryKey = ["categories"] as const;
 
@@ -14,7 +13,8 @@ export function useCategories() {
 
   return useQuery({
     queryKey: categoriesQueryKey,
-    queryFn: () => (env.useMocks ? Promise.resolve(mockCategories) : api.categories.list()),
+    queryFn: () =>
+      env.useMocks ? Promise.resolve([]) : fetchCategoriesListAll(),
     enabled: !auth?.isBootstrapping && !!auth?.isAuthenticated,
   });
 }
