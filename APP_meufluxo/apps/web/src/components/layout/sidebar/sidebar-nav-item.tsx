@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import type { NavItem } from "@/lib/navigation";
 import { useTranslation } from "@/lib/i18n";
 import { useSidebar } from "./sidebar-context";
+import { SidebarIconSlot } from "./sidebar-icon-slot";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
@@ -31,16 +32,26 @@ export function SidebarNavItem({ item, collapsed }: SidebarNavItemProps) {
   const linkContent = (
     <span
       className={cn(
-        "flex items-center gap-2 rounded-lg px-2 py-2 text-sm transition-colors",
+        "flex h-10 items-center rounded-lg px-2 text-sm transition-colors",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         active
           ? "bg-primary/10 text-primary"
           : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
-        collapsed && "justify-center px-2",
       )}
     >
-      <Icon className="h-4 w-4 shrink-0" aria-hidden />
-      {!collapsed && <span className="truncate">{title}</span>}
+      <span aria-hidden>
+        <SidebarIconSlot className="h-8 w-8">
+          <Icon className="h-4 w-4" />
+        </SidebarIconSlot>
+      </span>
+      <span
+        className={cn(
+          "min-w-0 overflow-hidden whitespace-nowrap pl-2 transition-all duration-200 ease-in-out",
+          collapsed ? "max-w-0 opacity-0" : "max-w-[160px] opacity-100",
+        )}
+      >
+        <span className="truncate">{title}</span>
+      </span>
     </span>
   );
 

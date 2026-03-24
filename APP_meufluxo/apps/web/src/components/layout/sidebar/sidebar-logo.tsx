@@ -1,9 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { useTheme } from "next-themes";
 
 import { useSidebar } from "./sidebar-context";
+import { SidebarIconSlot } from "./sidebar-icon-slot";
 import { cn } from "@/lib/utils";
 
 /** Logo slim (ícone) — usado no menu recolhido. */
@@ -15,26 +15,7 @@ function LogoIcon({ className }: { className?: string }) {
       alt="MeuFluxo"
       width={32}
       height={32}
-      className={cn("h-8 w-8 shrink-0 object-contain", className)}
-      aria-hidden
-    />
-  );
-}
-
-/** Logo completo (ícone + texto) — usado no menu expandido. Troca entre light/dark conforme o tema. */
-function LogoFull({ className }: { className?: string }) {
-  const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === "dark";
-  const src = isDark ? "/logo-full-dark.svg" : "/logo-full-ligth.svg";
-
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={src}
-      alt="MeuFluxo"
-      width={140}
-      height={32}
-      className={cn("h-8 w-auto shrink-0 object-contain object-left", className)}
+      className={cn("h-8 w-8 object-contain", className)}
       aria-hidden
     />
   );
@@ -46,15 +27,22 @@ export function SidebarLogo() {
   return (
     <div
       className={cn(
-        "flex min-h-[3rem] items-center overflow-hidden transition-[width] duration-200 ease-in-out",
-        expanded ? "w-full" : "w-10 justify-center",
+        "flex min-h-[3rem] items-center overflow-hidden",
+        "w-full justify-start px-2",
       )}
     >
-      {expanded ? (
-        <LogoFull className="shrink-0" />
-      ) : (
+      <SidebarIconSlot>
         <LogoIcon />
-      )}
+      </SidebarIconSlot>
+      <span
+        className={cn(
+          "ml-2 whitespace-nowrap text-base font-semibold text-black dark:text-white transition-all duration-200 ease-in-out",
+          expanded ? "max-w-[120px] translate-x-0 opacity-100" : "max-w-0 -translate-x-1 opacity-0",
+        )}
+        aria-hidden={!expanded}
+      >
+        MeuFluxo
+      </span>
     </div>
   );
 }
