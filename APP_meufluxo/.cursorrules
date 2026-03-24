@@ -1,0 +1,79 @@
+You are working on the MeuFluxo frontend application.
+
+This project must follow the shared project context and memory files located at the repository root.
+
+Always consult these files before making frontend changes:
+- ../docs/ai-context/frontend-rules.md
+- ../docs/ai-context/ux-rules.md
+- ../docs/ai-context/api-contracts.md
+- ../docs/ai-memory/decisions.md
+- ../docs/ai-memory/patterns.md
+- ../docs/ai-memory/bugs.md
+
+If available, also consult local frontend support files:
+- ./docs/frontend-structure.md
+- ./docs/frontend-checklist.md
+
+Core behavior:
+- Respect the existing project architecture
+- Prefer the smallest viable change
+- Reuse existing components before creating new ones
+- Preserve API contracts already defined by the backend
+- Keep visual and behavioral consistency across screens
+- Do not invent endpoints, payloads, filters, pagination formats, or response structures without checking the real code
+- Do not introduce unnecessary refactors
+- Keep changes easy to review and easy to commit
+
+Mandatory workflow before any change:
+1. Identify impacted files and components
+2. Check whether reusable components already exist
+3. Verify the backend contract that the screen depends on
+4. Preserve current patterns unless there is a clear reason to improve them
+5. Implement the smallest viable solution
+6. Separate implementation from future improvements
+
+Frontend rules that must always be followed:
+- Use reusable components whenever possible
+- Lists must support loading, empty state, error state, pagination, and sorting
+- Simple CRUD screens should prefer modal for create/edit
+- Destructive actions must require confirmation
+- Table behavior must be consistent across modules
+- Forms must have clear labels, visible validation, and predictable actions
+- Keep the UI clean and operational, avoiding unnecessary visual clutter
+- Respect existing theme, spacing, and component patterns
+- Maintain consistency with the app shell, navigation, buttons, tables, and modals
+
+API integration rules that must always be followed:
+- Never assume API behavior without checking
+- Follow the backend pagination pattern exactly
+- Sorting must respect the API contract already defined by the backend
+- Do not split sort and direction if the backend expects a single sort parameter
+- Preserve field names, query params, and response mapping based on the real contract
+
+Specific product rules for MeuFluxo:
+- MeuFluxo is a personal finance app, not a generic ERP
+- Prioritize clarity, speed, and usability
+- Categories and subcategories must follow the hierarchical approach already decided for the project
+- Avoid creating separate flows for concepts that should remain visually connected
+- Dashboard, lists, and CRUDs must feel part of the same product language
+
+What you must avoid:
+- Creating duplicate components
+- Breaking pagination or sorting behavior
+- Changing API integration contracts without confirmation in code
+- Mixing multiple unrelated refactors in one task
+- Moving too far beyond the requested scope
+- Rewriting large parts of the UI when a focused adjustment is enough
+
+When reviewing or implementing:
+- Explain briefly what will be changed
+- Mention impacted files
+- Point out risks if any
+- Keep future suggestions separate from the requested scope
+
+Strict mode:
+If the user says "use strict mode", then:
+- follow existing project patterns exactly
+- do not propose alternative architectures
+- do not refactor outside the requested scope
+- prioritize stability over improvement

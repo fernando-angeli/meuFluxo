@@ -156,28 +156,37 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   /** Bootstrap: tenta POST /auth/refresh (cookie), depois GET /users/me. Token só em memória. */
   const loadSession = React.useCallback(async () => {
-    const refreshData = await refreshWithCredentials();
-    if (!refreshData?.accessToken) {
+    try {
+      const refreshData = await refreshWithCredentials();
+      if (!refreshData?.accessToken) {
+        authTokenRef.current = null;
+        setState({
+          ...initialSessionState,
+          authStatus: "unauthenticated",
+          loading: false,
+        });
+        return;
+      }
+
+      const token = buildTokenMeta(refreshData);
+      authTokenRef.current = token.accessToken;
+      setState({
+        authStatus: "authenticated_loading_session",
+        loading: true,
+        error: null,
+        token,
+        data: null,
+      });
+
+      await refreshWithToken(token, null, "restore");
+    } catch {
       authTokenRef.current = null;
       setState({
         ...initialSessionState,
         authStatus: "unauthenticated",
         loading: false,
       });
-      return;
     }
-
-    const token = buildTokenMeta(refreshData);
-    authTokenRef.current = token.accessToken;
-    setState({
-      authStatus: "authenticated_loading_session",
-      loading: true,
-      error: null,
-      token,
-      data: null,
-    });
-
-    await refreshWithToken(token, null, "restore");
   }, [handleSessionExpired, refreshWithToken]);
 
   const doRefresh = React.useCallback(async (): Promise<string | null> => {

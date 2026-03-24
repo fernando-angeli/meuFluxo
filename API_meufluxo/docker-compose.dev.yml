@@ -1,0 +1,51 @@
+services:
+  meufluxo_db_dev:
+    image: postgres:16-alpine
+    profiles: ["dev"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_DEV_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    container_name: ${DB_DEV_NAME}
+    environment:
+      POSTGRES_DB: ${DB_DEV_NAME}
+      POSTGRES_USER: ${DB_DEV_USER}
+      POSTGRES_PASSWORD: ${DB_DEV_PASSWORD}
+    ports:
+      - "${DB_DEV_PORT}:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  api_dev:
+    image: maven:3.9.12-eclipse-temurin-25-alpine
+    container_name: meufluxo_api_dev
+    profiles: ["dev"]
+    working_dir: /workspace
+    command: mvn spring-boot:run -Dspring-boot.run.profiles=dev
+    depends_on:
+      meufluxo_db_dev:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://meufluxo_db_dev:5432/${DB_DEV_NAME}
+      SPRING_DATASOURCE_USERNAME: ${DB_DEV_USER}
+      SPRING_DATASOURCE_PASSWORD: ${DB_DEV_PASSWORD}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      SERVER_PORT: ${SERVER_PORT:-8080}
+      LOG_DIR: /workspace/logs
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+    volumes:
+      - ./:/workspace
+      - maven_cache:/root/.m2
+      - ./logs:/workspace/logs
+    restart: no
+
+volumes:
+  postgres_dev_data:
+    name: meufluxo_postgres_dev_data
+  maven_cache:
+    name: meufluxo_maven_cache

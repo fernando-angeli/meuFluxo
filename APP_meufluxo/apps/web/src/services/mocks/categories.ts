@@ -1,28 +1,8 @@
-import type { Category, SubCategory } from "@meufluxo/types";
+import type { SubCategory } from "@meufluxo/types";
 
 const now = new Date().toISOString();
 
-export const mockCategories: Category[] = [
-  {
-    id: "cat_1",
-    name: "Salário",
-    movementType: "INCOME",
-    meta: { createdAt: now, updatedAt: now, active: true },
-  },
-  {
-    id: "cat_2",
-    name: "Alimentação",
-    movementType: "EXPENSE",
-    meta: { createdAt: now, updatedAt: now, active: true },
-  },
-  {
-    id: "cat_3",
-    name: "Ajustes",
-    movementType: "EXPENSE",
-    meta: { createdAt: now, updatedAt: now, active: true },
-  },
-];
-
+/** Mantido para telas que ainda não integram subcategorias na API. */
 export const mockSubCategories: SubCategory[] = [
   {
     id: "sub_1",

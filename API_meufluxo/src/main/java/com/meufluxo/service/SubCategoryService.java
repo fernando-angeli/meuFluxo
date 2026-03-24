@@ -53,6 +53,19 @@ public class SubCategoryService extends BaseUserService {
         return PageResponse.toPageResponse(responsePage);
     }
 
+    /**
+     * Lista subcategorias apenas da categoria informada (mesmo workspace).
+     */
+    public PageResponse<SubCategoryResponse> findAllByCategory(Long categoryId, Pageable pageable) {
+        categoryService.findByIdOrThrow(categoryId);
+        Page<SubCategory> page = subCategoryRepository.findByCategory_IdAndWorkspaceId(
+                categoryId,
+                getCurrentWorkspaceId(),
+                pageable
+        );
+        return PageResponse.toPageResponse(page.map(subCategoryMapper::toResponse));
+    }
+
     @Transactional
     public SubCategoryResponse create(SubCategoryRequest request) {
         if (subCategoryRepository.existsByNameAndCategoryIdAndWorkspaceId(request.name(), request.categoryId(), getCurrentWorkspaceId())) {

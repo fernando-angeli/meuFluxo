@@ -2,19 +2,19 @@
 
 import { Pencil, Trash2 } from "lucide-react";
 
-import type { Account } from "@meufluxo/types";
+import type { SubCategory } from "@meufluxo/types";
 
 import { RowActionButtons, type RowActionButtonItem } from "@/components/patterns";
 
-export function AccountRowActions({
-  account,
+export function SubcategoryRowActions({
+  subcategory,
   onEdit,
   onDelete,
   isDeleting,
 }: {
-  account: Account;
-  onEdit: (account: Account) => void;
-  onDelete: (account: Account) => void;
+  subcategory: SubCategory;
+  onEdit: (s: SubCategory) => void;
+  onDelete: (s: SubCategory) => void;
   isDeleting?: boolean;
 }) {
   const actions: RowActionButtonItem[] = [
@@ -22,18 +22,18 @@ export function AccountRowActions({
       key: "edit",
       label: "Editar",
       icon: Pencil,
-      ariaLabel: "Editar conta",
-      onClick: () => onEdit(account),
+      ariaLabel: "Editar subcategoria",
+      onClick: () => onEdit(subcategory),
     },
     {
       key: "delete",
       label: "Excluir",
       icon: Trash2,
-      ariaLabel: "Excluir conta",
+      ariaLabel: "Excluir subcategoria",
       disabled: isDeleting,
-      onClick: () => onDelete(account),
+      onClick: () => onDelete(subcategory),
     },
   ];
 
-  return <RowActionButtons actions={actions} className="gap-2" />;
+  return <RowActionButtons actions={actions} density="compact" />;
 }

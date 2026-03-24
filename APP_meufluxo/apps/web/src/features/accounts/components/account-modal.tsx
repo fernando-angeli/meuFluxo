@@ -17,34 +17,17 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
 import { FormFieldError } from "@/components/form";
+import { FormDialogShell } from "@/components/patterns";
 import { useToast } from "@/components/toast";
-import {
-  extractApiError,
-  getInputErrorClass,
-  mapApiFieldErrors,
-} from "@/lib/api-error";
+import { extractApiError, getInputErrorClass, mapApiFieldErrors } from "@/lib/api-error";
 import { cn } from "@/lib/utils";
-import {
-  useCreateAccount,
-  useUpdateAccount,
-} from "@/hooks/api";
+import { useCreateAccount, useUpdateAccount } from "@/hooks/api";
 
-const ALLOWED_ACCOUNT_TYPES: AccountType[] = [
-  "CHECKING",
-  "CASH",
-  "INVESTMENT",
-];
+const ALLOWED_ACCOUNT_TYPES: AccountType[] = ["CHECKING", "CASH", "INVESTMENT"];
 
 const accountTypeEnum = z.enum([
   "CHECKING",
@@ -58,9 +41,7 @@ const accountTypeEnum = z.enum([
 const accountModalSchema = z.object({
   name: z.string().min(3, "Nome deve ter pelo menos 3 caracteres."),
   accountType: accountTypeEnum,
-  initialBalance: z
-    .number()
-    .min(0, "Saldo inicial não pode ser negativo."),
+  initialBalance: z.number().min(0, "Saldo inicial não pode ser negativo."),
   active: z.boolean(),
 });
 
@@ -187,8 +168,7 @@ export function AccountModal({
         currency,
       }).formatToParts(0);
       return (
-        parts.find((p) => p.type === "currency")?.value ??
-        (currency === "BRL" ? "R$" : currency)
+        parts.find((p) => p.type === "currency")?.value ?? (currency === "BRL" ? "R$" : currency)
       );
     } catch {
       return currency === "BRL" ? "R$" : currency;
@@ -196,154 +176,125 @@ export function AccountModal({
   }, [currency]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl" showClose>
-        <DialogHeader>
-          <DialogTitle>{isEdit ? "Editar conta" : "Nova conta"}</DialogTitle>
-          <DialogDescription>Atualize os dados principais da conta.</DialogDescription>
-        </DialogHeader>
+    <FormDialogShell
+      open={open}
+      onOpenChange={onOpenChange}
+      title={isEdit ? "Editar conta" : "Nova conta"}
+      description="Atualize os dados principais da conta."
+      generalError={generalError}
+      contentClassName="max-w-xl"
+    >
+      <form className="space-y-4" onSubmit={onSubmit}>
+        <div className="space-y-2">
+          <Label htmlFor="name">Nome</Label>
+          <Input
+            id="name"
+            placeholder="Ex.: Nubank"
+            className={cn(
+              getInputErrorClass(fieldErrors.name ?? form.formState.errors.name?.message),
+            )}
+            {...form.register("name", {
+              onChange: () => clearFieldError("name"),
+            })}
+          />
+          <FormFieldError message={fieldErrors.name ?? form.formState.errors.name?.message} />
+        </div>
 
-        <form className="space-y-4" onSubmit={onSubmit}>
-          {generalError ? (
-            <div
-              className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-              role="alert"
-            >
-              {generalError}
-            </div>
-          ) : null}
-
+        <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="name">Nome</Label>
-            <Input
-              id="name"
-              placeholder="Ex.: Nubank"
-              className={cn(
-                getInputErrorClass(
-                  fieldErrors.name ?? form.formState.errors.name?.message,
-                ),
-              )}
-              {...form.register("name", {
-                onChange: () => clearFieldError("name"),
-              })}
-            />
-            <FormFieldError
-              message={
-                fieldErrors.name ?? form.formState.errors.name?.message
-              }
-            />
+            <Label>Tipo</Label>
+            <Select
+              value={currentAccountType}
+              disabled={isEdit || isSubmitting}
+              onValueChange={(value) => {
+                form.setValue("accountType", value as AccountType, {
+                  shouldDirty: true,
+                });
+                clearFieldError("accountType");
+              }}
+            >
+              <SelectTrigger className={cn("h-10", getInputErrorClass(fieldErrors.accountType))}>
+                <SelectValue placeholder="Selecione o tipo" />
+              </SelectTrigger>
+              <SelectContent>
+                {options.map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {getAccountTypeLabel(t)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FormFieldError message={fieldErrors.accountType} />
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Tipo</Label>
-              <Select
-                value={currentAccountType}
+          <div className="space-y-2">
+            <Label htmlFor="initialBalance">Saldo inicial</Label>
+            <div className="relative">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                {currencySymbol}
+              </span>
+              <Input
+                id="initialBalance"
+                type="number"
+                step="0.01"
                 disabled={isEdit || isSubmitting}
-                onValueChange={(value) => {
-                  form.setValue("accountType", value as AccountType, {
-                    shouldDirty: true,
-                  });
-                  clearFieldError("accountType");
-                }}
-              >
-                <SelectTrigger
-                  className={cn(
-                    "h-10",
-                    getInputErrorClass(fieldErrors.accountType),
-                  )}
-                >
-                  <SelectValue placeholder="Selecione o tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  {options.map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {getAccountTypeLabel(t)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormFieldError message={fieldErrors.accountType} />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="initialBalance">Saldo inicial</Label>
-              <div className="relative">
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                  {currencySymbol}
-                </span>
-                <Input
-                  id="initialBalance"
-                  type="number"
-                  step="0.01"
-                  disabled={isEdit || isSubmitting}
-                  placeholder="0,00"
-                  className={cn(
-                    "pl-10 h-10",
-                    getInputErrorClass(
-                      fieldErrors.initialBalance ??
-                        form.formState.errors.initialBalance?.message,
-                    ),
-                  )}
-                  {...form.register("initialBalance", {
-                    valueAsNumber: true,
-                    onChange: () => clearFieldError("initialBalance"),
-                  })}
-                />
-              </div>
-              <FormFieldError
-                message={
-                  fieldErrors.initialBalance ??
-                  form.formState.errors.initialBalance?.message
-                }
+                placeholder="0,00"
+                className={cn(
+                  "pl-10 h-10",
+                  getInputErrorClass(
+                    fieldErrors.initialBalance ?? form.formState.errors.initialBalance?.message,
+                  ),
+                )}
+                {...form.register("initialBalance", {
+                  valueAsNumber: true,
+                  onChange: () => clearFieldError("initialBalance"),
+                })}
               />
             </div>
+            <FormFieldError
+              message={fieldErrors.initialBalance ?? form.formState.errors.initialBalance?.message}
+            />
           </div>
+        </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between gap-4">
-              <div className="space-y-1">
-                <Label>Conta ativa</Label>
-                <p className="text-xs text-muted-foreground">
-                  {active
-                    ? "A conta está visível nas seleções."
-                    : "A inativação não remove movimentações já cadastradas."}
-                </p>
-              </div>
-
-              <Switch
-                checked={active}
-                disabled={isSubmitting}
-                onCheckedChange={(checked) => {
-                  form.setValue("active", checked);
-                  clearFieldError("active");
-                }}
-                aria-label="Conta ativa"
-              />
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-4">
+            <div className="space-y-1">
+              <Label>Conta ativa</Label>
+              <p className="text-xs text-muted-foreground">
+                {active
+                  ? "A conta está visível nas seleções."
+                  : "A inativação não remove movimentações já cadastradas."}
+              </p>
             </div>
-            <FormFieldError message={fieldErrors.active} />
-          </div>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
+            <Switch
+              checked={active}
               disabled={isSubmitting}
-            >
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting
-                ? "Salvando..."
-                : isEdit
-                  ? "Salvar alterações"
-                  : "Criar conta"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+              onCheckedChange={(checked) => {
+                form.setValue("active", checked);
+                clearFieldError("active");
+              }}
+              aria-label="Conta ativa"
+            />
+          </div>
+          <FormFieldError message={fieldErrors.active} />
+        </div>
+
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isSubmitting}
+          >
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Salvando..." : isEdit ? "Salvar alterações" : "Criar conta"}
+          </Button>
+        </DialogFooter>
+      </form>
+    </FormDialogShell>
   );
 }
-

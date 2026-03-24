@@ -8,14 +8,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { mockAccounts } from "@/features/accounts/mocks/accounts";
 import { mockCashMovements } from "@/features/cash-movements/mocks/cash-movements";
-import { mockCategories } from "@/features/categories/mocks/categories";
 import { formatCurrency } from "@meufluxo/utils";
 import { useTranslation } from "@/lib/i18n";
+import { useCategories } from "@/hooks/api";
 
 export default function CashMovementsPage() {
   const { t } = useTranslation();
+  const { data: categories = [] } = useCategories();
   const accountsById = new Map(mockAccounts.map((a) => [a.id, a]));
-  const categoriesById = new Map(mockCategories.map((c) => [c.id, c]));
+  const categoriesById = new Map(categories.map((c) => [c.id, c]));
 
   return (
     <div className="space-y-6">

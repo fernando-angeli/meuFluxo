@@ -4,6 +4,7 @@ import type {
   WorkspaceApi,
   AccountsApi,
   CategoriesApi,
+  SubCategoriesApi,
   CashMovementsApi,
   ScheduledMovementsApi,
   CreditCardsApi,
@@ -19,6 +20,7 @@ import {
   createWorkspaceApi,
   createAccountsApi,
   createCategoriesApi,
+  createSubCategoriesApi,
   createCashMovementsApi,
   createScheduledMovementsApi,
   createCreditCardsApi,
@@ -33,6 +35,7 @@ export type MeuFluxoApi = {
   workspace: WorkspaceApi;
   accounts: AccountsApi;
   categories: CategoriesApi;
+  subCategories: SubCategoriesApi;
   cashMovements: CashMovementsApi;
   scheduledMovements: ScheduledMovementsApi;
   creditCards: CreditCardsApi;
@@ -48,6 +51,7 @@ export function createMeuFluxoApi(http: HttpClient): MeuFluxoApi {
     workspace: createWorkspaceApi(http),
     accounts: createAccountsApi(http),
     categories: createCategoriesApi(http),
+    subCategories: createSubCategoriesApi(http),
     cashMovements: createCashMovementsApi(http),
     scheduledMovements: createScheduledMovementsApi(http),
     creditCards: createCreditCardsApi(http),
