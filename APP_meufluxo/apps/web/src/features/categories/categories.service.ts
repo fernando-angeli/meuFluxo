@@ -75,3 +75,8 @@ export async function updateCategory(
 export async function deleteCategory(id: string): Promise<void> {
   await api.categories.deleteById(id);
 }
+
+export async function fetchCategoryById(id: string): Promise<Category> {
+  const raw = await api.categories.getById(id);
+  return normalizeCategoryFromApi(raw);
+}

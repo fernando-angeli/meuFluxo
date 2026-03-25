@@ -8,17 +8,21 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
+import { DetailsDrawer } from "@/components/details";
+import { CategoryDetails, CategoriesTable } from "@/components/categories";
 import { useAuthOptional } from "@/hooks/useAuth";
-import { categoriesQueryKey, useDeleteCategory } from "@/hooks/api";
+import {
+  categoriesQueryKey,
+  useCategoryDetails,
+  useDeleteCategory,
+} from "@/hooks/api";
 import { useTranslation } from "@/lib/i18n";
 import { useToast } from "@/components/toast";
 import { extractApiError } from "@/lib/api-error";
 import { getQueryErrorMessage } from "@/lib/query-error";
 import type { Category } from "@meufluxo/types";
 import { CategoryFormModal } from "@/features/categories/components/category-form-modal";
-import { CategorySubcategoriesPanel } from "@/features/categories/components/category-subcategories-panel";
 import { CategoryRowActions } from "@/features/categories/components/category-row-actions";
-import { ExpandableDataTable } from "@/components/data-table/ExpandableDataTable";
 import { getCategoriesTableColumns } from "@/features/categories/categories.columns";
 import { fetchCategoriesPage } from "@/features/categories/categories.service";
 import { useServerDataTable } from "@/hooks/useServerDataTable";
@@ -30,13 +34,16 @@ export default function CategoriesPage() {
 
   const [modalOpen, setModalOpen] = React.useState(false);
   const [editingCategory, setEditingCategory] = React.useState<Category | null>(null);
+  const [detailsOpen, setDetailsOpen] = React.useState(false);
+  const [selectedCategoryId, setSelectedCategoryId] = React.useState<string | null>(null);
+  const [selectedCategoryPreview, setSelectedCategoryPreview] =
+    React.useState<Category | null>(null);
 
   const [deleteOpen, setDeleteOpen] = React.useState(false);
   const [deletingCategory, setDeletingCategory] = React.useState<Category | null>(null);
 
-  const [expandedRowKey, setExpandedRowKey] = React.useState<string | null>(null);
-
   const deleteMutation = useDeleteCategory();
+  const categoryDetailsQuery = useCategoryDetails(selectedCategoryId, detailsOpen);
 
   const [search, setSearch] = React.useState("");
   const normalizedSearch = search.trim().toLowerCase();
@@ -75,20 +82,37 @@ export default function CategoriesPage() {
     setModalOpen(true);
   }, []);
 
-  const toggleExpand = React.useCallback((cat: Category) => {
-    setExpandedRowKey((prev) => (prev === cat.id ? null : cat.id));
+  const openDetails = React.useCallback((category: Category) => {
+    setSelectedCategoryId(category.id);
+    setSelectedCategoryPreview(category);
+    setDetailsOpen(true);
   }, []);
+
+  const closeDetails = React.useCallback(() => {
+    setDetailsOpen(false);
+  }, []);
+
+  const openEditModal = React.useCallback((category: Category) => {
+    setDetailsOpen(false);
+    setEditingCategory(category);
+    setModalOpen(true);
+  }, []);
+
+  const detailsErrorMessage = categoryDetailsQuery.isError
+    ? getQueryErrorMessage(
+        categoryDetailsQuery.error,
+        "Não foi possível carregar os detalhes da categoria.",
+      )
+    : null;
+
+  const selectedCategoryForEdit: Category | null =
+    categoryDetailsQuery.data ?? selectedCategoryPreview;
 
   const renderActions = React.useCallback(
     (category: Category) => (
       <CategoryRowActions
         category={category}
-        expanded={expandedRowKey === category.id}
-        onToggleExpand={toggleExpand}
-        onEdit={(c) => {
-          setEditingCategory(c);
-          setModalOpen(true);
-        }}
+        onEdit={(c) => openEditModal(c)}
         onDelete={(c) => {
           setDeletingCategory(c);
           setDeleteOpen(true);
@@ -96,7 +120,7 @@ export default function CategoriesPage() {
         isDeleting={deleteMutation.isPending && deletingCategory?.id === category.id}
       />
     ),
-    [deleteMutation.isPending, deletingCategory?.id, expandedRowKey, toggleExpand],
+    [deleteMutation.isPending, deletingCategory?.id, openEditModal],
   );
 
   const columns = React.useMemo(
@@ -133,7 +157,7 @@ export default function CategoriesPage() {
           </CardHeader>
 
           <CardContent className="space-y-4">
-            <ExpandableDataTable
+            <CategoriesTable
               columns={columns}
               data={filteredCategories}
               loading={categoriesTable.pageResponseQuery.isLoading}
@@ -146,20 +170,46 @@ export default function CategoriesPage() {
               onSortChange={categoriesTable.onSortChange}
               onPageChange={categoriesTable.onPageChange}
               onPageSizeChange={categoriesTable.onPageSizeChange}
-              onRowClick={(row) => {
-                setEditingCategory(row);
-                setModalOpen(true);
-              }}
-              getRowKey={(c) => c.id}
-              expandedRowKey={expandedRowKey}
-              renderExpandedRow={(row) => <CategorySubcategoriesPanel category={row} />}
-              emptyTitle="Nenhuma categoria encontrada"
-              emptyDescription="Nenhuma categoria cadastrada para este workspace."
-              pageSizeOptions={[10, 20, 50]}
+              onRowClick={openDetails}
             />
           </CardContent>
         </Card>
       </div>
+
+      <DetailsDrawer
+        isOpen={detailsOpen}
+        onClose={closeDetails}
+        title={
+          categoryDetailsQuery.data?.name ??
+          selectedCategoryPreview?.name ??
+          "Detalhes da categoria"
+        }
+        description="Visualize os dados da categoria e as subcategorias vinculadas."
+        widthClassName="w-full sm:max-w-2xl"
+        footer={
+          <div className="flex items-center justify-end gap-2">
+            <Button type="button" variant="outline" onClick={closeDetails}>
+              Fechar
+            </Button>
+            <Button
+              type="button"
+              disabled={!selectedCategoryForEdit}
+              onClick={() => {
+                if (!selectedCategoryForEdit) return;
+                openEditModal(selectedCategoryForEdit);
+              }}
+            >
+              Editar categoria
+            </Button>
+          </div>
+        }
+      >
+        <CategoryDetails
+          category={categoryDetailsQuery.data ?? null}
+          loading={categoryDetailsQuery.isLoading || categoryDetailsQuery.isFetching}
+          error={detailsErrorMessage}
+        />
+      </DetailsDrawer>
 
       <CategoryFormModal
         open={modalOpen}
@@ -186,6 +236,11 @@ export default function CategoriesPage() {
             await deleteMutation.mutateAsync(deletingCategory.id);
             success("Categoria excluída com sucesso");
             setDeleteOpen(false);
+            if (selectedCategoryId === deletingCategory.id) {
+              setSelectedCategoryId(null);
+              setSelectedCategoryPreview(null);
+              setDetailsOpen(false);
+            }
           } catch (err) {
             const apiErr = extractApiError(err);
             error(apiErr?.detail ?? "Não foi possível excluir a categoria");

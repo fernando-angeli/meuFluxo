@@ -62,6 +62,7 @@ export function SubcategoryFormModal({
     resolver: zodResolver(subcategoryFormSchema),
     defaultValues: {
       name: "",
+      description: "",
       active: true,
     },
   });
@@ -77,11 +78,13 @@ export function SubcategoryFormModal({
     if (subcategory) {
       form.reset({
         name: subcategory.name ?? "",
+        description: subcategory.description ?? "",
         active: !!subcategory.meta.active,
       });
     } else {
       form.reset({
         name: "",
+        description: "",
         active: true,
       });
     }
@@ -93,12 +96,14 @@ export function SubcategoryFormModal({
     setGeneralError(null);
 
     try {
+      const description = (values.description ?? "").trim();
       if (isEdit) {
         await updateMutation.mutateAsync({
           id: subcategory!.id,
           request: {
             name: values.name.trim(),
             active: values.active,
+            description,
           },
         });
         success("Subcategoria atualizada com sucesso");
@@ -106,6 +111,7 @@ export function SubcategoryFormModal({
         await createMutation.mutateAsync({
           name: values.name.trim(),
           categoryId: Number(parentCategory.id),
+          ...(description ? { description } : {}),
         });
         success("Subcategoria criada com sucesso");
       }
@@ -165,6 +171,30 @@ export function SubcategoryFormModal({
           />
           <FormFieldError
             message={fieldErrors.name ?? form.formState.errors.name?.message}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="subcat-description">Descrição</Label>
+          <textarea
+            id="subcat-description"
+            rows={3}
+            placeholder="Opcional"
+            autoComplete="off"
+            className={cn(
+              "flex min-h-[72px] w-full resize-y rounded-lg border bg-input px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
+              getInputErrorClass(
+                fieldErrors.description ?? form.formState.errors.description?.message,
+              ),
+            )}
+            {...form.register("description", {
+              onChange: () => clearFieldError("description"),
+            })}
+          />
+          <FormFieldError
+            message={
+              fieldErrors.description ?? form.formState.errors.description?.message
+            }
           />
         </div>
 

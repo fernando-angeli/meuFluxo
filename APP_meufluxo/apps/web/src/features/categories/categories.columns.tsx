@@ -69,7 +69,7 @@ export function getCategoriesTableColumns({
       key: "actions",
       title: "Ações",
       align: "right",
-      width: 132,
+      width: 96,
       cellClassName: "text-right",
       render: (c) => renderActions(c),
     },

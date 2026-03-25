@@ -13,6 +13,7 @@ import {
   updateSubcategory,
 } from "@/features/categories/subcategories.service";
 
+import { categoryDetailsQueryKey } from "./use-category-details";
 import { categoriesQueryKey } from "./use-categories";
 
 export function useCreateSubcategory() {
@@ -23,6 +24,7 @@ export function useCreateSubcategory() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["subcategories"] });
       await queryClient.invalidateQueries({ queryKey: categoriesQueryKey });
+      await queryClient.invalidateQueries({ queryKey: categoryDetailsQueryKey });
     },
   });
 }
@@ -36,6 +38,7 @@ export function useUpdateSubcategory() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["subcategories"] });
       await queryClient.invalidateQueries({ queryKey: categoriesQueryKey });
+      await queryClient.invalidateQueries({ queryKey: categoryDetailsQueryKey });
     },
   });
 }
@@ -48,6 +51,7 @@ export function useDeleteSubcategory() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["subcategories"] });
       await queryClient.invalidateQueries({ queryKey: categoriesQueryKey });
+      await queryClient.invalidateQueries({ queryKey: categoryDetailsQueryKey });
     },
   });
 }

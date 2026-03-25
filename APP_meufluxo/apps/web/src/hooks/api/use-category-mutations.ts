@@ -13,6 +13,7 @@ import {
   updateCategory,
 } from "@/features/categories/categories.service";
 
+import { categoryDetailsQueryKey } from "./use-category-details";
 import { categoriesQueryKey } from "./use-categories";
 
 export function useCreateCategory() {
@@ -22,6 +23,7 @@ export function useCreateCategory() {
     mutationFn: (request: CategoryCreateRequest) => createCategory(request),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: categoriesQueryKey });
+      await queryClient.invalidateQueries({ queryKey: categoryDetailsQueryKey });
       await queryClient.invalidateQueries({ queryKey: ["subcategories"] });
     },
   });
@@ -35,6 +37,7 @@ export function useUpdateCategory() {
       updateCategory(params.id, params.request),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: categoriesQueryKey });
+      await queryClient.invalidateQueries({ queryKey: categoryDetailsQueryKey });
       await queryClient.invalidateQueries({ queryKey: ["subcategories"] });
     },
   });
@@ -47,6 +50,7 @@ export function useDeleteCategory() {
     mutationFn: (id: string) => deleteCategory(id),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: categoriesQueryKey });
+      await queryClient.invalidateQueries({ queryKey: categoryDetailsQueryKey });
       await queryClient.invalidateQueries({ queryKey: ["subcategories"] });
     },
   });

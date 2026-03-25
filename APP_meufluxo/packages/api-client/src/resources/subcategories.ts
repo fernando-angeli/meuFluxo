@@ -14,12 +14,14 @@ export type SubCategoryCreateRequest = {
   name: string;
   /** ID da categoria pai (numérico na API). */
   categoryId: number;
+  description?: string | null;
 };
 
 export type SubCategoryUpdateRequest = {
   name: string;
   categoryId?: number | null;
   active?: boolean | null;
+  description?: string | null;
 };
 
 export type SubCategoriesApi = {

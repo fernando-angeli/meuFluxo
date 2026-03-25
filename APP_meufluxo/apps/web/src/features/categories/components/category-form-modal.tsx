@@ -67,6 +67,7 @@ export function CategoryFormModal({ open, onOpenChange, category }: CategoryForm
     resolver: zodResolver(categoryFormSchema),
     defaultValues: {
       name: "",
+      description: "",
       movementType: "EXPENSE",
       active: true,
     },
@@ -84,12 +85,14 @@ export function CategoryFormModal({ open, onOpenChange, category }: CategoryForm
     if (category) {
       form.reset({
         name: category.name ?? "",
+        description: category.description ?? "",
         movementType: category.movementType as MovementType,
         active: !!category.meta.active,
       });
     } else {
       form.reset({
         name: "",
+        description: "",
         movementType: "EXPENSE",
         active: true,
       });
@@ -102,21 +105,31 @@ export function CategoryFormModal({ open, onOpenChange, category }: CategoryForm
     setGeneralError(null);
 
     try {
+      const description = (values.description ?? "").trim();
       if (isEdit) {
         await updateMutation.mutateAsync({
           id: category!.id,
-          request: { name: values.name.trim(), active: values.active },
+          request: {
+            name: values.name.trim(),
+            active: values.active,
+            description,
+          },
         });
         success("Categoria atualizada com sucesso");
       } else {
         const created = await createMutation.mutateAsync({
           name: values.name.trim(),
           movementType: values.movementType,
+          ...(description ? { description } : {}),
         });
         if (!values.active) {
           await updateMutation.mutateAsync({
             id: String(created.id),
-            request: { name: values.name.trim(), active: values.active },
+            request: {
+              name: values.name.trim(),
+              active: values.active,
+              description,
+            },
           });
         }
         success("Categoria criada com sucesso");
@@ -144,8 +157,8 @@ export function CategoryFormModal({ open, onOpenChange, category }: CategoryForm
       title={isEdit ? "Editar categoria" : "Nova categoria"}
       description={
         isEdit
-          ? "Altere o nome ou o status da categoria. O tipo de movimentação não pode ser alterado."
-          : "Defina nome e tipo (receita ou despesa). As subcategorias são geridas ao expandir a linha na lista."
+          ? "Altere nome, descrição ou status. O tipo de movimentação não pode ser alterado."
+          : "Defina nome, tipo (receita ou despesa) e, se quiser, uma descrição. As subcategorias ficam nos detalhes da categoria."
       }
       generalError={generalError}
       contentClassName="max-w-xl"
@@ -168,6 +181,30 @@ export function CategoryFormModal({ open, onOpenChange, category }: CategoryForm
           />
           <FormFieldError
             message={fieldErrors.name ?? form.formState.errors.name?.message}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="category-form-description">Descrição</Label>
+          <textarea
+            id="category-form-description"
+            rows={3}
+            placeholder="Opcional — texto livre sobre a categoria"
+            autoComplete="off"
+            className={cn(
+              "flex min-h-[80px] w-full resize-y rounded-lg border bg-input px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
+              getInputErrorClass(
+                fieldErrors.description ?? form.formState.errors.description?.message,
+              ),
+            )}
+            {...form.register("description", {
+              onChange: () => clearFieldError("description"),
+            })}
+          />
+          <FormFieldError
+            message={
+              fieldErrors.description ?? form.formState.errors.description?.message
+            }
           />
         </div>
 
