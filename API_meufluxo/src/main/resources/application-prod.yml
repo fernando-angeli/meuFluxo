@@ -10,3 +10,8 @@ spring:
 
   flyway:
     enabled: true
+
+security:
+  refresh-token:
+    secure: ${REFRESH_TOKEN_COOKIE_SECURE:true}
+    same-site: ${REFRESH_TOKEN_COOKIE_SAME_SITE:None}
