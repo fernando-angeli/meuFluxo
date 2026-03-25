@@ -98,7 +98,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       authStatus: "session_expired",
       loading: false,
     });
-    router.replace("/login");
+    // Não redireciona aqui: o `ProtectedRoute` observa `isBootstrapping`/`isAuthenticated`
+    // e decide a navegação apenas quando a checagem inicial terminar.
   }, [router]);
 
   const refreshWithToken = React.useCallback(
