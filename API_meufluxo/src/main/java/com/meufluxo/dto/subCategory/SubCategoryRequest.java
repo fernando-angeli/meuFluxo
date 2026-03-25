@@ -10,6 +10,9 @@ public record SubCategoryRequest(
         String name,
 
         @NotNull(message = "A categoria é obrigatória")
-        Long categoryId
+        Long categoryId,
+
+        @Size(max = 1000, message = "A descrição pode ter no máximo 1000 caracteres")
+        String description
 ) {
 }

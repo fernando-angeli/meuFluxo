@@ -7,13 +7,10 @@ import com.meufluxo.dto.creditCard.CreditCardResponse;
 import com.meufluxo.dto.subCategory.SubCategoryResponse;
 import com.meufluxo.dto.user.AuthenticatedUserResponse;
 import com.meufluxo.mapper.AccountMapper;
-import com.meufluxo.mapper.CategoryMapper;
 import com.meufluxo.mapper.CreditCardMapper;
 import com.meufluxo.mapper.SubCategoryMapper;
 import com.meufluxo.model.Account;
-import com.meufluxo.model.Category;
 import com.meufluxo.model.CreditCard;
-import com.meufluxo.model.SubCategory;
 import com.meufluxo.model.workspaceAndUsers.Workspace;
 import com.meufluxo.repository.AccountRepository;
 import com.meufluxo.repository.CategoryRepository;
@@ -30,10 +27,10 @@ public class BootstrapService {
     private final AuthService authService;
     private final CurrentUserService currentUserService;
     private final CategoryRepository categoryRepository;
+    private final CategoryService categoryService;
     private final SubCategoryRepository subCategoryRepository;
     private final AccountRepository accountRepository;
     private final CreditCardRepository creditCardRepository;
-    private final CategoryMapper categoryMapper;
     private final SubCategoryMapper subCategoryMapper;
     private final AccountMapper accountMapper;
     private final CreditCardMapper creditCardMapper;
@@ -43,10 +40,10 @@ public class BootstrapService {
             AuthService authService,
             CurrentUserService currentUserService,
             CategoryRepository categoryRepository,
+            CategoryService categoryService,
             SubCategoryRepository subCategoryRepository,
             AccountRepository accountRepository,
             CreditCardRepository creditCardRepository,
-            CategoryMapper categoryMapper,
             SubCategoryMapper subCategoryMapper,
             AccountMapper accountMapper,
             CreditCardMapper creditCardMapper,
@@ -55,10 +52,10 @@ public class BootstrapService {
         this.authService = authService;
         this.currentUserService = currentUserService;
         this.categoryRepository = categoryRepository;
+        this.categoryService = categoryService;
         this.subCategoryRepository = subCategoryRepository;
         this.accountRepository = accountRepository;
         this.creditCardRepository = creditCardRepository;
-        this.categoryMapper = categoryMapper;
         this.subCategoryMapper = subCategoryMapper;
         this.accountMapper = accountMapper;
         this.creditCardMapper = creditCardMapper;
@@ -72,7 +69,7 @@ public class BootstrapService {
         Long workspaceId = workspace.getId();
 
         List<CategoryResponse> categories = categoryRepository.findAllByWorkspaceIdOrderByIdAsc(workspaceId).stream()
-                .map(categoryMapper::toResponse)
+                .map(categoryService::toResponseWithSubCategoryCount)
                 .toList();
         List<SubCategoryResponse> subCategories = subCategoryRepository.findAllByWorkspaceIdOrderByIdAsc(workspaceId).stream()
                 .map(subCategoryMapper::toResponse)

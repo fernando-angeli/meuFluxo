@@ -8,7 +8,9 @@ public record CategoryResponse(
         Long id,
         String name,
         MovementType movementType,
-        BaseResponse meta
+        BaseResponse meta,
+        String description,
+        Long subCategoryCount
 
 ) {
 }
