@@ -28,4 +28,6 @@ public interface SubCategoryRepository extends JpaRepository<SubCategory, Long> 
 
     List<SubCategory> findAllByWorkspaceIdOrderByIdAsc(Long workspaceId);
 
+    long countByCategory_IdAndWorkspaceId(Long categoryId, Long workspaceId);
+
 }

@@ -44,12 +44,12 @@ public class CategoryService extends BaseUserService {
     public CategoryResponse findById(Long id) {
         Category category = categoryRepository.findByIdAndWorkspaceId(id, getCurrentWorkspaceId())
                 .orElseThrow(() -> new NotFoundException("Categoria não encontrada com ID: " + id));
-        return categoryMapper.toResponse(category);
+        return toResponseWithSubCategoryCount(category);
     }
 
     public PageResponse<CategoryResponse> findAll(Pageable pageable) {
         Page<Category> categories = categoryRepository.findAllByWorkspaceId(getCurrentWorkspaceId(), pageable);
-        Page<CategoryResponse> responsePage = categories.map(categoryMapper::toResponse);
+        Page<CategoryResponse> responsePage = categories.map(this::toResponseWithSubCategoryCount);
         return PageResponse.toPageResponse(responsePage);
     }
 
@@ -60,9 +60,10 @@ public class CategoryService extends BaseUserService {
         }
         Category newCategory = categoryMapper.toEntity(request);
         newCategory.setWorkspace(getCurrentWorkspace());
+        newCategory.setDescription(trimToNull(request.description()));
         newCategory = categoryRepository.save(newCategory);
         workspaceSyncStateService.incrementCategoriesVersion(getCurrentWorkspaceId());
-        return categoryMapper.toResponse(newCategory);
+        return toResponseWithSubCategoryCount(newCategory);
     }
 
     @Transactional
@@ -84,9 +85,12 @@ public class CategoryService extends BaseUserService {
         if (request.active() != null) {
             existingCategory.setActive(request.active());
         }
+        if (request.description() != null) {
+            existingCategory.setDescription(trimToNull(request.description()));
+        }
         existingCategory = categoryRepository.saveAndFlush(existingCategory);
         workspaceSyncStateService.incrementCategoriesVersion(getCurrentWorkspaceId());
-        return categoryMapper.toResponse(existingCategory);
+        return toResponseWithSubCategoryCount(existingCategory);
     }
 
     @Transactional
@@ -110,6 +114,30 @@ public class CategoryService extends BaseUserService {
     public void existsId(Long id) {
         categoryRepository.findByIdAndWorkspaceId(id, getCurrentWorkspaceId())
                 .orElseThrow(() -> new NotFoundException("Categoria não encontrada com ID: " + id));
+    }
+
+    /**
+     * Monta {@link CategoryResponse} com contagem real de subcategorias (workspace atual).
+     */
+    public CategoryResponse toResponseWithSubCategoryCount(Category category) {
+        CategoryResponse base = categoryMapper.toResponse(category);
+        long count = subCategoryRepository.countByCategory_IdAndWorkspaceId(category.getId(), getCurrentWorkspaceId());
+        return new CategoryResponse(
+                base.id(),
+                base.name(),
+                base.movementType(),
+                base.meta(),
+                base.description(),
+                count
+        );
+    }
+
+    private static String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
 }

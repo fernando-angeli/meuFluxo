@@ -22,6 +22,9 @@ public class SubCategory extends UserOwnedEntity {
     @Column(nullable = false)
     private String name;
 
+    @Column(length = 1000)
+    private String description;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "category_id", nullable = false)
     private Category category;

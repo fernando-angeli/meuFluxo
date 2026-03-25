@@ -12,6 +12,9 @@ public record CategoryRequest(
         String name,
 
         @NotNull(message = "O tipo de categoria é obrigatório")
-        MovementType movementType
+        MovementType movementType,
+
+        @Size(max = 1000, message = "A descrição pode ter no máximo 1000 caracteres")
+        String description
 ) {
 }

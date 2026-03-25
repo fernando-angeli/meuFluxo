@@ -14,6 +14,7 @@ public interface CategoryMapper {
     Category toEntity(CategoryRequest categoryCreateRequest);
 
     @Mapping(target = "meta", source = ".")
+    @Mapping(target = "subCategoryCount", ignore = true)
     CategoryResponse toResponse(Category category);
 
     BaseResponse toBaseResponse(Category category);

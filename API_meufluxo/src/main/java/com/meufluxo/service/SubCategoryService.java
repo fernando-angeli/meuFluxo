@@ -75,6 +75,7 @@ public class SubCategoryService extends BaseUserService {
         SubCategory newSubCategory = subCategoryMapper.toEntity(request);
         newSubCategory.setCategory(category);
         newSubCategory.setWorkspace(getCurrentWorkspace());
+        newSubCategory.setDescription(trimToNull(request.description()));
         newSubCategory = subCategoryRepository.save(newSubCategory);
         workspaceSyncStateService.incrementCategoriesVersion(getCurrentWorkspaceId());
         return subCategoryMapper.toResponse(newSubCategory);
@@ -115,6 +116,9 @@ public class SubCategoryService extends BaseUserService {
         if (request.active() != null) {
             existingSubCategory.setActive(request.active());
         }
+        if (request.description() != null) {
+            existingSubCategory.setDescription(trimToNull(request.description()));
+        }
         existingSubCategory = subCategoryRepository.saveAndFlush(existingSubCategory);
         workspaceSyncStateService.incrementCategoriesVersion(getCurrentWorkspaceId());
         return subCategoryMapper.toResponse(existingSubCategory);
@@ -138,6 +142,14 @@ public class SubCategoryService extends BaseUserService {
     public void existsId(Long id) {
         subCategoryRepository.findByIdAndWorkspaceId(id, getCurrentWorkspaceId())
                 .orElseThrow(() -> new NotFoundException("SubCategoria não encontrada com ID: " + id));
+    }
+
+    private static String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
 }

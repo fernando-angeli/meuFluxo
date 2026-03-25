@@ -9,7 +9,10 @@ public record CategoryUpdateRequest(
         @Size(min = 3, message = "O nome da categoria deve conter no mínimo 3 caracteres")
         String name,
 
-        Boolean active
+        Boolean active,
+
+        @Size(max = 1000, message = "A descrição pode ter no máximo 1000 caracteres")
+        String description
 
 ) {
 }

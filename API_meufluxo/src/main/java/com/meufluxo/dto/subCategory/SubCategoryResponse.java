@@ -7,6 +7,7 @@ import com.meufluxo.enums.MovementType;
 public record SubCategoryResponse(
         Long id,
         String name,
+        String description,
         MovementType movementType,
         CategorySimpleResponse category,
         BaseResponse meta
