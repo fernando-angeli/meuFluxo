@@ -40,3 +40,6 @@ out/
 .nuxt/
 .output/
 
+# ---- Turborepo (cache local; nao versionar) ----
+.turbo/
+

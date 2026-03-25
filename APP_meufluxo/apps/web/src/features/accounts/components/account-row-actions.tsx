@@ -1,11 +1,10 @@
 "use client";
 
-import type { Account } from "@meufluxo/types";
-import * as React from "react";
 import { Pencil, Trash2 } from "lucide-react";
 
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Button } from "@/components/ui/button";
+import type { Account } from "@meufluxo/types";
+
+import { RowActionButtons, type RowActionButtonItem } from "@/components/patterns";
 
 export function AccountRowActions({
   account,
@@ -18,45 +17,23 @@ export function AccountRowActions({
   onDelete: (account: Account) => void;
   isDeleting?: boolean;
 }) {
-  return (
-    <div className="flex items-center justify-end gap-2">
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            aria-label="Editar conta"
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit(account);
-            }}
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>Editar</TooltipContent>
-      </Tooltip>
+  const actions: RowActionButtonItem[] = [
+    {
+      key: "edit",
+      label: "Editar",
+      icon: Pencil,
+      ariaLabel: "Editar conta",
+      onClick: () => onEdit(account),
+    },
+    {
+      key: "delete",
+      label: "Excluir",
+      icon: Trash2,
+      ariaLabel: "Excluir conta",
+      disabled: isDeleting,
+      onClick: () => onDelete(account),
+    },
+  ];
 
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            aria-label="Excluir conta"
-            disabled={isDeleting}
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(account);
-            }}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>Excluir</TooltipContent>
-      </Tooltip>
-    </div>
-  );
+  return <RowActionButtons actions={actions} className="gap-2" />;
 }
-

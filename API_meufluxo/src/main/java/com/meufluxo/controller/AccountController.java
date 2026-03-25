@@ -1,6 +1,7 @@
 package com.meufluxo.controller;
 
 import com.meufluxo.common.dto.PageResponse;
+import com.meufluxo.dto.account.AccountDetailsResponse;
 import com.meufluxo.dto.account.AccountRequest;
 import com.meufluxo.dto.account.AccountResponse;
 import com.meufluxo.dto.account.AccountUpdateRequest;
@@ -42,16 +43,16 @@ public class AccountController {
             @ApiResponse(
                     responseCode = "200",
                     description = "Conta encontrada",
-                    content = @Content(schema = @Schema(implementation = AccountResponse.class))
+                    content = @Content(schema = @Schema(implementation = AccountDetailsResponse.class))
             ),
             @ApiResponse(responseCode = "404", description = "Conta não encontrada", content = @Content),
             @ApiResponse(responseCode = "400", description = "Parâmetros inválidos", content = @Content)
     })
-    public ResponseEntity<AccountResponse> getAccountById(
+    public ResponseEntity<AccountDetailsResponse> getAccountById(
             @Parameter(description = "ID da conta", example = "1", required = true)
             @PathVariable Long id
     ) {
-        AccountResponse response = service.getById(id);
+        AccountDetailsResponse response = service.getById(id);
         return ResponseEntity.ok(response);
     }
 

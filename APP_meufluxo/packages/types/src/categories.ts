@@ -17,6 +17,10 @@ export type Category = {
   name: string;
   movementType: MovementType;
   meta: EntityMeta;
+  /** Quando a API expuser descrição */
+  description?: string | null;
+  /** Quando a API expuser contagem de subcategorias */
+  subCategoryCount?: number | null;
 };
 
 export type SubCategory = {
@@ -25,4 +29,6 @@ export type SubCategory = {
   movementType: MovementType;
   category: CategorySummary;
   meta: EntityMeta;
+  /** Quando a API expuser descrição */
+  description?: string | null;
 };

@@ -68,15 +68,20 @@ public class SubCategoryController {
             @ApiResponse(responseCode = "400", description = "Parâmetros inválidos", content = @Content)
     })
     public PageResponse<SubCategoryResponse> getAllSubCategories(
+            @Parameter(description = "Filtrar pela categoria pai (opcional)")
+            @RequestParam(required = false) Long categoryId,
             @Parameter(description = "Paginação e ordenação (page, size, sort)")
             @PageableDefault(
                     page = 0,
                     size = 20,
                     sort = "name",
-                    direction = Sort.Direction.DESC
+                    direction = Sort.Direction.ASC
             )
             Pageable pageable
     ) {
+        if (categoryId != null) {
+            return service.findAllByCategory(categoryId, pageable);
+        }
         return service.findAll(pageable);
     }
 

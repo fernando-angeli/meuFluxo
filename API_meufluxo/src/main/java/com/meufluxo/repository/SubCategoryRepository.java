@@ -24,6 +24,8 @@ public interface SubCategoryRepository extends JpaRepository<SubCategory, Long> 
 
     Page<SubCategory> findAllByWorkspaceId(Long currentWorkspaceId, Pageable pageable);
 
+    Page<SubCategory> findByCategory_IdAndWorkspaceId(Long categoryId, Long workspaceId, Pageable pageable);
+
     List<SubCategory> findAllByWorkspaceIdOrderByIdAsc(Long workspaceId);
 
 }
