@@ -11,11 +11,15 @@ export type CategoriesListParams = Partial<Omit<PageQueryParams, "page" | "size"
 export type CategoryCreateRequest = {
   name: string;
   movementType: MovementType;
+  /** Opcional; omitir ou null para sem descrição. */
+  description?: string | null;
 };
 
 export type CategoryUpdateRequest = {
   name: string;
   active?: boolean | null;
+  /** Ausente = não alterar na API; string (inclusive vazia) para definir/limpar. */
+  description?: string | null;
 };
 
 export type CategoriesApi = {

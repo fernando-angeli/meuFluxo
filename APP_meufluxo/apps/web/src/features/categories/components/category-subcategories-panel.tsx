@@ -78,6 +78,13 @@ export function CategorySubcategoriesPanel({ category }: CategorySubcategoriesPa
         subtitle={
           <>
             Vinculadas a <span className="font-medium">{category.name}</span>
+            {typeof category.subCategoryCount === "number" ? (
+              <span className="text-muted-foreground">
+                {" "}
+                · {category.subCategoryCount}{" "}
+                {category.subCategoryCount === 1 ? "subcategoria" : "subcategorias"}
+              </span>
+            ) : null}
           </>
         }
         action={

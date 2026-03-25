@@ -25,6 +25,7 @@ export {
   useUpdateCategory,
   useDeleteCategory,
 } from "./use-category-mutations";
+export { useCategoryDetails, categoryDetailsQueryKey } from "./use-category-details";
 export {
   useCreateSubcategory,
   useUpdateSubcategory,
