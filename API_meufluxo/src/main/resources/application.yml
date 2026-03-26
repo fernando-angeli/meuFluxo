@@ -73,3 +73,7 @@ springdoc:
 #      date-time: yyyy-MM-dd'T'HH:mm:ss
 #      time: HH:mm:ss
 #    throw-exception-if-no-handler-found: true
+
+meufluxo:
+  planned-entry:
+    max-batch-months: ${PLANNED_ENTRY_MAX_BATCH_MONTHS:24}
