@@ -11,13 +11,16 @@ import { mockSubCategories } from "@/services/mocks/categories";
 export const subCategoriesQueryKey = ["subcategories", "all"] as const;
 
 /** Lista global de subcategorias (ex.: filtros do dashboard). */
-export function useSubCategories() {
+export function useSubCategories(options?: { realOnly?: boolean }) {
   const auth = useAuthOptional();
+  const realOnly = options?.realOnly ?? false;
 
   return useQuery({
-    queryKey: subCategoriesQueryKey,
+    queryKey: [...subCategoriesQueryKey, realOnly ? "real-only" : "default"] as const,
     queryFn: () =>
-      env.useMocks ? Promise.resolve(mockSubCategories) : fetchSubcategoriesListAll(),
+      env.useMocks && !realOnly
+        ? Promise.resolve(mockSubCategories)
+        : fetchSubcategoriesListAll(),
     enabled: !auth?.isBootstrapping && !!auth?.isAuthenticated,
   });
 }
