@@ -20,6 +20,8 @@ export * from "./notifications";
 export * from "./dashboard";
 export * from "./enum-friendly";
 export * from "./pagination";
+export * from "./planned-entries";
+export * from "./holidays";
 
 export type ID = string;
 
