@@ -35,3 +35,9 @@ export { createCreditCardsApi, type CreditCardsApi } from "./credit-cards";
 export { createInvoicesApi, type InvoicesApi } from "./invoices";
 export { createNotificationsApi, type NotificationsApi } from "./notifications";
 export { createKpisApi, type KpisApi } from "./kpis";
+export { createExpensesApi, type ExpensesApi } from "./expenses";
+export {
+  createHolidaysApi,
+  type HolidaysApi,
+  type HolidaysListParams,
+} from "./holidays";
