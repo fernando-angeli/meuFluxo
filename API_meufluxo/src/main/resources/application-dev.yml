@@ -17,3 +17,9 @@ spring:
 
   flyway:
     enabled: false
+
+security:
+  refresh-token:
+    secure: false
+    same-site: Lax
+    cookie-path: /

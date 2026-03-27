@@ -31,3 +31,11 @@ export {
   useUpdateSubcategory,
   useDeleteSubcategory,
 } from "./use-subcategory-mutations";
+export {
+  useCreateSingleExpense,
+  usePreviewExpenseBatch,
+  useCreateExpenseBatch,
+  useUpdateExpense,
+} from "./use-expense-mutations";
+export { useCancelExpense } from "./use-expenses-mutations";
+export { useSettleExpense } from "./use-expenses-mutations";

@@ -9,6 +9,7 @@ import { SidebarNavGroup } from "./sidebar-nav-group";
 
 export function SidebarNav() {
   const { t } = useTranslation();
+
   return (
     <ScrollArea className="flex-1 overflow-y-auto overflow-x-hidden">
       <nav

@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 
 import type { NavItem } from "@/lib/navigation";
 import { useTranslation } from "@/lib/i18n";
-import { useSidebar } from "./sidebar-context";
 import { SidebarIconSlot } from "./sidebar-icon-slot";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -20,14 +19,11 @@ type SidebarNavItemProps = {
 export function SidebarNavItem({ item, collapsed }: SidebarNavItemProps) {
   const pathname = usePathname();
   const { t } = useTranslation();
-  const { setExpanded } = useSidebar();
-  const active = pathname === item.href;
+  const active =
+    pathname === item.href ||
+    (pathname?.startsWith(`${item.href}/`) ?? false);
   const Icon = item.icon;
   const title = t(item.titleKey);
-
-  const handleClick = React.useCallback(() => {
-    if (collapsed) setExpanded(true);
-  }, [collapsed, setExpanded]);
 
   const linkContent = (
     <span
@@ -46,8 +42,8 @@ export function SidebarNavItem({ item, collapsed }: SidebarNavItemProps) {
       </span>
       <span
         className={cn(
-          "min-w-0 overflow-hidden whitespace-nowrap pl-2 transition-all duration-200 ease-in-out",
-          collapsed ? "max-w-0 opacity-0" : "max-w-[160px] opacity-100",
+          "min-w-0 overflow-hidden whitespace-nowrap transition-all duration-200 ease-in-out",
+          collapsed ? "max-w-0 opacity-0" : "max-w-[160px] pl-2 opacity-100",
         )}
       >
         <span className="truncate">{title}</span>
@@ -59,7 +55,7 @@ export function SidebarNavItem({ item, collapsed }: SidebarNavItemProps) {
     return (
       <Tooltip delayDuration={300}>
         <TooltipTrigger asChild>
-          <Link href={item.href} className="block" onClick={handleClick}>
+          <Link href={item.href} className="block">
             {linkContent}
           </Link>
         </TooltipTrigger>
@@ -71,7 +67,7 @@ export function SidebarNavItem({ item, collapsed }: SidebarNavItemProps) {
   }
 
   return (
-    <Link href={item.href} className="block" onClick={handleClick}>
+    <Link href={item.href} className="block">
       {linkContent}
     </Link>
   );

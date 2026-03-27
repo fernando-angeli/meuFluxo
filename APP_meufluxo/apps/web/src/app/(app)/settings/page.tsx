@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -11,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import { useTranslation, useLocale, LOCALES, LOCALE_LABELS } from "@/lib/i18n";
 import type { Locale } from "@/lib/i18n";
+import { Button } from "@/components/ui/button";
 
 export default function SettingsPage() {
   const { t } = useTranslation();
@@ -42,20 +44,31 @@ export default function SettingsPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Workspace</CardTitle>
-            <CardDescription>Nome, moeda e membros (em breve).</CardDescription>
+            <CardTitle className="text-base">{t("pages.settings.workspace.title")}</CardTitle>
+            <CardDescription>{t("pages.settings.workspace.description")}</CardDescription>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
-            Estrutura pronta para multiusuário e permissão por role.
+            {t("pages.settings.workspace.body")}
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Notificações</CardTitle>
-            <CardDescription>In-app e integrações futuras (WhatsApp).</CardDescription>
+            <CardTitle className="text-base">{t("pages.settings.notifications.title")}</CardTitle>
+            <CardDescription>{t("pages.settings.notifications.description")}</CardDescription>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
-            Canal WhatsApp previsto no domínio, mas ainda não implementado.
+            {t("pages.settings.notifications.body")}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">{t("pages.settings.holidays.title")}</CardTitle>
+            <CardDescription>{t("pages.settings.holidays.description")}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild variant="outline">
+              <Link href="/settings/holidays">{t("pages.settings.holidays.action")}</Link>
+            </Button>
           </CardContent>
         </Card>
       </div>
