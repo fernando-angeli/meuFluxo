@@ -3,7 +3,6 @@ package com.meufluxo.service;
 import com.meufluxo.common.dto.PageResponse;
 import com.meufluxo.common.exception.BusinessException;
 import com.meufluxo.common.exception.NotFoundException;
-import com.meufluxo.config.PlannedEntryProperties;
 import com.meufluxo.dto.plannedEntry.*;
 import com.meufluxo.enums.FinancialDirection;
 import com.meufluxo.enums.MovementType;
@@ -36,7 +35,6 @@ public class PlannedEntryService extends BaseUserService {
     private final SubCategoryService subCategoryService;
     private final AccountService accountService;
     private final BusinessDayService businessDayService;
-    private final PlannedEntryProperties plannedEntryProperties;
 
     public PlannedEntryService(
             CurrentUserService currentUserService,
@@ -45,8 +43,7 @@ public class PlannedEntryService extends BaseUserService {
             CategoryService categoryService,
             SubCategoryService subCategoryService,
             AccountService accountService,
-            BusinessDayService businessDayService,
-            PlannedEntryProperties plannedEntryProperties
+            BusinessDayService businessDayService
     ) {
         super(currentUserService);
         this.plannedEntryRepository = plannedEntryRepository;
@@ -55,7 +52,6 @@ public class PlannedEntryService extends BaseUserService {
         this.subCategoryService = subCategoryService;
         this.accountService = accountService;
         this.businessDayService = businessDayService;
-        this.plannedEntryProperties = plannedEntryProperties;
     }
 
     @Transactional
@@ -78,29 +74,30 @@ public class PlannedEntryService extends BaseUserService {
 
     @Transactional
     public PlannedEntryBatchCreateResponse createExpenseBatch(PlannedEntryBatchCreateRequest request) {
-        validateBatchLimit(request.monthsToGenerate());
         UUID groupId = UUID.randomUUID();
 
         Category category = validateAndGetCategoryForDirection(request.categoryId(), FinancialDirection.EXPENSE);
         SubCategory subCategory = validateAndGetSubCategory(request.subCategoryId(), category);
         Account defaultAccount = validateAndGetAccount(request.defaultAccountId());
+        String description = trimToNull(request.description());
+        String notes = trimToNull(request.notes());
 
         List<PlannedEntry> entries = new ArrayList<>();
-        for (int i = 0; i < request.monthsToGenerate(); i++) {
+        for (PlannedEntryBatchItemRequest item : request.entries()) {
             PlannedEntry entry = new PlannedEntry();
             entry.setWorkspace(getCurrentWorkspace());
             entry.setDirection(FinancialDirection.EXPENSE);
-            entry.setDescription(trimToNull(request.description()));
+            entry.setDescription(description);
             entry.setCategory(category);
             entry.setSubCategory(subCategory);
-            entry.setExpectedAmount(request.expectedAmount());
+            entry.setExpectedAmount(item.expectedAmount());
             entry.setAmountBehavior(request.amountBehavior());
-            entry.setDueDate(adjustDueDate(request.firstDueDate().plusMonths(i)));
+            entry.setDueDate(item.dueDate());
             entry.setStatus(PlannedEntryStatus.OPEN);
             entry.setDefaultAccount(defaultAccount);
             entry.setGroupId(groupId);
             entry.setOriginType(PlannedEntryOriginType.BATCH_MANUAL);
-            entry.setNotes(trimToNull(request.notes()));
+            entry.setNotes(notes);
             entries.add(entry);
         }
 
@@ -366,15 +363,6 @@ public class PlannedEntryService extends BaseUserService {
         }
         if (notes != null) {
             entry.setNotes(trimToNull(notes));
-        }
-    }
-
-    private void validateBatchLimit(Integer monthsToGenerate) {
-        if (monthsToGenerate == null || monthsToGenerate < 1) {
-            throw new BusinessException("Quantidade de meses inválida.");
-        }
-        if (monthsToGenerate > plannedEntryProperties.getMaxBatchMonths()) {
-            throw new BusinessException("Quantidade de meses excede o limite permitido (" + plannedEntryProperties.getMaxBatchMonths() + ").");
         }
     }
 

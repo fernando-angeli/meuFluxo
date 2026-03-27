@@ -2,7 +2,6 @@ package com.meufluxo.service;
 
 import com.meufluxo.common.dto.PageResponse;
 import com.meufluxo.common.exception.BusinessException;
-import com.meufluxo.config.PlannedEntryProperties;
 import com.meufluxo.dto.BaseResponse;
 import com.meufluxo.dto.plannedEntry.*;
 import com.meufluxo.enums.*;
@@ -54,8 +53,6 @@ class PlannedEntryServiceTest {
 
     @BeforeEach
     void setUp() {
-        PlannedEntryProperties properties = new PlannedEntryProperties();
-        properties.setMaxBatchMonths(6);
         service = new PlannedEntryService(
                 currentUserService,
                 plannedEntryRepository,
@@ -63,8 +60,7 @@ class PlannedEntryServiceTest {
                 categoryService,
                 subCategoryService,
                 accountService,
-                businessDayService,
-                properties
+                businessDayService
         );
 
         Workspace workspace = new Workspace();
@@ -117,12 +113,14 @@ class PlannedEntryServiceTest {
                 "Academia",
                 1L,
                 null,
-                new BigDecimal("120.00"),
                 PlannedAmountBehavior.FIXED,
-                LocalDate.of(2026, 4, 10),
-                3,
                 null,
-                null
+                null,
+                List.of(
+                        new PlannedEntryBatchItemRequest(LocalDate.of(2026, 4, 10), new BigDecimal("120.00")),
+                        new PlannedEntryBatchItemRequest(LocalDate.of(2026, 4, 24), new BigDecimal("130.00")),
+                        new PlannedEntryBatchItemRequest(LocalDate.of(2026, 5, 15), new BigDecimal("140.00"))
+                )
         );
         Category category = buildExpenseCategory(1L);
 
@@ -136,9 +134,14 @@ class PlannedEntryServiceTest {
         assertEquals(3, response.entries().size());
         assertEquals(response.groupId(), response.entries().get(0).groupId());
         assertEquals(response.groupId(), response.entries().get(1).groupId());
+        assertEquals(response.groupId(), response.entries().get(2).groupId());
         assertEquals(LocalDate.of(2026, 4, 10), response.entries().get(0).dueDate());
-        assertEquals(LocalDate.of(2026, 5, 10), response.entries().get(1).dueDate());
-        assertEquals(LocalDate.of(2026, 6, 10), response.entries().get(2).dueDate());
+        assertEquals(LocalDate.of(2026, 4, 24), response.entries().get(1).dueDate());
+        assertEquals(LocalDate.of(2026, 5, 15), response.entries().get(2).dueDate());
+        assertEquals(new BigDecimal("120.00"), response.entries().get(0).expectedAmount());
+        assertEquals(new BigDecimal("130.00"), response.entries().get(1).expectedAmount());
+        assertEquals(new BigDecimal("140.00"), response.entries().get(2).expectedAmount());
+        assertEquals(PlannedEntryOriginType.BATCH_MANUAL, response.entries().get(0).originType());
     }
 
     @Test
@@ -245,23 +248,6 @@ class PlannedEntryServiceTest {
         assertEquals(2, response.updatedCount());
         assertEquals("novo desc", open1.getDescription());
         assertEquals(new BigDecimal("250.00"), open2.getExpectedAmount());
-    }
-
-    @Test
-    void createBatchShouldValidateMaxMonths() {
-        PlannedEntryBatchCreateRequest request = new PlannedEntryBatchCreateRequest(
-                "Academia",
-                1L,
-                null,
-                new BigDecimal("120.00"),
-                PlannedAmountBehavior.FIXED,
-                LocalDate.of(2026, 4, 10),
-                7,
-                null,
-                null
-        );
-
-        assertThrows(BusinessException.class, () -> service.createExpenseBatch(request));
     }
 
     @Test

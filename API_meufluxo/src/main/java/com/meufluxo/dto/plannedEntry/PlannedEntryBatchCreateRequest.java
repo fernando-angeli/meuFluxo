@@ -1,15 +1,14 @@
 package com.meufluxo.dto.plannedEntry;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.meufluxo.enums.PlannedAmountBehavior;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.util.List;
 
 public record PlannedEntryBatchCreateRequest(
         @NotBlank(message = "Descrição é obrigatória.")
@@ -19,26 +18,18 @@ public record PlannedEntryBatchCreateRequest(
         @NotNull(message = "Categoria é obrigatória.")
         Long categoryId,
 
+        @JsonAlias("subcategoryId")
         Long subCategoryId,
-
-        @NotNull(message = "Valor esperado é obrigatório.")
-        @Positive(message = "Valor esperado deve ser maior que zero.")
-        BigDecimal expectedAmount,
 
         @NotNull(message = "Comportamento do valor é obrigatório.")
         PlannedAmountBehavior amountBehavior,
 
-        @NotNull(message = "Primeira data de vencimento é obrigatória.")
-        LocalDate firstDueDate,
-
-        @NotNull(message = "Quantidade de meses é obrigatória.")
-        @Min(value = 1, message = "Quantidade de meses deve ser no mínimo 1.")
-        @Max(value = 120, message = "Quantidade de meses deve ser no máximo 120.")
-        Integer monthsToGenerate,
-
         Long defaultAccountId,
 
         @Size(max = 2000, message = "Notas devem ter no máximo 2000 caracteres.")
-        String notes
+        String notes,
+
+        @NotEmpty(message = "Lista de lançamentos é obrigatória e não pode estar vazia.")
+        List<@Valid PlannedEntryBatchItemRequest> entries
 ) {
 }
