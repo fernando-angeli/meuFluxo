@@ -21,6 +21,7 @@ type FilterSelectProps<T extends string = string> = {
   placeholder?: string;
   className?: string;
   triggerClassName?: string;
+  disabled?: boolean;
 };
 
 /**
@@ -34,15 +35,20 @@ export function FilterSelect<T extends string>({
   placeholder = "Selecionar",
   className,
   triggerClassName,
+  disabled = false,
 }: FilterSelectProps<T>) {
+  const EMPTY_VALUE = "__empty__";
+
   return (
-    <Select value={value} onValueChange={(v) => onChange(v as T)}>
+    <Select
+      value={value === "" ? undefined : value}
+      onValueChange={(v) => onChange((v === EMPTY_VALUE ? "" : v) as T)}
+      disabled={disabled}
+    >
       <SelectTrigger
         className={cn(
-          "h-10 min-w-[140px] rounded-xl border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors",
-          "hover:bg-muted/50 hover:border-input",
-          "focus:ring-2 focus:ring-ring focus:ring-offset-2",
-          "data-[state=open]:border-primary/50 data-[state=open]:ring-2 data-[state=open]:ring-primary/20",
+          "h-10 min-h-10 min-w-0 w-full items-center gap-2 py-2 text-sm leading-normal box-border",
+          "data-[state=open]:border-primary data-[state=open]:shadow-md data-[state=open]:ring-2 data-[state=open]:ring-primary/25 data-[state=open]:ring-offset-2 data-[state=open]:ring-offset-background dark:data-[state=open]:ring-primary/35",
           triggerClassName,
         )}
       >
@@ -55,8 +61,8 @@ export function FilterSelect<T extends string>({
       >
         {options.map((opt) => (
           <SelectItem
-            key={opt.value}
-            value={opt.value}
+            key={opt.value || EMPTY_VALUE}
+            value={opt.value === "" ? EMPTY_VALUE : opt.value}
             className="rounded-lg py-2 cursor-pointer focus:bg-accent"
           >
             {opt.label}
