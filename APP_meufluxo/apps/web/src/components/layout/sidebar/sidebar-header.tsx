@@ -7,7 +7,7 @@ import { WorkspaceSwitcher } from "./workspace-switcher";
 import { cn } from "@/lib/utils";
 
 export const SIDEBAR_COLLAPSED_CLASS = "w-16";
-export const SIDEBAR_EXPANDED_CLASS = "w-64";
+export const SIDEBAR_EXPANDED_CLASS = "w-56";
 
 export function SidebarHeader() {
   return (

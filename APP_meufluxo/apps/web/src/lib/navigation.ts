@@ -17,13 +17,6 @@ export type NavItem = {
   titleKey: TranslationKey;
   href: string;
   icon: LucideIcon;
-  /** Estrutura pronta para submenus futuros. */
-  children?: NavChildItem[];
-};
-
-export type NavChildItem = {
-  titleKey: TranslationKey;
-  href: string;
 };
 
 export const mainNav: NavItem[] = [
@@ -31,26 +24,8 @@ export const mainNav: NavItem[] = [
   { titleKey: "nav.movements", href: "/cash-movements", icon: Wallet },
   { titleKey: "nav.accounts", href: "/accounts", icon: Landmark },
   { titleKey: "nav.categories", href: "/categories", icon: Layers },
-  {
-    titleKey: "nav.income",
-    href: "/income",
-    icon: ArrowUpCircle,
-    children: [
-      { titleKey: "nav.income.registrations", href: "/income/registrations" },
-      { titleKey: "nav.income.receipts", href: "/income/receipts" },
-      { titleKey: "nav.income.history", href: "/income/history" },
-    ],
-  },
-  {
-    titleKey: "nav.expenses",
-    href: "/expenses",
-    icon: ArrowDownCircle,
-    children: [
-      { titleKey: "nav.expenses.registrations", href: "/expenses/registrations" },
-      { titleKey: "nav.expenses.payments", href: "/expenses/payments" },
-      { titleKey: "nav.expenses.history", href: "/expenses/history" },
-    ],
-  },
+  { titleKey: "nav.income", href: "/income", icon: ArrowUpCircle },
+  { titleKey: "nav.expenses", href: "/expenses", icon: ArrowDownCircle },
 ];
 
 export type NavGroup = {

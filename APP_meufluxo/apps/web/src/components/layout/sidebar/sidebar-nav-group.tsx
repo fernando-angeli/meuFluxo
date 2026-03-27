@@ -9,15 +9,9 @@ import { useSidebar } from "./sidebar-context";
 
 type SidebarNavGroupProps = {
   group: NavGroup;
-  expandedGroups: Record<string, boolean>;
-  onGroupExpandedChange: (href: string, expanded: boolean) => void;
 };
 
-export function SidebarNavGroup({
-  group,
-  expandedGroups,
-  onGroupExpandedChange,
-}: SidebarNavGroupProps) {
+export function SidebarNavGroup({ group }: SidebarNavGroupProps) {
   const { expanded } = useSidebar();
   const { t } = useTranslation();
 
@@ -29,12 +23,7 @@ export function SidebarNavGroup({
       <ul className="space-y-0.5" role="list">
         {group.items.map((item) => (
           <li key={item.href}>
-            <SidebarNavItem
-              item={item}
-              collapsed={!expanded}
-              expanded={!!expandedGroups[item.href]}
-              onExpandedChange={(next) => onGroupExpandedChange(item.href, next)}
-            />
+            <SidebarNavItem item={item} collapsed={!expanded} />
           </li>
         ))}
       </ul>
