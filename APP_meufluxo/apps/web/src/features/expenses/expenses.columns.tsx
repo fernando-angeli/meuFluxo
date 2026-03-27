@@ -1,0 +1,93 @@
+"use client";
+
+import type { ReactNode } from "react";
+
+import type { ExpenseRecord, PlannedEntryStatus } from "@meufluxo/types";
+import type { DataTableColumn } from "@/components/data-table/types";
+import { Badge } from "@/components/ui/badge";
+
+const statusLabel: Record<PlannedEntryStatus, string> = {
+  OPEN: "Em aberto",
+  OVERDUE: "Em atraso",
+  COMPLETED: "Liquidado",
+  CANCELED: "Cancelado",
+};
+
+function formatDate(value: string) {
+  if (!value) return "—";
+  const [y, m, d] = value.split("-");
+  if (!y || !m || !d) return value;
+  return `${d}/${m}/${y}`;
+}
+
+function formatMoney(value: number) {
+  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+export function getExpensesTableColumns({
+  categoryNameById,
+  subCategoryNameById,
+  renderActions,
+}: {
+  categoryNameById: Map<string, string>;
+  subCategoryNameById: Map<string, string>;
+  renderActions: (row: ExpenseRecord) => ReactNode;
+}): Array<DataTableColumn<ExpenseRecord>> {
+  return [
+    { key: "description", title: "Descrição", dataIndex: "description", sortable: true, sortKey: "description", cellClassName: "font-medium" },
+    {
+      key: "category",
+      title: "Categoria",
+      sortable: true,
+      sortKey: "categoryId",
+      render: (row) => categoryNameById.get(row.categoryId) ?? "—",
+    },
+    {
+      key: "subCategory",
+      title: "Subcategoria",
+      render: (row) => (row.subCategoryId ? subCategoryNameById.get(row.subCategoryId) ?? "—" : "—"),
+    },
+    {
+      key: "expectedAmount",
+      title: "Valor previsto",
+      sortable: true,
+      sortKey: "expectedAmount",
+      align: "right",
+      render: (row) => formatMoney(row.expectedAmount),
+    },
+    {
+      key: "dueDate",
+      title: "Vencimento",
+      sortable: true,
+      sortKey: "dueDate",
+      render: (row) => formatDate(row.dueDate),
+    },
+    {
+      key: "amountBehavior",
+      title: "Tipo",
+      sortable: true,
+      sortKey: "amountBehavior",
+      render: (row) => (row.amountBehavior === "FIXED" ? "Fixo" : "Estimado"),
+    },
+    {
+      key: "status",
+      title: "Status",
+      sortable: true,
+      sortKey: "status",
+      render: (row) => (
+        <Badge variant={row.status === "COMPLETED" ? "success" : row.status === "CANCELED" ? "muted" : "secondary"}>
+          {statusLabel[row.status]}
+        </Badge>
+      ),
+    },
+    {
+      key: "actions",
+      title: "Ações",
+      align: "right",
+      width: 132,
+      cellClassName: "text-right",
+      render: (row) => renderActions(row),
+    },
+  ];
+}
+
