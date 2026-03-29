@@ -21,7 +21,9 @@ import java.util.UUID;
         indexes = {
                 @Index(name = "idx_planned_entries_workspace_direction_due_date", columnList = "workspace_id,direction,due_date"),
                 @Index(name = "idx_planned_entries_workspace_direction_status_due_date", columnList = "workspace_id,direction,status,due_date"),
-                @Index(name = "idx_planned_entries_group_id", columnList = "group_id")
+                @Index(name = "idx_planned_entries_group_id", columnList = "group_id"),
+                @Index(name = "idx_planned_entries_workspace_direction_issue_date", columnList = "workspace_id,direction,issue_date"),
+                @Index(name = "idx_planned_entries_workspace_direction_document", columnList = "workspace_id,direction,document")
         }
 )
 public class PlannedEntry extends UserOwnedEntity {
@@ -57,6 +59,12 @@ public class PlannedEntry extends UserOwnedEntity {
 
     @Column(name = "due_date", nullable = false)
     private LocalDate dueDate;
+
+    @Column(name = "issue_date")
+    private LocalDate issueDate;
+
+    @Column(length = 255)
+    private String document;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)

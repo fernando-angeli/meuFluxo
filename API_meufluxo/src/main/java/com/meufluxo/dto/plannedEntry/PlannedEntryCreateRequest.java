@@ -1,5 +1,6 @@
 package com.meufluxo.dto.plannedEntry;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.meufluxo.enums.PlannedAmountBehavior;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -28,6 +29,13 @@ public record PlannedEntryCreateRequest(
 
         @NotNull(message = "Data de vencimento é obrigatória.")
         LocalDate dueDate,
+
+        @JsonAlias({"emissionDate", "expenseDate"})
+        LocalDate issueDate,
+
+        @JsonAlias("documento")
+        @Size(max = 255, message = "Documento deve ter no máximo 255 caracteres.")
+        String document,
 
         Long defaultAccountId,
 

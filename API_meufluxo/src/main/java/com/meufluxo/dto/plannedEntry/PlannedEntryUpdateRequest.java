@@ -1,5 +1,6 @@
 package com.meufluxo.dto.plannedEntry;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.meufluxo.enums.PlannedAmountBehavior;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
@@ -21,6 +22,13 @@ public record PlannedEntryUpdateRequest(
         PlannedAmountBehavior amountBehavior,
 
         LocalDate dueDate,
+
+        @JsonAlias({"emissionDate", "expenseDate"})
+        LocalDate issueDate,
+
+        @JsonAlias("documento")
+        @Size(max = 255, message = "Documento deve ter no máximo 255 caracteres.")
+        String document,
 
         Long defaultAccountId,
 

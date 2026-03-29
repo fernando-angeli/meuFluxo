@@ -4,6 +4,7 @@ import com.meufluxo.model.workspaceAndUsers.Workspace;
 import com.meufluxo.model.workspaceAndUsers.WorkspaceUser;
 import com.meufluxo.model.workspaceAndUsers.User;
 import com.meufluxo.model.workspaceAndUsers.UserPreference;
+import com.meufluxo.enums.UserLanguage;
 import com.meufluxo.repository.WorkspaceRepository;
 import com.meufluxo.repository.UserRepository;
 import com.meufluxo.security.CustomUserDetails;
@@ -12,6 +13,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Locale;
 
 @Service
 public class CurrentUserService {
@@ -76,5 +78,31 @@ public class CurrentUserService {
 
         return workspaceRepository.findById(activeWorkspace.getId())
                 .orElseThrow(() -> new RuntimeException("Workspace do usuário autenticado não encontrado."));
+    }
+
+    public String getCurrentCountryCode() {
+        User user = getCurrentUser();
+        List<WorkspaceUser> memberships = userWorkspaceService.getActiveMemberships(user.getId());
+        if (memberships.isEmpty()) {
+            return "BR";
+        }
+
+        UserPreference preference = userPreferenceService.getOrCreate(user, memberships);
+        UserLanguage language = preference.getLanguage();
+        if (language == null) {
+            return "BR";
+        }
+
+        String languageCode = language.getCode();
+        int separatorIndex = languageCode.indexOf('-');
+        if (separatorIndex > 0 && separatorIndex < languageCode.length() - 1) {
+            return languageCode.substring(separatorIndex + 1).toUpperCase(Locale.ROOT);
+        }
+
+        return switch (language) {
+            case PT_BR -> "BR";
+            case ES -> "ES";
+            case EN -> "US";
+        };
     }
 }

@@ -29,6 +29,7 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -67,7 +68,7 @@ class PlannedEntryServiceTest {
         workspace.setId(10L);
         lenient().when(currentUserService.getCurrentWorkspaceId()).thenReturn(10L);
         lenient().when(currentUserService.getCurrentWorkspace()).thenReturn(workspace);
-        lenient().when(businessDayService.adjustToNextBusinessDay(any(LocalDate.class)))
+        lenient().when(businessDayService.adjustToNextBusinessDay(any(LocalDate.class), any()))
                 .thenAnswer(invocation -> invocation.getArgument(0));
     }
 
@@ -80,6 +81,8 @@ class PlannedEntryServiceTest {
                 new BigDecimal("120.00"),
                 PlannedAmountBehavior.FIXED,
                 LocalDate.now().plusDays(5),
+                LocalDate.now().plusDays(1),
+                "FAT-001",
                 null,
                 "mensal"
         );
@@ -105,6 +108,8 @@ class PlannedEntryServiceTest {
         assertEquals(PlannedEntryOriginType.SINGLE, response.originType());
         assertNull(response.groupId());
         assertEquals(PlannedEntryStatus.OPEN, response.status());
+        assertEquals("FAT-001", response.document());
+        assertEquals(request.issueDate(), response.issueDate());
     }
 
     @Test
@@ -114,12 +119,14 @@ class PlannedEntryServiceTest {
                 1L,
                 null,
                 PlannedAmountBehavior.FIXED,
+                LocalDate.of(2026, 4, 1),
+                "A23",
                 null,
                 null,
                 List.of(
-                        new PlannedEntryBatchItemRequest(LocalDate.of(2026, 4, 10), new BigDecimal("120.00")),
-                        new PlannedEntryBatchItemRequest(LocalDate.of(2026, 4, 24), new BigDecimal("130.00")),
-                        new PlannedEntryBatchItemRequest(LocalDate.of(2026, 5, 15), new BigDecimal("140.00"))
+                        new PlannedEntryBatchItemRequest(LocalDate.of(2026, 4, 10), null, "A23/01", new BigDecimal("120.00")),
+                        new PlannedEntryBatchItemRequest(LocalDate.of(2026, 4, 24), null, "A23/02", new BigDecimal("130.00")),
+                        new PlannedEntryBatchItemRequest(LocalDate.of(2026, 5, 15), null, "A23/03", new BigDecimal("140.00"))
                 )
         );
         Category category = buildExpenseCategory(1L);
@@ -142,6 +149,66 @@ class PlannedEntryServiceTest {
         assertEquals(new BigDecimal("130.00"), response.entries().get(1).expectedAmount());
         assertEquals(new BigDecimal("140.00"), response.entries().get(2).expectedAmount());
         assertEquals(PlannedEntryOriginType.BATCH_MANUAL, response.entries().get(0).originType());
+        assertEquals("A23/01", response.entries().get(0).document());
+        assertEquals("A23/02", response.entries().get(1).document());
+        assertEquals("A23/03", response.entries().get(2).document());
+        assertEquals(LocalDate.of(2026, 4, 1), response.entries().get(0).issueDate());
+    }
+
+    @Test
+    void createBatchShouldReturnAdjustedDueDateForPreview() {
+        PlannedEntryBatchCreateRequest request = new PlannedEntryBatchCreateRequest(
+                "Aluguel",
+                1L,
+                null,
+                PlannedAmountBehavior.FIXED,
+                null,
+                null,
+                null,
+                null,
+                List.of(new PlannedEntryBatchItemRequest(LocalDate.of(2026, 4, 18), null, null, new BigDecimal("900.00")))
+        );
+        Category category = buildExpenseCategory(1L);
+
+        when(categoryService.findByIdOrThrow(1L)).thenReturn(category);
+        when(businessDayService.adjustToNextBusinessDay(LocalDate.of(2026, 4, 18), 10L))
+                .thenReturn(LocalDate.of(2026, 4, 20));
+        when(plannedEntryRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(plannedEntryMapper.toResponse(any(PlannedEntry.class))).thenAnswer(invocation -> toResponse(invocation.getArgument(0)));
+
+        PlannedEntryBatchCreateResponse response = service.createExpenseBatch(request);
+
+        assertEquals(LocalDate.of(2026, 4, 20), response.entries().getFirst().dueDate());
+    }
+
+    @Test
+    void createSingleExpenseShouldFallbackIssueDateToDueDateWhenMissing() {
+        PlannedEntryCreateRequest request = new PlannedEntryCreateRequest(
+                "Academia",
+                1L,
+                null,
+                new BigDecimal("120.00"),
+                PlannedAmountBehavior.FIXED,
+                LocalDate.of(2026, 4, 10),
+                null,
+                null,
+                null,
+                null
+        );
+        Category category = buildExpenseCategory(1L);
+        PlannedEntry mapped = new PlannedEntry();
+        mapped.setExpectedAmount(request.expectedAmount());
+        mapped.setAmountBehavior(request.amountBehavior());
+        mapped.setDueDate(request.dueDate());
+
+        when(plannedEntryMapper.toEntity(request)).thenReturn(mapped);
+        when(categoryService.findByIdOrThrow(1L)).thenReturn(category);
+        when(plannedEntryRepository.save(any(PlannedEntry.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(plannedEntryMapper.toResponse(any(PlannedEntry.class))).thenAnswer(invocation -> toResponse(invocation.getArgument(0)));
+
+        PlannedEntryResponse response = service.createExpense(request);
+
+        assertEquals(LocalDate.of(2026, 4, 10), response.issueDate());
     }
 
     @Test
@@ -168,11 +235,58 @@ class PlannedEntryServiceTest {
                 null,
                 null,
                 null,
+                null,
+                null,
+                null,
+                null,
                 PageRequest.of(0, 20)
         );
 
         assertEquals(1, response.content().size());
         assertEquals("Aluguel", response.content().getFirst().description());
+    }
+
+    @Test
+    void listExpensesShouldRejectInvalidIssueDateRange() {
+        assertThrows(BusinessException.class, () -> service.findExpenses(
+                null,
+                null,
+                null,
+                LocalDate.of(2026, 5, 1),
+                LocalDate.of(2026, 4, 1),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                PageRequest.of(0, 20)
+        ));
+    }
+
+    @Test
+    void listExpensesShouldAcceptDocumentAndIssueDateFilters() {
+        Page<PlannedEntry> page = new PageImpl<>(List.of(), PageRequest.of(0, 20), 0);
+        when(plannedEntryRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(PageRequest.class)))
+                .thenReturn(page);
+
+        PageResponse<PlannedEntryResponse> response = service.findExpenses(
+                null,
+                null,
+                LocalDate.of(2026, 4, 3),
+                null,
+                null,
+                null,
+                null,
+                " DOC-100 ",
+                null,
+                null,
+                null,
+                PageRequest.of(0, 20)
+        );
+
+        assertEquals(0, response.totalElements());
+        verify(plannedEntryRepository).findAll(any(org.springframework.data.jpa.domain.Specification.class), any(PageRequest.class));
     }
 
     @Test
@@ -199,6 +313,8 @@ class PlannedEntryServiceTest {
                 new BigDecimal("200.00"),
                 null,
                 null,
+                LocalDate.of(2026, 4, 2),
+                "ABC-999",
                 null,
                 "nota"
         );
@@ -207,6 +323,8 @@ class PlannedEntryServiceTest {
         assertEquals("Novo", response.description());
         assertEquals(new BigDecimal("200.00"), response.expectedAmount());
         assertEquals("nota", response.notes());
+        assertEquals("ABC-999", response.document());
+        assertEquals(LocalDate.of(2026, 4, 2), response.issueDate());
     }
 
     @Test
@@ -238,6 +356,8 @@ class PlannedEntryServiceTest {
                 null,
                 null,
                 new BigDecimal("250.00"),
+                LocalDate.of(2026, 4, 2),
+                "REV-010",
                 null,
                 "novo note"
         );
@@ -248,6 +368,8 @@ class PlannedEntryServiceTest {
         assertEquals(2, response.updatedCount());
         assertEquals("novo desc", open1.getDescription());
         assertEquals(new BigDecimal("250.00"), open2.getExpectedAmount());
+        assertEquals("REV-010", open1.getDocument());
+        assertEquals(LocalDate.of(2026, 4, 2), open2.getIssueDate());
     }
 
     @Test
@@ -264,7 +386,7 @@ class PlannedEntryServiceTest {
                 .thenReturn(Optional.of(reference));
 
         PlannedEntryFutureOpenUpdateRequest request = new PlannedEntryFutureOpenUpdateRequest(
-                null, null, null, new BigDecimal("80.00"), null, null
+                null, null, null, new BigDecimal("80.00"), null, null, null, null
         );
 
         assertThrows(BusinessException.class, () -> service.updateExpenseFutureOpen(21L, request));
@@ -286,7 +408,7 @@ class PlannedEntryServiceTest {
 
         PlannedEntryFutureOpenUpdateResponse response = service.updateExpenseFutureOpen(
                 22L,
-                new PlannedEntryFutureOpenUpdateRequest("x", null, null, null, null, null)
+                new PlannedEntryFutureOpenUpdateRequest("x", null, null, null, null, null, null, null)
         );
 
         assertEquals(0, response.updatedCount());
@@ -323,6 +445,8 @@ class PlannedEntryServiceTest {
                 entry.getActualAmount(),
                 entry.getAmountBehavior(),
                 entry.getDueDate(),
+                entry.getIssueDate(),
+                entry.getDocument(),
                 entry.getStatus(),
                 entry.getDefaultAccount() != null ? entry.getDefaultAccount().getId() : null,
                 entry.getSettledAccount() != null ? entry.getSettledAccount().getId() : null,

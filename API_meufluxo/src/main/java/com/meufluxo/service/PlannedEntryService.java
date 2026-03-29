@@ -65,6 +65,8 @@ public class PlannedEntryService extends BaseUserService {
         entry.setGroupId(null);
         entry.setWorkspace(getCurrentWorkspace());
         entry.setDueDate(adjustDueDate(entry.getDueDate()));
+        entry.setIssueDate(Optional.ofNullable(request.issueDate()).orElse(entry.getDueDate()));
+        entry.setDocument(trimToNull(request.document()));
         entry.setDescription(trimToNull(request.description()));
         entry.setNotes(trimToNull(request.notes()));
         entry = plannedEntryRepository.save(entry);
@@ -81,6 +83,7 @@ public class PlannedEntryService extends BaseUserService {
         Account defaultAccount = validateAndGetAccount(request.defaultAccountId());
         String description = trimToNull(request.description());
         String notes = trimToNull(request.notes());
+        String rootDocument = trimToNull(request.document());
 
         List<PlannedEntry> entries = new ArrayList<>();
         for (PlannedEntryBatchItemRequest item : request.entries()) {
@@ -92,12 +95,14 @@ public class PlannedEntryService extends BaseUserService {
             entry.setSubCategory(subCategory);
             entry.setExpectedAmount(item.expectedAmount());
             entry.setAmountBehavior(request.amountBehavior());
-            entry.setDueDate(item.dueDate());
+            entry.setDueDate(adjustDueDate(item.dueDate()));
             entry.setStatus(PlannedEntryStatus.OPEN);
             entry.setDefaultAccount(defaultAccount);
             entry.setGroupId(groupId);
             entry.setOriginType(PlannedEntryOriginType.BATCH_MANUAL);
             entry.setNotes(notes);
+            entry.setIssueDate(firstNonNull(item.issueDate(), request.issueDate(), entry.getDueDate()));
+            entry.setDocument(firstNonNull(trimToNull(item.document()), rootDocument));
             entries.add(entry);
         }
 
@@ -120,8 +125,12 @@ public class PlannedEntryService extends BaseUserService {
     public PageResponse<PlannedEntryResponse> findExpenses(
             PlannedEntryStatus status,
             com.meufluxo.enums.PlannedAmountBehavior amountBehavior,
+            LocalDate issueDate,
+            LocalDate issueDateStart,
+            LocalDate issueDateEnd,
             LocalDate dueDateStart,
             LocalDate dueDateEnd,
+            String document,
             Long categoryId,
             Long subCategoryId,
             UUID groupId,
@@ -133,13 +142,20 @@ public class PlannedEntryService extends BaseUserService {
         if (dueDateStart != null && dueDateEnd != null && dueDateStart.isAfter(dueDateEnd)) {
             throw new BusinessException("Intervalo de data inválido: dueDateStart maior que dueDateEnd.");
         }
+        if (issueDateStart != null && issueDateEnd != null && issueDateStart.isAfter(issueDateEnd)) {
+            throw new BusinessException("Intervalo de data inválido: issueDateStart maior que issueDateEnd.");
+        }
 
         Specification<PlannedEntry> specification = buildSpecification(
                 FinancialDirection.EXPENSE,
                 status,
                 amountBehavior,
+                issueDate,
+                issueDateStart,
+                issueDateEnd,
                 dueDateStart,
                 dueDateEnd,
+                trimToNull(document),
                 categoryId,
                 subCategoryId,
                 groupId
@@ -153,7 +169,16 @@ public class PlannedEntryService extends BaseUserService {
     @Transactional
     public PlannedEntryResponse updateExpense(Long id, PlannedEntryUpdateRequest request) {
         PlannedEntry entry = findByIdOrThrow(id, FinancialDirection.EXPENSE);
-        applyUpdate(entry, request.categoryId(), request.subCategoryId(), request.defaultAccountId(), request.description(), request.notes());
+        applyUpdate(
+                entry,
+                request.categoryId(),
+                request.subCategoryId(),
+                request.defaultAccountId(),
+                request.description(),
+                request.notes(),
+                request.issueDate(),
+                request.document()
+        );
 
         if (request.expectedAmount() != null) {
             entry.setExpectedAmount(request.expectedAmount());
@@ -218,6 +243,12 @@ public class PlannedEntryService extends BaseUserService {
             if (request.notes() != null) {
                 entry.setNotes(trimToNull(request.notes()));
             }
+            if (request.issueDate() != null) {
+                entry.setIssueDate(request.issueDate());
+            }
+            if (request.document() != null) {
+                entry.setDocument(trimToNull(request.document()));
+            }
 
             if (request.categoryId() != null) {
                 entry.setCategory(category);
@@ -238,8 +269,12 @@ public class PlannedEntryService extends BaseUserService {
             FinancialDirection direction,
             PlannedEntryStatus status,
             com.meufluxo.enums.PlannedAmountBehavior amountBehavior,
+            LocalDate issueDate,
+            LocalDate issueDateStart,
+            LocalDate issueDateEnd,
             LocalDate dueDateStart,
             LocalDate dueDateEnd,
+            String document,
             Long categoryId,
             Long subCategoryId,
             UUID groupId
@@ -263,11 +298,23 @@ public class PlannedEntryService extends BaseUserService {
             if (amountBehavior != null) {
                 predicates.add(cb.equal(root.get("amountBehavior"), amountBehavior));
             }
+            if (issueDate != null) {
+                predicates.add(cb.equal(root.get("issueDate"), issueDate));
+            }
+            if (issueDateStart != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("issueDate"), issueDateStart));
+            }
+            if (issueDateEnd != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("issueDate"), issueDateEnd));
+            }
             if (dueDateStart != null) {
                 predicates.add(cb.greaterThanOrEqualTo(root.get("dueDate"), dueDateStart));
             }
             if (dueDateEnd != null) {
                 predicates.add(cb.lessThanOrEqualTo(root.get("dueDate"), dueDateEnd));
+            }
+            if (document != null) {
+                predicates.add(cb.like(cb.lower(root.get("document")), "%" + document.toLowerCase() + "%"));
             }
             if (categoryId != null) {
                 predicates.add(cb.equal(root.get("category").get("id"), categoryId));
@@ -338,7 +385,9 @@ public class PlannedEntryService extends BaseUserService {
             Long subCategoryId,
             Long defaultAccountId,
             String description,
-            String notes
+            String notes,
+            LocalDate issueDate,
+            String document
     ) {
         Category targetCategory = categoryId == null
                 ? entry.getCategory()
@@ -364,13 +413,19 @@ public class PlannedEntryService extends BaseUserService {
         if (notes != null) {
             entry.setNotes(trimToNull(notes));
         }
+        if (issueDate != null) {
+            entry.setIssueDate(issueDate);
+        }
+        if (document != null) {
+            entry.setDocument(trimToNull(document));
+        }
     }
 
     private LocalDate adjustDueDate(LocalDate dueDate) {
         if (dueDate == null) {
             return null;
         }
-        return businessDayService.adjustToNextBusinessDay(dueDate);
+        return businessDayService.adjustToNextBusinessDay(dueDate, getCurrentWorkspaceId());
     }
 
     private PlannedEntryResponse withComputedStatus(PlannedEntryResponse response) {
@@ -397,6 +452,8 @@ public class PlannedEntryService extends BaseUserService {
                 response.actualAmount(),
                 response.amountBehavior(),
                 response.dueDate(),
+                response.issueDate(),
+                response.document(),
                 effectiveStatus,
                 response.defaultAccountId(),
                 response.settledAccountId(),
@@ -415,5 +472,14 @@ public class PlannedEntryService extends BaseUserService {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private static <T> T firstNonNull(T... values) {
+        for (T value : values) {
+            if (value != null) {
+                return value;
+            }
+        }
+        return null;
     }
 }
