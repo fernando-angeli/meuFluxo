@@ -1,123 +1,59 @@
-# 📊 meuFluxo
+# meuFluxo
 
-O **meuFluxo** é uma aplicação fullstack de controle de fluxo de caixa desenvolvida com foco em **engenharia backend utilizando Java e Spring Boot**, organização arquitetural e boas práticas aplicadas em ambientes corporativos.
+Projeto fullstack para gestão de fluxo financeiro, com backend em Spring Boot e frontend em monorepo JavaScript/TypeScript.
 
-Embora possua frontend próprio, o núcleo do projeto está na construção de um backend consistente, escalável e preparado para evolução.
+## Objetivo do projeto
 
----
+O meuFluxo foi construído para evoluir como produto e como base técnica, priorizando:
 
-## 🎯 Objetivo Técnico
+- arquitetura com responsabilidades bem definidas
+- regras de negócio centralizadas em serviços
+- contratos explícitos entre frontend e backend
+- versionamento de banco com migrations
+- experiência consistente de listagem, cadastro e revisão de lançamentos
 
-O projeto foi concebido para demonstrar:
+## Estrutura do repositório
 
-- Arquitetura em camadas bem definida  
-- Separação clara de responsabilidades  
-- Centralização de regras de negócio na camada de serviço  
-- Controle transacional explícito  
-- Versionamento de banco de dados com migrations  
-- API REST desacoplada  
+```text
+meuFluxo/
+├── APP_meufluxo/   # Frontend (monorepo: web + mobile + pacotes compartilhados)
+└── API_meufluxo/   # Backend (Spring Boot + PostgreSQL + Flyway)
+```
 
-Mais do que um CRUD financeiro, o meuFluxo foi estruturado como base sólida para crescimento contínuo e aplicação de padrões reais de mercado.
+## Stack principal
 
----
+- **Frontend:** Turborepo, pnpm workspaces, Next.js (web), Tailwind, React Query, Zod, Radix UI
+- **Backend:** Java 25, Spring Boot 4, Spring Data JPA, PostgreSQL, Flyway, Docker Compose
+- **Pacotes compartilhados (APP):** `api-client`, `types`, `utils`, `config`
 
-## 🏗 Arquitetura Geral
+## Estado atual do projeto
 
-O projeto é dividido em duas aplicações independentes:
+- backend com domínio financeiro principal e filtros paginados/sortáveis
+- frontend web em operação com listagens, filtros, modais de cadastro/edição e revisão de lançamentos recorrentes
+- app mobile ainda em base inicial no monorepo
 
-meuFluxo
-├── api/ → Backend (Spring Boot)
-└── app/ → Frontend (Vue 3 + TypeScript)
+## Como começar
 
+1. Clone o repositório e entre na pasta:
 
-Essa separação permite:
+```bash
+git clone <url-do-repo>
+cd meuFluxo
+```
 
-- Evolução independente das camadas  
-- Melhor organização estrutural  
-- Possibilidade futura de migração para microsserviços  
-- Escalabilidade horizontal  
+2. Siga o README do subprojeto que deseja executar:
 
----
+- Frontend: [`APP_meufluxo/README.md`](APP_meufluxo/README.md)
+- Backend: [`API_meufluxo/README.md`](API_meufluxo/README.md)
 
-## 🔹 Backend (API)
+## Links rápidos
 
-A API concentra o núcleo do sistema:
+- Frontend monorepo: [`APP_meufluxo`](APP_meufluxo)
+- Backend API: [`API_meufluxo`](API_meufluxo)
 
-- Regras de negócio  
-- Controle transacional  
-- Persistência e modelagem de dados  
-- Versionamento do banco via Flyway  
-- Exposição de endpoints REST  
+## Roadmap resumido
 
-### Arquitetura em camadas
-controller → service → repository → database
-
-
-### Responsabilidades por camada
-
-**Controller**
-- Exposição de endpoints REST  
-- Recebimento de requisições  
-- Retorno de respostas padronizadas  
-- Sem regra de negócio  
-
-**Service**
-- Centralização das regras de negócio  
-- Aplicação de impactos financeiros  
-- Orquestração entre serviços  
-- Controle transacional  
-- Tratamento de atualizações parciais  
-
-**Repository**
-- Persistência via Spring Data JPA  
-- Abstração do acesso ao banco  
-- Foco exclusivo em operações de dados  
-
----
-
-## 🗄 Banco de Dados
-
-- PostgreSQL  
-- Versionamento estruturado com Flyway  
-- Scripts de migração controlados  
-- `ddl-auto` desabilitado para manter controle explícito do schema  
-
-O banco é tratado como parte controlada da aplicação, evitando dependência implícita do ORM para evolução estrutural.
-
----
-
-## 🔎 Decisões Arquiteturais
-
-- Uso de DTOs para evitar exposição direta de entidades  
-- Separação clara entre entidade e contrato externo  
-- Regras de negócio centralizadas na camada de serviço  
-- Uso de `BigDecimal` para operações financeiras  
-- Atualizações parciais controladas explicitamente  
-- Estrutura preparada para autenticação e multiusuário  
-
----
-
-## 🧠 Evolução Planejada
-
-A estrutura atual permite evoluir naturalmente para:
-
-- Autenticação com JWT  
-- Controle por usuário  
-- Testes unitários e de integração  
-- Logs estruturados  
-- Observabilidade  
-- Arquitetura orientada a eventos  
-- Transição futura para microsserviços  
-
----
-
-## 👨‍💻 Posicionamento Técnico
-
-O meuFluxo demonstra:
-
-- Domínio de Java aplicado em arquitetura real  
-- Uso estruturado do ecossistema Spring  
-- Organização de código voltada à manutenção e escalabilidade  
-- Mentalidade backend-first mesmo em um projeto fullstack  
-
-É um projeto pessoal desenvolvido com mentalidade de ambiente corporativo, focado em qualidade estrutural e evolução contínua.
+- consolidar integração de fluxo de preparação/revisão frontend com ajustes automáticos
+- ampliar cobertura de testes automatizados (frontend e backend)
+- evoluir autenticação/autorização e governança de multi-workspace
+- maturar o app mobile a partir da base existente
