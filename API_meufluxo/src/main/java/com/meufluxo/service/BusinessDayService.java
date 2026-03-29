@@ -1,71 +1,81 @@
 package com.meufluxo.service;
 
-import com.meufluxo.enums.HolidayScope;
-import com.meufluxo.model.Holiday;
 import com.meufluxo.repository.HolidayRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.util.List;
 
 @Service
 public class BusinessDayService {
 
-    private static final String COUNTRY_CODE_BR = "BR";
+    private static final String DEFAULT_COUNTRY_CODE = "BR";
 
     private final HolidayRepository holidayRepository;
+    private final CurrentUserService currentUserService;
 
-    public BusinessDayService(HolidayRepository holidayRepository) {
+    public BusinessDayService(HolidayRepository holidayRepository, CurrentUserService currentUserService) {
         this.holidayRepository = holidayRepository;
+        this.currentUserService = currentUserService;
     }
 
-    /**
-     * MVP: considera dia útil quando não é sábado/domingo e não é feriado nacional ativo do Brasil.
-     */
     public LocalDate adjustToNextBusinessDay(LocalDate date) {
-        return adjustToNextBusinessDay(date, null);
+        return adjustToNextBusinessDay(date, resolveCurrentWorkspaceId(), resolveCurrentCountryCode());
     }
 
-    /**
-     * Mantém assinatura preparada para escopos futuros (workspace/state/city).
-     */
     public LocalDate adjustToNextBusinessDay(LocalDate date, Long workspaceId) {
+        return adjustToNextBusinessDay(date, workspaceId, resolveCurrentCountryCode());
+    }
+
+    public LocalDate adjustToNextBusinessDay(LocalDate date, Long workspaceId, String countryCode) {
         LocalDate cursor = date;
-        while (!isBusinessDay(cursor, workspaceId)) {
+        while (!isBusinessDay(cursor, workspaceId, countryCode)) {
             cursor = cursor.plusDays(1);
         }
         return cursor;
     }
 
     public boolean isBusinessDay(LocalDate date) {
-        return isBusinessDay(date, null);
+        return isBusinessDay(date, resolveCurrentWorkspaceId(), resolveCurrentCountryCode());
     }
 
     public boolean isBusinessDay(LocalDate date, Long workspaceId) {
+        return isBusinessDay(date, workspaceId, resolveCurrentCountryCode());
+    }
+
+    public boolean isBusinessDay(LocalDate date, Long workspaceId, String countryCode) {
         DayOfWeek dayOfWeek = date.getDayOfWeek();
         if (dayOfWeek == DayOfWeek.SATURDAY || dayOfWeek == DayOfWeek.SUNDAY) {
             return false;
         }
 
-        List<Holiday> holidays = holidayRepository.findAllByHolidayDateAndActiveTrue(date);
-        for (Holiday holiday : holidays) {
-            if (isApplicableHoliday(holiday, workspaceId)) {
-                return false;
-            }
-        }
-        return true;
+        return !holidayRepository.existsApplicableHoliday(
+                date,
+                normalizeCountryCode(countryCode),
+                workspaceId
+        );
     }
 
-    private boolean isApplicableHoliday(Holiday holiday, Long workspaceId) {
-        if (holiday.getScope() == HolidayScope.NATIONAL) {
-            return COUNTRY_CODE_BR.equalsIgnoreCase(holiday.getCountryCode());
+    private String resolveCurrentCountryCode() {
+        try {
+            return normalizeCountryCode(currentUserService.getCurrentCountryCode());
+        } catch (RuntimeException ex) {
+            return DEFAULT_COUNTRY_CODE;
         }
-        if (holiday.getScope() == HolidayScope.WORKSPACE) {
-            return workspaceId != null
-                    && holiday.getWorkspace() != null
-                    && workspaceId.equals(holiday.getWorkspace().getId());
+    }
+
+    private Long resolveCurrentWorkspaceId() {
+        try {
+            return currentUserService.getCurrentWorkspaceId();
+        } catch (RuntimeException ex) {
+            return null;
         }
-        return false;
+    }
+
+    private String normalizeCountryCode(String countryCode) {
+        if (countryCode == null || countryCode.isBlank()) {
+            return DEFAULT_COUNTRY_CODE;
+        }
+        return countryCode.trim().toUpperCase();
     }
 }
