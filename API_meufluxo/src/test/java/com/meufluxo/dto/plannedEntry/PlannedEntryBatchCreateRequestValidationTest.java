@@ -34,6 +34,8 @@ class PlannedEntryBatchCreateRequestValidationTest {
                 PlannedAmountBehavior.ESTIMATED,
                 null,
                 null,
+                null,
+                null,
                 List.of()
         );
 
@@ -51,7 +53,9 @@ class PlannedEntryBatchCreateRequestValidationTest {
                 PlannedAmountBehavior.ESTIMATED,
                 null,
                 null,
-                List.of(new PlannedEntryBatchItemRequest(LocalDate.of(2026, 4, 10), BigDecimal.ZERO))
+                null,
+                null,
+                List.of(new PlannedEntryBatchItemRequest(LocalDate.of(2026, 4, 10), null, null, BigDecimal.ZERO))
         );
 
         Set<ConstraintViolation<PlannedEntryBatchCreateRequest>> violations = validator.validate(request);
@@ -68,7 +72,9 @@ class PlannedEntryBatchCreateRequestValidationTest {
                 PlannedAmountBehavior.ESTIMATED,
                 null,
                 null,
-                List.of(new PlannedEntryBatchItemRequest(null, new BigDecimal("99.90")))
+                null,
+                null,
+                List.of(new PlannedEntryBatchItemRequest(null, null, null, new BigDecimal("99.90")))
         );
 
         Set<ConstraintViolation<PlannedEntryBatchCreateRequest>> violations = validator.validate(request);

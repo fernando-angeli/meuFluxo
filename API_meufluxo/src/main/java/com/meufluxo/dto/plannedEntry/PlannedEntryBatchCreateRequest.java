@@ -8,6 +8,7 @@ import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
+import java.time.LocalDate;
 import java.util.List;
 
 public record PlannedEntryBatchCreateRequest(
@@ -23,6 +24,13 @@ public record PlannedEntryBatchCreateRequest(
 
         @NotNull(message = "Comportamento do valor é obrigatório.")
         PlannedAmountBehavior amountBehavior,
+
+        @JsonAlias({"emissionDate", "expenseDate"})
+        LocalDate issueDate,
+
+        @JsonAlias("documento")
+        @Size(max = 255, message = "Documento deve ter no máximo 255 caracteres.")
+        String document,
 
         Long defaultAccountId,
 

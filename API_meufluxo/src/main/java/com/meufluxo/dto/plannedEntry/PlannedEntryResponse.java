@@ -21,6 +21,8 @@ public record PlannedEntryResponse(
         BigDecimal actualAmount,
         PlannedAmountBehavior amountBehavior,
         LocalDate dueDate,
+        LocalDate issueDate,
+        String document,
         PlannedEntryStatus status,
         Long defaultAccountId,
         Long settledAccountId,
