@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { DateRangePicker, FilterSelect, type DateRangeValue } from "@/components/filters";
 
-export type FinancialFilterStatus = "OPEN" | "COMPLETED" | "ALL";
+export type FinancialFilterStatus = "OPEN" | "OVERDUE" | "COMPLETED" | "ALL";
 
 export type FinancialRecordsFilterState = {
   status: FinancialFilterStatus;
@@ -31,7 +31,8 @@ export function FinancialRecordsFilterHeader({
   const statusOptions = React.useMemo(
     () => [
       { value: "OPEN", label: "Em aberto" },
-      { value: "COMPLETED", label: "Liquidados" },
+      { value: "OVERDUE", label: "Em atraso" },
+      { value: "COMPLETED", label: "Liquidado" },
       { value: "ALL", label: "Todos" },
     ] as const,
     [],

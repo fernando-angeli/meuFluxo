@@ -24,11 +24,14 @@ import {
   type ExpenseCreateFormValues,
 } from "@/features/expenses/expense-create-form.schema";
 import { ExpenseExpectedAmountInput } from "@/features/expenses/components/expense-expected-amount-input";
+import { ExpenseFormDateField } from "@/features/expenses/components/expense-form-date-field";
+import { applyBusinessDayAdjustmentsToPreviewEntries } from "@/features/expenses/expense-preview-business-day-adjust";
 import { ExpenseRecurrenceInlineSentence } from "@/features/expenses/components/expense-recurrence-inline-sentence";
 import { generateRecurringPreviewEntries, type ExpenseRecurrenceType } from "@/features/expenses/recurrence-utils";
 
 type PreviewContext = {
   description: string;
+  baseDocument: string | null;
   categoryId: number;
   subCategoryId: number | null;
   expectedAmount: number;
@@ -38,6 +41,14 @@ type PreviewContext = {
   categoryName: string;
   subCategoryName: string | null;
 };
+
+function todayIsoDate(): string {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
 
 export function ExpenseFormModal({
   open,
@@ -88,7 +99,9 @@ export function ExpenseFormModal({
       subCategoryId: "",
       expectedAmount: "",
       amountBehavior: "FIXED",
+      issueDate: "",
       dueDate: "",
+      document: "",
       defaultAccountId: "",
       notes: "",
       repetitionsCount: "",
@@ -122,7 +135,9 @@ export function ExpenseFormModal({
         subCategoryId: expense.subCategoryId ?? "",
         expectedAmount: String(expense.expectedAmount),
         amountBehavior: expense.amountBehavior,
+        issueDate: "",
         dueDate: expense.dueDate,
+        document: "",
         defaultAccountId: expense.defaultAccountId ?? "",
         notes: expense.notes ?? "",
         repetitionsCount: "",
@@ -137,7 +152,9 @@ export function ExpenseFormModal({
         subCategoryId: "",
         expectedAmount: "",
         amountBehavior: "FIXED",
+        issueDate: "",
         dueDate: "",
+        document: "",
         defaultAccountId: "",
         notes: "",
         repetitionsCount: "",
@@ -173,6 +190,19 @@ export function ExpenseFormModal({
   }, [recurrenceType, form]);
 
   const onSubmit = form.handleSubmit(async (values) => {
+    if (!values.issueDate?.trim()) {
+      const fallbackIssueDate = todayIsoDate();
+      form.setValue("issueDate", fallbackIssueDate, {
+        shouldDirty: false,
+        shouldTouch: false,
+      });
+      values.issueDate = fallbackIssueDate;
+    }
+
+    // issueDate e document: formulário pronto para persistência futura; API atual não expõe esses campos em PlannedEntry.
+    void values.issueDate;
+    void values.document;
+
     const category = expenseCategories.find((item) => item.id === values.categoryId);
     if (!category) {
       form.setError("categoryId", { message: t("expenses.validation.categoryRequired") });
@@ -235,7 +265,7 @@ export function ExpenseFormModal({
       const repetitionsCount = Number(values.repetitionsCount ?? "");
       const intervalDays = values.intervalDays ? Number(values.intervalDays) : undefined;
 
-      const previewEntries = generateRecurringPreviewEntries({
+      const generatedEntries = generateRecurringPreviewEntries({
         recurrenceType,
         firstDueDate: values.dueDate,
         repetitionsCount,
@@ -243,13 +273,16 @@ export function ExpenseFormModal({
         expectedAmount: payloadBase.expectedAmount,
       });
 
-      if (!previewEntries.length) {
+      if (!generatedEntries.length) {
         error(t("expenses.feedback.previewEmpty"));
         return;
       }
 
+      const previewEntries = await applyBusinessDayAdjustmentsToPreviewEntries(generatedEntries);
+
       setPreviewContext({
         description: payloadBase.description,
+        baseDocument: values.document?.trim() ? values.document.trim() : null,
         categoryId: payloadBase.categoryId,
         subCategoryId: payloadBase.subCategoryId,
         expectedAmount: payloadBase.expectedAmount,
@@ -303,7 +336,7 @@ export function ExpenseFormModal({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         {/* //AQUI MUDA CSS MODAL */}
-        <DialogContent className="flex max-h-[95vh] min-h-0 w-[min(100%,45rem)] max-w-2.1xl flex-col overflow-hidden">
+        <DialogContent className="flex max-h-[95vh] min-h-0 w-[min(100%,48rem)] max-w-2.1xl flex-col overflow-hidden">
           <DialogHeader className="shrink-0">
             <DialogTitle>{isEdit ? "Editar despesa" : "Nova despesa"}</DialogTitle>
           </DialogHeader>
@@ -311,6 +344,13 @@ export function ExpenseFormModal({
           <form
             className="flex min-h-0 w-full flex-1 flex-col overflow-hidden"
             onSubmit={onSubmit}
+            autoComplete="off"
+            spellCheck={false}
+            autoCorrect="off"
+            autoCapitalize="none"
+            data-lpignore="true"
+            data-1p-ignore="true"
+            data-form-type="other"
           >
             <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-y-contain px-2">
             {/* Linha 1 — descrição */}
@@ -318,17 +358,26 @@ export function ExpenseFormModal({
               <Label htmlFor="expense-modal-description">{t("expenses.form.description")}</Label>
               <Input
                 id="expense-modal-description"
-                className={modalFieldHm}
+                className={`${modalFieldHm} pr-10`}
                 maxLength={80}
+                autoComplete="off"
+                spellCheck={false}
+                autoCorrect="off"
+                autoCapitalize="none"
+                data-lpignore="true"
+                data-1p-ignore="true"
+                data-form-type="other"
                 {...form.register("description")}
               />
             </div>
 
-            {/* Linha 2 — categoria 45% / subcategoria 55% */}
-            <div className="grid gap-4 sm:grid-cols-[45fr_55fr] sm:items-end">
+            {/* Linha — categoria, subcategoria, conta de pagamento */}
+            <div className="grid gap-4 sm:grid-cols-3 sm:items-end">
               <div className="flex min-w-0 flex-col gap-1.5">
                 <Label htmlFor="expense-modal-category">{t("expenses.form.category")}</Label>
                 <FilterSelect
+                  id="expense-modal-category"
+                  name="expense_category_id"
                   value={form.watch("categoryId") || ""}
                   onChange={(value) => form.setValue("categoryId", value, { shouldDirty: true })}
                   options={expenseCategories.map((category) => ({
@@ -342,6 +391,8 @@ export function ExpenseFormModal({
               <div className="flex min-w-0 flex-col gap-1.5">
                 <Label htmlFor="expense-modal-subcategory">{t("expenses.form.subCategory")}</Label>
                 <FilterSelect
+                  id="expense-modal-subcategory"
+                  name="expense_subcategory_id"
                   value={form.watch("subCategoryId") || ""}
                   onChange={(value) => form.setValue("subCategoryId", value, { shouldDirty: true })}
                   options={availableSubCategories.map((subcategory) => ({
@@ -353,10 +404,98 @@ export function ExpenseFormModal({
                   triggerClassName={`min-w-0 w-full ${modalFieldHm}`}
                 />
               </div>
+              <div className="flex min-h-0 min-w-0 flex-col gap-1.5">
+                <Label htmlFor="expense-modal-account">{t("expenses.form.suggestedAccount")}</Label>
+                <FilterSelect
+                  id="expense-modal-account"
+                  name="expense_account_id"
+                  value={form.watch("defaultAccountId") || ""}
+                  onChange={(value) => form.setValue("defaultAccountId", value, { shouldDirty: true })}
+                  options={accounts.map((account) => ({
+                    value: String(account.id),
+                    label: truncate(account.name, 40),
+                  }))}
+                  placeholder={t("expenses.form.selectAccount")}
+                  triggerClassName={`min-w-0 w-full ${modalFieldHm}`}
+                />
+              </div>
             </div>
 
-            {/* Linha 3 — valor / vencimento / conta (items-start: label colado ao campo; sem esticar pela altura da coluna Valor) */}
-            <div className="grid gap-3 sm:grid-cols-[35fr_30fr_35fr] sm:items-end">
+            {/* Linha — emissão, vencimento, documento, valor (grid 4 colunas em sm+) */}
+            <div className="grid gap-3 sm:grid-cols-[23fr_23fr_24fr_30fr] sm:items-end">
+              <div className="flex min-h-0 min-w-0 flex-col gap-1.5">
+                <Label htmlFor="expense-modal-issue-date">{t("expenses.form.issueDate")}</Label>
+                <ExpenseFormDateField
+                  control={form.control}
+                  name="issueDate"
+                  id="expense-modal-issue-date"
+                  inputName="expense_issue_date"
+                  containerClassName="min-w-0 w-full"
+                  className={`${modalFieldHm} text-center`}
+                  placeholder={t("expenses.form.datePlaceholder")}
+                  fillTodayOnBlurIfEmpty
+                  autoComplete="off"
+                  spellCheck={false}
+                  autoCorrect="off"
+                  autoCapitalize="none"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
+                  data-form-type="other"
+                  calendarButtonAriaLabel="Abrir calendário de emissão"
+                  aria-invalid={!!form.formState.errors.issueDate}
+                />
+                {form.formState.errors.issueDate ? (
+                  <p className="text-xs text-destructive">{form.formState.errors.issueDate.message}</p>
+                ) : null}
+              </div>
+              <div className="flex min-h-0 min-w-0 flex-col gap-1.5">
+                <Label htmlFor={isEdit ? "expense-modal-due-date-edit" : "expense-modal-due-date"}>
+                  {!isEdit && creationType === "RECURRING"
+                    ? t("expenses.form.firstDueDate")
+                    : t("expenses.form.dueDate")}
+                </Label>
+                <ExpenseFormDateField
+                  control={form.control}
+                  name="dueDate"
+                  id={isEdit ? "expense-modal-due-date-edit" : "expense-modal-due-date"}
+                  inputName="expense_due_date"
+                  containerClassName="min-w-0 w-full"
+                  className={`${modalFieldHm} text-center`}
+                  placeholder={t("expenses.form.datePlaceholder")}
+                  autoComplete="off"
+                  spellCheck={false}
+                  autoCorrect="off"
+                  autoCapitalize="none"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
+                  data-form-type="other"
+                  calendarButtonAriaLabel="Abrir calendário de vencimento"
+                  aria-invalid={!!form.formState.errors.dueDate}
+                />
+                {form.formState.errors.dueDate ? (
+                  <p className="text-xs text-destructive">{form.formState.errors.dueDate.message}</p>
+                ) : null}
+              </div>
+              <div className="flex min-h-0 min-w-0 flex-col gap-1.5">
+                <Label htmlFor="expense-modal-document">{t("expenses.form.document")}</Label>
+                <Input
+                  id="expense-modal-document"
+                  className={`${modalFieldHm} pr-10`}
+                  maxLength={80}
+                  autoComplete="off"
+                  spellCheck={false}
+                  autoCorrect="off"
+                  autoCapitalize="none"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
+                  data-form-type="other"
+                  placeholder={t("expenses.form.documentPlaceholder")}
+                  {...form.register("document")}
+                />
+                {form.formState.errors.document ? (
+                  <p className="text-xs text-destructive">{form.formState.errors.document.message}</p>
+                ) : null}
+              </div>
               <div className="flex min-h-0 min-w-0 flex-col gap-1.5">
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                   <Label htmlFor="expense-modal-amount" className="shrink-0">
@@ -368,6 +507,7 @@ export function ExpenseFormModal({
                         type="button"
                         className="text-muted-foreground shrink-0 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
                         aria-label={t("expenses.form.amountBehavior")}
+                        tabIndex={-1}
                       >
                         <HelpCircle className="h-3.5 w-3.5" />
                       </button>
@@ -383,6 +523,7 @@ export function ExpenseFormModal({
                     className="shrink-0"
                     value={amountBehavior}
                     onChange={(next) => form.setValue("amountBehavior", next)}
+                    tabStop="none"
                     aria-label={t("expenses.form.amountBehavior")}
                     options={
                       [
@@ -394,45 +535,23 @@ export function ExpenseFormModal({
                 </div>
                 <div className="flex min-w-0 flex-col gap-1.5">
                   <ExpenseExpectedAmountInput
-                    className={modalFieldHm}
+                    className={`${modalFieldHm} pr-10`}
                     control={form.control}
                     name="expectedAmount"
                     id="expense-modal-amount"
+                    autoComplete="off"
+                    spellCheck={false}
+                    autoCorrect="off"
+                    autoCapitalize="none"
+                    data-lpignore="true"
+                    data-1p-ignore="true"
+                    data-form-type="other"
                     aria-invalid={!!form.formState.errors.expectedAmount}
                   />
                   {form.formState.errors.expectedAmount ? (
                     <p className="text-xs text-destructive">{form.formState.errors.expectedAmount.message}</p>
                   ) : null}
                 </div>
-              </div>
-              <div className="flex min-h-0 min-w-0 flex-col gap-1.5">
-                <Label htmlFor={isEdit ? "expense-modal-due-date-edit" : "expense-modal-due-date"}>
-                  {!isEdit && creationType === "RECURRING"
-                    ? t("expenses.form.firstDueDate")
-                    : t("expenses.form.dueDate")}
-                </Label>
-                <Input
-                  id={isEdit ? "expense-modal-due-date-edit" : "expense-modal-due-date"}
-                  className={modalFieldHm}
-                  type="date"
-                  {...form.register("dueDate")}
-                />
-                {form.formState.errors.dueDate ? (
-                  <p className="text-xs text-destructive">{form.formState.errors.dueDate.message}</p>
-                ) : null}
-              </div>
-              <div className="flex min-h-0 min-w-0 flex-col gap-1.5">
-                <Label htmlFor="expense-modal-account">{t("expenses.form.suggestedAccount")}</Label>
-                <FilterSelect
-                  value={form.watch("defaultAccountId") || ""}
-                  onChange={(value) => form.setValue("defaultAccountId", value, { shouldDirty: true })}
-                  options={accounts.map((account) => ({
-                    value: String(account.id),
-                    label: truncate(account.name, 40),
-                  }))}
-                  placeholder={t("expenses.form.selectAccount")}
-                  triggerClassName={`min-w-0 w-full ${modalFieldHm}`}
-                />
               </div>
             </div>
 
@@ -489,6 +608,7 @@ export function ExpenseFormModal({
                           shouldDirty: true,
                         })
                       }
+                      disabled={creationType === "SINGLE"}
                       aria-labelledby="expense-modal-recurrence-type-label"
                       options={
                         [
@@ -524,6 +644,13 @@ export function ExpenseFormModal({
               <textarea
                 id="expense-modal-notes"
                 maxLength={250}
+                autoComplete="off"
+                spellCheck={false}
+                autoCorrect="off"
+                autoCapitalize="none"
+                data-lpignore="true"
+                data-1p-ignore="true"
+                data-form-type="other"
                 className="box-border h-[3rem] w-full resize-none overflow-y-auto overscroll-y-contain rounded-lg border border-input bg-input px-3 py-2 text-sm shadow-sm ring-offset-background transition-[color,box-shadow,border-color] placeholder:text-muted-foreground hover:border-primary/50 hover:shadow-sm dark:hover:border-primary/60 focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:focus-visible:ring-primary/35 disabled:cursor-not-allowed disabled:opacity-50"
                 {...form.register("notes")}
               />
@@ -531,9 +658,6 @@ export function ExpenseFormModal({
             </div>
 
             <DialogFooter className="mt-4 shrink-0 gap-3 border-t border-border/60 pt-4 sm:gap-2">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
-                {t("expenses.actions.cancel")}
-              </Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting
                   ? t("expenses.actions.loadingPreview")
@@ -542,6 +666,9 @@ export function ExpenseFormModal({
                     : creationType === "RECURRING"
                       ? t("expenses.actions.generatePreview")
                       : t("expenses.actions.createSingle")}
+              </Button>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
+                {t("expenses.actions.cancel")}
               </Button>
             </DialogFooter>
           </form>
@@ -552,6 +679,7 @@ export function ExpenseFormModal({
         open={previewOpen}
         onOpenChange={setPreviewOpen}
         description={previewContext?.description ?? ""}
+        baseDocument={previewContext?.baseDocument ?? null}
         categoryName={previewContext?.categoryName ?? ""}
         subCategoryName={previewContext?.subCategoryName ?? null}
         baseAmount={previewContext?.expectedAmount ?? 0}

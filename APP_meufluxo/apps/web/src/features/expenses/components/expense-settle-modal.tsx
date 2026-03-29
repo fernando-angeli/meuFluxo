@@ -1,12 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 
 import type { ExpenseRecord } from "@meufluxo/types";
+import { amountToEditString, intlLocaleFromAppLocale, parseMoneyInput } from "@meufluxo/utils";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MinorUnitMoneyInput } from "@/components/ui/minor-unit-money-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -17,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/components/toast";
 import { extractApiError } from "@/lib/api-error";
+import { useLocale } from "@/lib/i18n";
 import { useSettleExpense } from "@/hooks/api";
 
 type SettleFormValues = {
@@ -59,6 +62,8 @@ export function ExpenseSettleModal({
   onSettled: () => void;
 }) {
   const { success, error } = useToast();
+  const { locale: appLocale } = useLocale();
+  const intlLocale = intlLocaleFromAppLocale(appLocale);
   const settleMutation = useSettleExpense();
 
   const form = useForm<SettleFormValues>({
@@ -73,12 +78,12 @@ export function ExpenseSettleModal({
   React.useEffect(() => {
     if (!open) return;
     form.reset({
-      actualAmount: expense ? String(expense.expectedAmount) : "",
+      actualAmount: expense ? amountToEditString(expense.expectedAmount, intlLocale) : "",
       settledAt: toIsoDate(new Date()),
       settledAccountId: expense?.defaultAccountId ?? "",
       notes: expense?.notes ?? "",
     });
-  }, [expense, form, open]);
+  }, [expense, form, intlLocale, open]);
 
   const isSubmitting = settleMutation.isPending;
   const selectedAccountName =
@@ -87,7 +92,7 @@ export function ExpenseSettleModal({
   const onSubmit = form.handleSubmit(async (values) => {
     if (!expense) return;
 
-    const actualAmount = Number(values.actualAmount);
+    const actualAmount = parseMoneyInput(values.actualAmount);
     if (!Number.isFinite(actualAmount) || actualAmount <= 0) {
       form.setError("actualAmount", { message: "Informe um valor pago maior que zero." });
       return;
@@ -143,12 +148,19 @@ export function ExpenseSettleModal({
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="expense-settle-actual-amount">Valor pago/real</Label>
-                <Input
-                  id="expense-settle-actual-amount"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  {...form.register("actualAmount")}
+                <Controller
+                  name="actualAmount"
+                  control={form.control}
+                  render={({ field }) => (
+                    <MinorUnitMoneyInput
+                      id="expense-settle-actual-amount"
+                      ref={field.ref}
+                      name={field.name}
+                      value={field.value}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                    />
+                  )}
                 />
                 {form.formState.errors.actualAmount ? (
                   <p className="text-xs text-destructive">{form.formState.errors.actualAmount.message}</p>
@@ -157,7 +169,12 @@ export function ExpenseSettleModal({
 
               <div className="space-y-2">
                 <Label htmlFor="expense-settle-date">Data da baixa/pagamento</Label>
-                <Input id="expense-settle-date" type="date" {...form.register("settledAt")} />
+                <Input
+                  id="expense-settle-date"
+                  type="date"
+                  className="text-center"
+                  {...form.register("settledAt")}
+                />
                 {form.formState.errors.settledAt ? (
                   <p className="text-xs text-destructive">{form.formState.errors.settledAt.message}</p>
                 ) : null}

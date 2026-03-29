@@ -155,8 +155,12 @@ export const en: Record<PtBRKeys, string> = {
     "The amount usually repeats, but can still be adjusted when settling.",
   "expenses.form.amountBehavior.estimatedHint":
     "The amount is a forecast and may vary more frequently.",
+  "expenses.form.issueDate": "Issue date",
   "expenses.form.dueDate": "Due date",
   "expenses.form.firstDueDate": "First due date",
+  "expenses.form.document": "Document",
+  "expenses.form.documentPlaceholder": "e.g. INV-1234",
+  "expenses.form.datePlaceholder": "dd/mm/yyyy",
   "expenses.form.suggestedAccount": "Suggested account",
   "expenses.form.creationType": "Creation type",
   "expenses.form.creationType.single": "Single entry",
@@ -213,12 +217,20 @@ export const en: Record<PtBRKeys, string> = {
   "expenses.preview.totalEntries": "Entries count",
   "expenses.preview.order": "Installment",
   "expenses.preview.dueDate": "Due date",
+  "expenses.preview.document": "Document",
   "expenses.preview.amount": "Amount",
   "expenses.preview.adjustment": "Automatic adjustment",
   "expenses.preview.adjusted": "Adjusted to business day",
   "expenses.preview.originalDate": "Original date",
   "expenses.preview.adjustedHint":
     "Date was automatically adjusted to the next business day.",
+  "expenses.preview.adjustedWeekendHint":
+    "Due date was on a weekend and was adjusted to the next business day.",
+  "expenses.preview.adjustedHolidayHint":
+    "Due date was on a holiday and was adjusted to the next business day.",
+  "expenses.preview.manualDocumentChanged": "Document manually changed.",
+  "expenses.preview.manualDueDateChanged": "Due date manually changed.",
+  "expenses.preview.manualAmountChanged": "Amount manually changed.",
   "expenses.actions.cancel": "Cancel",
   "expenses.actions.creating": "Creating...",
   "expenses.actions.confirmCreate": "Confirm creation",
@@ -236,6 +248,8 @@ export const en: Record<PtBRKeys, string> = {
     "Selected subcategory does not belong to the selected category.",
   "expenses.validation.amountRequired": "Enter the base amount.",
   "expenses.validation.amountPositive": "Amount must be greater than zero.",
+  "expenses.validation.dateInvalid": "Invalid date. Use dd/mm/yyyy or the calendar format.",
+  "expenses.validation.documentMaxLength": "Document must be at most 80 characters.",
 
   "auth.login": "Sign in",
   "auth.loginDescription": "Access your workspace and manage your finances.",

@@ -164,8 +164,12 @@ export const ptBR = {
     "O valor normalmente se repete, mas ainda pode ser ajustado na baixa.",
   "expenses.form.amountBehavior.estimatedHint":
     "O valor serve como previsão e pode variar com mais frequência.",
+  "expenses.form.issueDate": "Emissão",
   "expenses.form.dueDate": "Vencimento",
   "expenses.form.firstDueDate": "Primeiro vencimento",
+  "expenses.form.document": "Documento",
+  "expenses.form.documentPlaceholder": "Ex.: NF-1234",
+  "expenses.form.datePlaceholder": "dd/mm/aaaa",
   "expenses.form.suggestedAccount": "Conta do débito",
   "expenses.form.creationType": "Tipo de criação",
   "expenses.form.creationType.single": "Único",
@@ -222,12 +226,20 @@ export const ptBR = {
   "expenses.preview.totalEntries": "Quantidade de lançamentos",
   "expenses.preview.order": "Parcela",
   "expenses.preview.dueDate": "Vencimento",
+  "expenses.preview.document": "Documento",
   "expenses.preview.amount": "Valor",
   "expenses.preview.adjustment": "Ajuste automático",
   "expenses.preview.adjusted": "Ajustado para dia útil",
   "expenses.preview.originalDate": "Data original",
   "expenses.preview.adjustedHint":
     "A data foi ajustada automaticamente para o próximo dia útil.",
+  "expenses.preview.adjustedWeekendHint":
+    "Vencimento em fim de semana, ajustado para o próximo dia útil.",
+  "expenses.preview.adjustedHolidayHint":
+    "Vencimento em feriado, ajustado para o próximo dia útil.",
+  "expenses.preview.manualDocumentChanged": "Documento alterado manualmente.",
+  "expenses.preview.manualDueDateChanged": "Vencimento alterado manualmente.",
+  "expenses.preview.manualAmountChanged": "Valor alterado manualmente.",
   "expenses.actions.cancel": "Cancelar",
   "expenses.actions.creating": "Criando...",
   "expenses.actions.confirmCreate": "Confirmar criação",
@@ -245,6 +257,8 @@ export const ptBR = {
     "A subcategoria selecionada não pertence à categoria informada.",
   "expenses.validation.amountRequired": "Informe o valor.",
   "expenses.validation.amountPositive": "O valor deve ser maior que zero.",
+  "expenses.validation.dateInvalid": "Data inválida. Use dd/mm/aaaa ou o formato do calendário.",
+  "expenses.validation.documentMaxLength": "Documento deve ter no máximo 80 caracteres.",
 
   // Auth / Login
   "auth.login": "Entrar",

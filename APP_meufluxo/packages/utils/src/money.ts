@@ -54,6 +54,46 @@ export function parseMoneyInput(raw: string): number {
   return n < 0 ? 0 : n;
 }
 
+/** Máximo de dígitos de centavos digitados (evita valores absurdos no input). */
+export const MAX_MINOR_UNIT_MONEY_DIGITS = 14;
+
+/**
+ * Converte valor monetário em string só com dígitos de centavos (150,00 → "15000").
+ */
+export function minorUnitDigitsFromAmount(amount: number): string {
+  if (!Number.isFinite(amount) || amount <= 0) return "";
+  const minor = Math.round(amount * 100);
+  if (minor <= 0) return "";
+  const cap = Number.parseInt("9".repeat(MAX_MINOR_UNIT_MONEY_DIGITS), 10);
+  return String(Math.min(minor, cap));
+}
+
+/**
+ * Interpreta apenas dígitos como centavos (ex.: "150" → 1,50).
+ */
+export function amountFromMinorUnitDigits(digits: string): number {
+  const d = digits.replace(/\D/g, "");
+  if (!d) return 0;
+  const minor = parseInt(d, 10);
+  if (!Number.isFinite(minor)) return 0;
+  return minor / 100;
+}
+
+/**
+ * Formata dígitos de centavos para moeda enquanto o usuário digita.
+ */
+export function formatCurrencyFromMinorUnitDigits(
+  digits: string,
+  currency: "BRL" | "USD" | "EUR" = "BRL",
+  intlLocale = currency === "BRL" ? "pt-BR" : "en-US",
+): string {
+  const d = digits.replace(/\D/g, "");
+  if (!d) return "";
+  const minor = parseInt(d, 10);
+  if (!Number.isFinite(minor)) return "";
+  return formatCurrency(minor / 100, currency, intlLocale);
+}
+
 export function sum(values: Array<number | null | undefined>) {
   return values.reduce<number>((acc, v) => acc + (v ?? 0), 0);
 }
