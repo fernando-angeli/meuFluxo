@@ -18,10 +18,15 @@ type FilterSelectProps<T extends string = string> = {
   value: T;
   onChange: (value: T) => void;
   options: FilterSelectOption<T>[];
+  id?: string;
+  name?: string;
   placeholder?: string;
   className?: string;
   triggerClassName?: string;
   disabled?: boolean;
+  "data-lpignore"?: "true" | "false";
+  "data-1p-ignore"?: "true" | "false";
+  "data-form-type"?: "other";
 };
 
 /**
@@ -32,10 +37,15 @@ export function FilterSelect<T extends string>({
   value,
   onChange,
   options,
+  id,
+  name,
   placeholder = "Selecionar",
   className,
   triggerClassName,
   disabled = false,
+  "data-lpignore": dataLpIgnore = "true",
+  "data-1p-ignore": data1pIgnore = "true",
+  "data-form-type": dataFormType = "other",
 }: FilterSelectProps<T>) {
   const EMPTY_VALUE = "__empty__";
 
@@ -46,8 +56,13 @@ export function FilterSelect<T extends string>({
       disabled={disabled}
     >
       <SelectTrigger
+        id={id}
+        name={name}
+        data-lpignore={dataLpIgnore}
+        data-1p-ignore={data1pIgnore}
+        data-form-type={dataFormType}
         className={cn(
-          "h-10 min-h-10 min-w-0 w-full items-center gap-2 py-2 text-sm leading-normal box-border",
+          "h-10 min-h-10 min-w-0 w-full items-center gap-2 py-2 pr-10 text-sm leading-normal box-border",
           "data-[state=open]:border-primary data-[state=open]:shadow-md data-[state=open]:ring-2 data-[state=open]:ring-primary/25 data-[state=open]:ring-offset-2 data-[state=open]:ring-offset-background dark:data-[state=open]:ring-primary/35",
           triggerClassName,
         )}

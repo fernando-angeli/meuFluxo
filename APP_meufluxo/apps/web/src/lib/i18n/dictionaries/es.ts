@@ -155,8 +155,12 @@ export const es: Record<PtBRKeys, string> = {
     "El valor normalmente se repite, pero aún puede ajustarse al liquidar.",
   "expenses.form.amountBehavior.estimatedHint":
     "El valor funciona como previsión y puede variar con más frecuencia.",
+  "expenses.form.issueDate": "Emisión",
   "expenses.form.dueDate": "Vencimiento",
   "expenses.form.firstDueDate": "Primer vencimiento",
+  "expenses.form.document": "Documento",
+  "expenses.form.documentPlaceholder": "Ej.: NF-1234",
+  "expenses.form.datePlaceholder": "dd/mm/aaaa",
   "expenses.form.suggestedAccount": "Cuenta sugerida",
   "expenses.form.creationType": "Tipo de creación",
   "expenses.form.creationType.single": "Lanzamiento único",
@@ -213,12 +217,20 @@ export const es: Record<PtBRKeys, string> = {
   "expenses.preview.totalEntries": "Cantidad de lanzamientos",
   "expenses.preview.order": "Parcela",
   "expenses.preview.dueDate": "Vencimiento",
+  "expenses.preview.document": "Documento",
   "expenses.preview.amount": "Valor",
   "expenses.preview.adjustment": "Ajuste automático",
   "expenses.preview.adjusted": "Ajustado al día hábil",
   "expenses.preview.originalDate": "Fecha original",
   "expenses.preview.adjustedHint":
     "La fecha se ajustó automáticamente al próximo día hábil.",
+  "expenses.preview.adjustedWeekendHint":
+    "El vencimiento cayó en fin de semana y se ajustó al próximo día hábil.",
+  "expenses.preview.adjustedHolidayHint":
+    "El vencimiento cayó en feriado y se ajustó al próximo día hábil.",
+  "expenses.preview.manualDocumentChanged": "Documento modificado manualmente.",
+  "expenses.preview.manualDueDateChanged": "Vencimiento modificado manualmente.",
+  "expenses.preview.manualAmountChanged": "Valor modificado manualmente.",
   "expenses.actions.cancel": "Cancelar",
   "expenses.actions.creating": "Creando...",
   "expenses.actions.confirmCreate": "Confirmar creación",
@@ -236,6 +248,8 @@ export const es: Record<PtBRKeys, string> = {
     "La subcategoría seleccionada no pertenece a la categoría elegida.",
   "expenses.validation.amountRequired": "Indica el importe base.",
   "expenses.validation.amountPositive": "El importe debe ser mayor que cero.",
+  "expenses.validation.dateInvalid": "Fecha inválida. Usa dd/mm/aaaa o el formato del calendario.",
+  "expenses.validation.documentMaxLength": "El documento debe tener como máximo 80 caracteres.",
 
   "auth.login": "Entrar",
   "auth.loginDescription": "Accede a tu espacio de trabajo y gestiona tus finanzas.",

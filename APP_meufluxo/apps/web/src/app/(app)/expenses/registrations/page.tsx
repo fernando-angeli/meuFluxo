@@ -28,11 +28,14 @@ import {
   type ExpenseCreateFormValues,
 } from "@/features/expenses/expense-create-form.schema";
 import { ExpenseExpectedAmountInput } from "@/features/expenses/components/expense-expected-amount-input";
+import { ExpenseFormDateField } from "@/features/expenses/components/expense-form-date-field";
+import { applyBusinessDayAdjustmentsToPreviewEntries } from "@/features/expenses/expense-preview-business-day-adjust";
 import { ExpenseRecurrenceSection } from "@/features/expenses/components/expense-recurrence-section";
 import { generateRecurringPreviewEntries, type ExpenseRecurrenceType } from "@/features/expenses/recurrence-utils";
 
 type PreviewContext = {
   description: string;
+  baseDocument: string | null;
   categoryId: number;
   subCategoryId: number | null;
   expectedAmount: number;
@@ -70,7 +73,9 @@ export default function ExpenseRegistrationsPage() {
       subCategoryId: "",
       expectedAmount: "",
       amountBehavior: "FIXED",
+      issueDate: "",
       dueDate: "",
+      document: "",
       defaultAccountId: "",
       notes: "",
       repetitionsCount: "",
@@ -101,6 +106,9 @@ export default function ExpenseRegistrationsPage() {
   }, [availableSubCategories, form, selectedCategoryId]);
 
   const onSubmit = form.handleSubmit(async (values) => {
+    void values.issueDate;
+    void values.document;
+
     const category = expenseCategories.find((item) => item.id === values.categoryId);
     if (!category) {
       form.setError("categoryId", { message: t("expenses.validation.categoryRequired") });
@@ -139,7 +147,9 @@ export default function ExpenseRegistrationsPage() {
           ...form.getValues(),
           description: "",
           expectedAmount: "",
+          issueDate: "",
           dueDate: "",
+          document: "",
           notes: "",
         });
         return;
@@ -154,7 +164,7 @@ export default function ExpenseRegistrationsPage() {
       const repetitionsCount = Number(values.repetitionsCount ?? "");
       const intervalDays = values.intervalDays ? Number(values.intervalDays) : undefined;
 
-      const previewEntries = generateRecurringPreviewEntries({
+      const generatedEntries = generateRecurringPreviewEntries({
         recurrenceType,
         firstDueDate: values.dueDate,
         repetitionsCount,
@@ -162,13 +172,16 @@ export default function ExpenseRegistrationsPage() {
         expectedAmount: payloadBase.expectedAmount,
       });
 
-      if (!previewEntries.length) {
+      if (!generatedEntries.length) {
         error(t("expenses.feedback.previewEmpty"));
         return;
       }
 
+      const previewEntries = await applyBusinessDayAdjustmentsToPreviewEntries(generatedEntries);
+
       setPreviewContext({
         description: payloadBase.description,
+        baseDocument: values.document?.trim() ? values.document.trim() : null,
         categoryId: payloadBase.categoryId,
         subCategoryId: payloadBase.subCategoryId,
         expectedAmount: payloadBase.expectedAmount,
@@ -209,7 +222,9 @@ export default function ExpenseRegistrationsPage() {
           ...form.getValues(),
           description: "",
           expectedAmount: "",
+          issueDate: "",
           dueDate: "",
+          document: "",
           notes: "",
         });
       } catch (err) {
@@ -435,19 +450,50 @@ export default function ExpenseRegistrationsPage() {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="expense-issue-date">{t("expenses.form.issueDate")}</Label>
+                <ExpenseFormDateField
+                  control={form.control}
+                  name="issueDate"
+                  id="expense-issue-date"
+                  className="w-[150px] max-w-full shrink-0 text-center"
+                  placeholder={t("expenses.form.datePlaceholder")}
+                  aria-invalid={!!form.formState.errors.issueDate}
+                />
+                {form.formState.errors.issueDate ? (
+                  <p className="text-xs text-destructive">{form.formState.errors.issueDate.message}</p>
+                ) : null}
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="expense-due-date">
                   {creationType === "RECURRING"
                     ? t("expenses.form.firstDueDate")
                     : t("expenses.form.dueDate")}
                 </Label>
-                <Input
+                <ExpenseFormDateField
+                  control={form.control}
+                  name="dueDate"
                   id="expense-due-date"
-                  type="date"
-                  className="w-[150px] max-w-full shrink-0"
-                  {...form.register("dueDate")}
+                  className="w-[150px] max-w-full shrink-0 text-center"
+                  placeholder={t("expenses.form.datePlaceholder")}
+                  aria-invalid={!!form.formState.errors.dueDate}
                 />
                 {form.formState.errors.dueDate ? (
                   <p className="text-xs text-destructive">{form.formState.errors.dueDate.message}</p>
+                ) : null}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="expense-document">{t("expenses.form.document")}</Label>
+                <Input
+                  id="expense-document"
+                  maxLength={80}
+                  autoComplete="off"
+                  placeholder={t("expenses.form.documentPlaceholder")}
+                  {...form.register("document")}
+                />
+                {form.formState.errors.document ? (
+                  <p className="text-xs text-destructive">{form.formState.errors.document.message}</p>
                 ) : null}
               </div>
 
@@ -480,6 +526,7 @@ export default function ExpenseRegistrationsPage() {
         open={previewOpen}
         onOpenChange={setPreviewOpen}
         description={previewContext?.description ?? ""}
+        baseDocument={previewContext?.baseDocument ?? null}
         categoryName={previewContext?.categoryName ?? ""}
         subCategoryName={previewContext?.subCategoryName ?? null}
         baseAmount={previewContext?.expectedAmount ?? 0}

@@ -1,9 +1,12 @@
 import { z } from "zod";
 import { parseMoneyInput } from "@meufluxo/utils";
 
+import { normalizeExpenseDateInput } from "@/features/expenses/expense-date-parse";
 import type { TranslationKey } from "@/lib/i18n/types";
 
 export function createExpenseCreateFormSchema(t: (key: TranslationKey) => string) {
+  const invalidDateMsg = t("expenses.validation.dateInvalid");
+
   return z
     .object({
       creationType: z.enum(["SINGLE", "RECURRING"]),
@@ -24,7 +27,22 @@ export function createExpenseCreateFormSchema(t: (key: TranslationKey) => string
           return Number.isFinite(n) && n > 0;
         }, t("expenses.validation.amountPositive")),
       amountBehavior: z.enum(["FIXED", "ESTIMATED"]),
-      dueDate: z.string().trim().min(1, "Data do vencimento é obrigatória."),
+      issueDate: z
+        .string()
+        .trim()
+        .refine((value) => value === "" || normalizeExpenseDateInput(value) != null, {
+          message: invalidDateMsg,
+        })
+        .transform((value) => (value === "" ? "" : (normalizeExpenseDateInput(value) as string))),
+      dueDate: z
+        .string()
+        .trim()
+        .min(1, "Data do vencimento é obrigatória.")
+        .refine((value) => normalizeExpenseDateInput(value) != null, {
+          message: invalidDateMsg,
+        })
+        .transform((value) => normalizeExpenseDateInput(value) as string),
+      document: z.string().trim().max(80, t("expenses.validation.documentMaxLength")),
       defaultAccountId: z.string().trim().optional(),
       notes: z
         .string()

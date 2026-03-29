@@ -6,8 +6,19 @@ import type { UseFormReturn } from "react-hook-form";
 import { Input } from "@/components/ui/input";
 import type { TranslationKey } from "@/lib/i18n/types";
 import type { ExpenseCreateFormValues } from "@/features/expenses/expense-create-form.schema";
+import { normalizeExpenseDateInput } from "@/features/expenses/expense-date-parse";
 import type { ExpenseRecurrenceType } from "@/features/expenses/recurrence-utils";
 import { cn } from "@/lib/utils";
+
+function dayFromDueDateValue(value: string): number | null {
+  if (!value.trim()) return null;
+  const iso = /^\d{4}-\d{2}-\d{2}$/.test(value.trim())
+    ? value.trim()
+    : normalizeExpenseDateInput(value);
+  if (!iso) return null;
+  const d = Number(iso.split("-")[2]);
+  return Number.isFinite(d) && d >= 1 ? d : null;
+}
 
 const inlineNumberInputClassName = cn(
   "h-8 min-h-8 w-[3rem] min-w-[2.5rem] shrink-0 px-1.5 text-center text-sm tabular-nums",
@@ -32,8 +43,8 @@ export function recurrencePreviewLine(
 
   const dueDate = form.watch("dueDate");
   if (!dueDate) return null;
-  const dayFromDue = Number(dueDate.split("-")[2]);
-  if (!Number.isFinite(dayFromDue) || dayFromDue < 1) return null;
+  const dayFromDue = dayFromDueDateValue(dueDate);
+  if (dayFromDue == null) return null;
   return t("expenses.form.recurrence.previewFixedDay")
     .replace("{{count}}", String(repetitionsCount))
     .replace("{{day}}", String(dayFromDue));
@@ -61,15 +72,12 @@ export function ExpenseRecurrenceInlineSentence({
   showPreview = false,
   className,
 }: ExpenseRecurrenceInlineSentenceProps) {
+  const isFixedDates = recurrenceType === "FIXED_DATES";
   const dueDate = form.watch("dueDate");
   const repetitionsClass = repetitionsInputClassName ?? inlineNumberInputClassName;
   const intervalClass = intervalInputClassName ?? inlineNumberInputClassName;
 
-  const dayFromDue = React.useMemo(() => {
-    if (!dueDate?.trim()) return null;
-    const d = Number(dueDate.split("-")[2]);
-    return Number.isFinite(d) && d >= 1 ? d : null;
-  }, [dueDate]);
+  const dayFromDue = React.useMemo(() => dayFromDueDateValue(dueDate ?? ""), [dueDate]);
 
   const repetitionsErr = form.formState.errors.repetitionsCount?.message;
   const intervalErr = form.formState.errors.intervalDays?.message;
@@ -85,13 +93,20 @@ export function ExpenseRecurrenceInlineSentence({
         <span className="inline-flex max-w-full flex-wrap items-center gap-x-1 gap-y-1.5">
           <span>{t("expenses.form.recurrence.sentenceRepeatPrefix")}</span>
           <Input
-            id={`${idPrefix}-repetitions`}
+            id={isFixedDates ? `${idPrefix}-fixed-dates-repetitions` : `${idPrefix}-repetitions`}
             type="number"
             className={repetitionsClass}
             min={1}
             max={120}
             step={1}
             aria-label={t("expenses.form.recurrence.repetitions")}
+            autoComplete={isFixedDates ? "off" : undefined}
+            spellCheck={isFixedDates ? false : undefined}
+            autoCorrect={isFixedDates ? "off" : undefined}
+            autoCapitalize={isFixedDates ? "none" : undefined}
+            data-lpignore={isFixedDates ? "true" : undefined}
+            data-1p-ignore={isFixedDates ? "true" : undefined}
+            data-form-type={isFixedDates ? "other" : undefined}
             {...form.register("repetitionsCount")}
           />
           {recurrenceType === "INTERVAL_DAYS" ? (

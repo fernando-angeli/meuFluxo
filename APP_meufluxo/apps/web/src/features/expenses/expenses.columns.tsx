@@ -4,13 +4,21 @@ import type { ReactNode } from "react";
 
 import type { ExpenseRecord, PlannedEntryStatus } from "@meufluxo/types";
 import type { DataTableColumn } from "@/components/data-table/types";
-import { Badge } from "@/components/ui/badge";
+import type { StatusTone } from "@/components/ui/status-indicator";
+import { StatusIndicator } from "@/components/ui/status-indicator";
 
 const statusLabel: Record<PlannedEntryStatus, string> = {
   OPEN: "Em aberto",
   OVERDUE: "Em atraso",
   COMPLETED: "Liquidado",
   CANCELED: "Cancelado",
+};
+
+const statusTone: Record<PlannedEntryStatus, StatusTone> = {
+  OPEN: "info",
+  OVERDUE: "critical",
+  COMPLETED: "positive",
+  CANCELED: "neutral",
 };
 
 function formatDate(value: string) {
@@ -75,9 +83,7 @@ export function getExpensesTableColumns({
       sortable: true,
       sortKey: "status",
       render: (row) => (
-        <Badge variant={row.status === "COMPLETED" ? "success" : row.status === "CANCELED" ? "muted" : "secondary"}>
-          {statusLabel[row.status]}
-        </Badge>
+        <StatusIndicator label={statusLabel[row.status]} tone={statusTone[row.status]} />
       ),
     },
     {
