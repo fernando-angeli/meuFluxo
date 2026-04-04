@@ -54,7 +54,7 @@ function adjustDateToBusinessDay(isoDate: string, holidayDates: Set<string>): {
   adjustedAutomatically: boolean;
   originalDueDate: string | null;
 } {
-  let cursor = fromIsoDate(isoDate);
+  const cursor = fromIsoDate(isoDate);
   const original = isoDate;
 
   while (isWeekend(cursor) || holidayDates.has(toIsoDate(cursor))) {
