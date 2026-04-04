@@ -43,6 +43,15 @@ export function ExpenseRowActions({
     },
   ];
 
-  return <RowActionButtons actions={actions} density="default" />;
+  return (
+    <RowActionButtons
+      actions={actions.map((action) => ({
+        ...action,
+        buttonClassName: "h-10 w-10",
+      }))}
+      density="default"
+      className="justify-center gap-2"
+    />
+  );
 }
 

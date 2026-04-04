@@ -21,7 +21,7 @@ import { ExpenseFormModal } from "@/features/expenses/components/expense-form-mo
 import { ExpenseSettleModal } from "@/features/expenses/components/expense-settle-modal";
 import { DetailsDrawer } from "@/components/details";
 import { DetailsRow, DetailsSection } from "@/components/details";
-import { getDefaultDashboardDateRange } from "@/features/dashboard/lib/date-range";
+import { getMonthRange } from "@/features/dashboard/lib/date-range";
 
 const expensesQueryKey = ["expenses"] as const;
 
@@ -33,11 +33,16 @@ export default function ExpensesPage() {
   const { data: subCategories = [] } = useSubCategories({ realOnly: true });
   const { data: accounts = [] } = useAccounts();
 
+  const initialMonthRange = React.useMemo(() => {
+    const now = new Date();
+    return getMonthRange(now.getFullYear(), now.getMonth());
+  }, []);
+
   const [filters, setFilters] = React.useState<FinancialRecordsFilterState>({
     status: "OPEN",
     categoryId: "",
     subCategoryId: "",
-    dateRange: getDefaultDashboardDateRange(),
+    dateRange: initialMonthRange,
   });
   const [selected, setSelected] = React.useState<ExpenseRecord | null>(null);
   const [detailsOpen, setDetailsOpen] = React.useState(false);
@@ -62,6 +67,8 @@ export default function ExpensesPage() {
       ...(filters.status !== "ALL" ? { status: filters.status } : {}),
       ...(filters.categoryId ? { categoryId: filters.categoryId } : {}),
       ...(filters.subCategoryId ? { subCategoryId: filters.subCategoryId } : {}),
+      ...(filters.dateRange.startDate ? { issueDateStart: filters.dateRange.startDate } : {}),
+      ...(filters.dateRange.endDate ? { issueDateEnd: filters.dateRange.endDate } : {}),
       ...(filters.dateRange.startDate ? { dueDateStart: filters.dateRange.startDate } : {}),
       ...(filters.dateRange.endDate ? { dueDateEnd: filters.dateRange.endDate } : {}),
     },
@@ -184,6 +191,7 @@ export default function ExpensesPage() {
               <DetailsRow label="Categoria" value={categoryNameById.get(selected.categoryId) ?? "—"} />
               <DetailsRow label="Subcategoria" value={selected.subCategoryId ? subCategoryNameById.get(selected.subCategoryId) ?? "—" : "—"} />
               <DetailsRow label="Valor previsto" value={selected.expectedAmount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} />
+              <DetailsRow label="Emissão" value={selected.issueDate} />
               <DetailsRow label="Vencimento" value={selected.dueDate} />
               <DetailsRow label="Tipo" value={selected.amountBehavior === "FIXED" ? "Fixo" : "Estimado"} />
               <DetailsRow label="Status" value={selected.status} />
