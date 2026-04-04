@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 
 import type { ExpenseBatchConfirmEntry, ExpenseBatchPreviewEntry } from "@meufluxo/types";
+import { parseMoneyInput } from "@meufluxo/utils";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -45,6 +46,14 @@ type PreviewContext = {
   categoryName: string;
   subCategoryName: string | null;
 };
+
+function todayIsoDate(): string {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
 
 export default function ExpenseRegistrationsPage() {
   const { t } = useTranslation();
@@ -106,6 +115,15 @@ export default function ExpenseRegistrationsPage() {
   }, [availableSubCategories, form, selectedCategoryId]);
 
   const onSubmit = form.handleSubmit(async (values) => {
+    if (!values.issueDate?.trim()) {
+      const fallbackIssueDate = todayIsoDate();
+      form.setValue("issueDate", fallbackIssueDate, {
+        shouldDirty: false,
+        shouldTouch: false,
+      });
+      values.issueDate = fallbackIssueDate;
+    }
+
     void values.issueDate;
     void values.document;
 
@@ -130,7 +148,7 @@ export default function ExpenseRegistrationsPage() {
       description: values.description.trim(),
       categoryId: Number(values.categoryId),
       subCategoryId: values.subCategoryId ? Number(values.subCategoryId) : null,
-      expectedAmount: Number(values.expectedAmount),
+      expectedAmount: parseMoneyInput(values.expectedAmount),
       amountBehavior: values.amountBehavior,
       defaultAccountId: values.defaultAccountId ? Number(values.defaultAccountId) : null,
       notes: values.notes?.trim() ? values.notes.trim() : null,
@@ -140,6 +158,7 @@ export default function ExpenseRegistrationsPage() {
       if (values.creationType === "SINGLE") {
         await createSingleMutation.mutateAsync({
           ...payloadBase,
+          issueDate: values.issueDate,
           dueDate: values.dueDate,
         });
         success(t("expenses.feedback.singleCreated"));
@@ -166,6 +185,7 @@ export default function ExpenseRegistrationsPage() {
 
       const generatedEntries = generateRecurringPreviewEntries({
         recurrenceType,
+        issueDate: values.issueDate ?? todayIsoDate(),
         firstDueDate: values.dueDate,
         repetitionsCount,
         intervalDays: recurrenceType === "INTERVAL_DAYS" ? intervalDays : undefined,
@@ -457,6 +477,7 @@ export default function ExpenseRegistrationsPage() {
                   id="expense-issue-date"
                   className="w-[150px] max-w-full shrink-0 text-center"
                   placeholder={t("expenses.form.datePlaceholder")}
+                  fillTodayOnBlurIfEmpty
                   aria-invalid={!!form.formState.errors.issueDate}
                 />
                 {form.formState.errors.issueDate ? (

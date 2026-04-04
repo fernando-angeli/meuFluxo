@@ -6,6 +6,7 @@ import { HelpCircle } from "lucide-react";
 import { useForm } from "react-hook-form";
 
 import type { ExpenseBatchConfirmEntry, ExpenseBatchPreviewEntry, ExpenseRecord } from "@meufluxo/types";
+import { parseMoneyInput } from "@meufluxo/utils";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -224,7 +225,7 @@ export function ExpenseFormModal({
       description: values.description.trim(),
       categoryId: Number(values.categoryId),
       subCategoryId: values.subCategoryId ? Number(values.subCategoryId) : null,
-      expectedAmount: Number(values.expectedAmount),
+      expectedAmount: parseMoneyInput(values.expectedAmount),
       amountBehavior: values.amountBehavior,
       defaultAccountId: values.defaultAccountId ? Number(values.defaultAccountId) : null,
       notes: values.notes?.trim() ? values.notes.trim() : null,
@@ -236,6 +237,7 @@ export function ExpenseFormModal({
           id: expense.id,
           request: {
             ...payloadBase,
+            issueDate: values.issueDate,
             dueDate: values.dueDate,
           },
         });
@@ -248,6 +250,7 @@ export function ExpenseFormModal({
       if (values.creationType === "SINGLE") {
         await createSingleMutation.mutateAsync({
           ...payloadBase,
+          issueDate: values.issueDate,
           dueDate: values.dueDate,
         });
         success(t("expenses.feedback.singleCreated"));
@@ -267,6 +270,7 @@ export function ExpenseFormModal({
 
       const generatedEntries = generateRecurringPreviewEntries({
         recurrenceType,
+        issueDate: values.issueDate,
         firstDueDate: values.dueDate,
         repetitionsCount,
         intervalDays: recurrenceType === "INTERVAL_DAYS" ? intervalDays : undefined,
