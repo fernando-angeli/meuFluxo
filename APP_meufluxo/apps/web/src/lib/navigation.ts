@@ -2,10 +2,9 @@ import type { LucideIcon } from "lucide-react";
 import {
   ArrowDownCircle,
   ArrowUpCircle,
+  CreditCard,
   Gauge,
   Landmark,
-  Layers,
-  Wallet,
 } from "lucide-react";
 import type { TranslationKey } from "@/lib/i18n";
 
@@ -15,17 +14,34 @@ export const HOME_PATH = "/dashboard";
 export type NavItem = {
   /** Chave do dicionário i18n (ex: nav.dashboard) */
   titleKey: TranslationKey;
-  href: string;
+  href?: string;
   icon: LucideIcon;
+  children?: Array<{
+    titleKey: TranslationKey;
+    href: string;
+  }>;
 };
 
 export const mainNav: NavItem[] = [
   { titleKey: "nav.dashboard", href: "/dashboard", icon: Gauge },
-  { titleKey: "nav.movements", href: "/cash-movements", icon: Wallet },
-  { titleKey: "nav.accounts", href: "/accounts", icon: Landmark },
-  { titleKey: "nav.categories", href: "/categories", icon: Layers },
-  { titleKey: "nav.income", href: "/income", icon: ArrowUpCircle },
-  { titleKey: "nav.expenses", href: "/expenses", icon: ArrowDownCircle },
+  {
+    titleKey: "nav.accounts",
+    icon: Landmark,
+    children: [
+      { titleKey: "nav.accounts", href: "/accounts" },
+      { titleKey: "nav.accounts.statement", href: "/accounts/statement" },
+    ],
+  },
+  { titleKey: "nav.income", href: "/receivables", icon: ArrowUpCircle },
+  { titleKey: "nav.expenses", href: "/payables", icon: ArrowDownCircle },
+  {
+    titleKey: "nav.creditCards",
+    icon: CreditCard,
+    children: [
+      { titleKey: "nav.creditCards", href: "/cards" },
+      { titleKey: "nav.invoices", href: "/cards/invoices" },
+    ],
+  },
 ];
 
 export type NavGroup = {
@@ -36,7 +52,7 @@ export type NavGroup = {
 
 /** Grupos do menu lateral na nova estrutura funcional. */
 export const mainNavGroups: NavGroup[] = [
-  { labelKey: "nav.overview", items: mainNav.slice(0, 1) },
+  { labelKey: "nav.overview", items: [mainNav[0]] },
   { labelKey: "nav.finance", items: mainNav.slice(1) },
 ];
 
