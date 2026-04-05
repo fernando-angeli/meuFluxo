@@ -22,7 +22,7 @@ export function SidebarNavGroup({ group }: SidebarNavGroupProps) {
     >
       <ul className="space-y-0.5" role="list">
         {group.items.map((item) => (
-          <li key={item.href}>
+          <li key={item.href ?? item.titleKey}>
             <SidebarNavItem item={item} collapsed={!expanded} />
           </li>
         ))}

@@ -17,6 +17,7 @@ export const ptBR = {
   "nav.dashboard": "Dashboard",
   "nav.movements": "Movimentos",
   "nav.accounts": "Contas",
+  "nav.accounts.statement": "Extrato",
   "nav.categories": "Categorias",
   "nav.cashMovements": "Movimentos",
   "nav.scheduled": "Agendados",

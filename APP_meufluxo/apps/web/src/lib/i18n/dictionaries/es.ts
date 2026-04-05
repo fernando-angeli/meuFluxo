@@ -16,6 +16,7 @@ export const es: Record<PtBRKeys, string> = {
   "nav.dashboard": "Dashboard",
   "nav.movements": "Movimentos",
   "nav.accounts": "Cuentas",
+  "nav.accounts.statement": "Extracto",
   "nav.categories": "Categorías",
   "nav.cashMovements": "Movimientos",
   "nav.scheduled": "Programados",
