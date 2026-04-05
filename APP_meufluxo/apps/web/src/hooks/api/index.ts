@@ -38,3 +38,10 @@ export {
 } from "./use-expense-mutations";
 export { useCancelExpense } from "./use-expenses-mutations";
 export { useSettleExpense } from "./use-expenses-mutations";
+export {
+  useCreateSingleIncome,
+  useCreateIncomeBatch,
+  useUpdateIncome,
+  useCancelIncome,
+  useSettleIncome,
+} from "./use-income-mutations";

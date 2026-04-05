@@ -6,7 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { DateRangePicker, FilterSelect, type DateRangeValue } from "@/components/filters";
 
-export type FinancialFilterStatus = "OPEN" | "OVERDUE" | "COMPLETED" | "ALL";
+export type FinancialFilterStatus =
+  | "OPEN"
+  | "OVERDUE"
+  | "COMPLETED"
+  | "CANCELED"
+  | "ALL";
 
 export type FinancialRecordsFilterState = {
   status: FinancialFilterStatus;
@@ -21,21 +26,26 @@ export function FinancialRecordsFilterHeader({
   onChange,
   categoryOptions,
   subCategoryOptions,
+  statusLabelOverrides,
+  idPrefix = "expenses-filter",
 }: {
   title: string;
   filters: FinancialRecordsFilterState;
   onChange: (next: FinancialRecordsFilterState) => void;
   categoryOptions: Array<{ id: string; name: string }>;
   subCategoryOptions: Array<{ id: string; name: string }>;
+  statusLabelOverrides?: Partial<Record<FinancialFilterStatus, string>>;
+  idPrefix?: string;
 }) {
   const statusOptions = React.useMemo(
     () => [
-      { value: "OPEN", label: "Em aberto" },
-      { value: "OVERDUE", label: "Em atraso" },
-      { value: "COMPLETED", label: "Liquidado" },
-      { value: "ALL", label: "Todos" },
+      { value: "OPEN", label: statusLabelOverrides?.OPEN ?? "Em aberto" },
+      { value: "OVERDUE", label: statusLabelOverrides?.OVERDUE ?? "Em atraso" },
+      { value: "COMPLETED", label: statusLabelOverrides?.COMPLETED ?? "Liquidado" },
+      { value: "CANCELED", label: statusLabelOverrides?.CANCELED ?? "Cancelado" },
+      { value: "ALL", label: statusLabelOverrides?.ALL ?? "Todos" },
     ] as const,
-    [],
+    [statusLabelOverrides],
   );
   const categoryOptionsWithAll = React.useMemo(
     () => [{ value: "", label: "Todas" }, ...categoryOptions.map((c) => ({ value: c.id, label: c.name }))],
@@ -53,8 +63,9 @@ export function FinancialRecordsFilterHeader({
       </CardHeader>
       <CardContent className="grid gap-3 md:grid-cols-4">
         <div className="space-y-1.5">
-          <Label htmlFor="expenses-filter-status">Status</Label>
+          <Label htmlFor={`${idPrefix}-status`}>Status</Label>
           <FilterSelect
+            id={`${idPrefix}-status`}
             value={filters.status}
             onChange={(value) => onChange({ ...filters, status: value as FinancialFilterStatus })}
             options={statusOptions.map((item) => ({ value: item.value, label: item.label }))}
@@ -64,8 +75,9 @@ export function FinancialRecordsFilterHeader({
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="expenses-filter-category">Categoria</Label>
+          <Label htmlFor={`${idPrefix}-category`}>Categoria</Label>
           <FilterSelect
+            id={`${idPrefix}-category`}
             value={filters.categoryId}
             onChange={(value) =>
               onChange({
@@ -81,8 +93,9 @@ export function FinancialRecordsFilterHeader({
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="expenses-filter-subcategory">Subcategoria</Label>
+          <Label htmlFor={`${idPrefix}-subcategory`}>Subcategoria</Label>
           <FilterSelect
+            id={`${idPrefix}-subcategory`}
             value={filters.subCategoryId}
             onChange={(value) => onChange({ ...filters, subCategoryId: value })}
             options={subCategoryOptionsWithAll}
@@ -93,7 +106,7 @@ export function FinancialRecordsFilterHeader({
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="expenses-filter-month">Período</Label>
+          <Label htmlFor={`${idPrefix}-period`}>Período</Label>
           <DateRangePicker
             value={filters.dateRange}
             onChange={(dateRange) => dateRange && onChange({ ...filters, dateRange })}

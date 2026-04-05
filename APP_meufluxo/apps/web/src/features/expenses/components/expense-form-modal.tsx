@@ -18,7 +18,14 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useToast } from "@/components/toast";
 import { extractApiError } from "@/lib/api-error";
 import { useTranslation } from "@/lib/i18n";
-import { useCreateExpenseBatch, useCreateSingleExpense, useUpdateExpense } from "@/hooks/api";
+import {
+  useCreateExpenseBatch,
+  useCreateIncomeBatch,
+  useCreateSingleExpense,
+  useCreateSingleIncome,
+  useUpdateExpense,
+  useUpdateIncome,
+} from "@/hooks/api";
 import { ExpenseBatchPreviewModal } from "@/features/expenses/components/expense-batch-preview-modal";
 import {
   createExpenseCreateFormSchema,
@@ -59,6 +66,8 @@ export function ExpenseFormModal({
   subCategories,
   accounts,
   onSaved,
+  mode = "expense",
+  labels,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -67,6 +76,15 @@ export function ExpenseFormModal({
   subCategories: Array<{ id: string; name: string; categoryId: string }>;
   accounts: Array<{ id: string; name: string }>;
   onSaved: () => void;
+  mode?: "expense" | "income";
+  labels?: {
+    createTitle?: string;
+    editTitle?: string;
+    updatedSuccess?: string;
+    singleCreatedSuccess?: string;
+    batchCreatedSuccess?: string;
+    accountLabel?: string;
+  };
 }) {
   const truncate = React.useCallback((value: string, max: number) => {
     const trimmed = value.trim();
@@ -79,9 +97,18 @@ export function ExpenseFormModal({
   const { t } = useTranslation();
   const { success, error } = useToast();
 
-  const createSingleMutation = useCreateSingleExpense();
-  const updateMutation = useUpdateExpense();
-  const createBatchMutation = useCreateExpenseBatch();
+  const createSingleExpenseMutation = useCreateSingleExpense();
+  const updateExpenseMutation = useUpdateExpense();
+  const createExpenseBatchMutation = useCreateExpenseBatch();
+  const createSingleIncomeMutation = useCreateSingleIncome();
+  const updateIncomeMutation = useUpdateIncome();
+  const createIncomeBatchMutation = useCreateIncomeBatch();
+
+  const createSingleMutation =
+    mode === "income" ? createSingleIncomeMutation : createSingleExpenseMutation;
+  const updateMutation = mode === "income" ? updateIncomeMutation : updateExpenseMutation;
+  const createBatchMutation =
+    mode === "income" ? createIncomeBatchMutation : createExpenseBatchMutation;
 
   const [previewOpen, setPreviewOpen] = React.useState(false);
   const [previewEntries, setPreviewEntries] = React.useState<ExpenseBatchPreviewEntry[]>([]);
@@ -115,10 +142,12 @@ export function ExpenseFormModal({
   const recurrenceType = form.watch("recurrenceType") ?? "INTERVAL_DAYS";
   const amountBehavior = form.watch("amountBehavior");
 
-  const expenseCategories = React.useMemo(
-    () => categories.filter((category) => category.movementType !== "INCOME"),
-    [categories],
-  );
+  const supportedCategories = React.useMemo(() => {
+    if (mode === "income") {
+      return categories.filter((category) => category.movementType !== "EXPENSE");
+    }
+    return categories.filter((category) => category.movementType !== "INCOME");
+  }, [categories, mode]);
 
   const availableSubCategories = React.useMemo(() => {
     if (!selectedCategoryId) return [];
@@ -204,7 +233,7 @@ export function ExpenseFormModal({
     void values.issueDate;
     void values.document;
 
-    const category = expenseCategories.find((item) => item.id === values.categoryId);
+    const category = supportedCategories.find((item) => item.id === values.categoryId);
     if (!category) {
       form.setError("categoryId", { message: t("expenses.validation.categoryRequired") });
       return;
@@ -241,7 +270,7 @@ export function ExpenseFormModal({
             dueDate: values.dueDate,
           },
         });
-        success("Despesa atualizada com sucesso.");
+        success(labels?.updatedSuccess ?? "Despesa atualizada com sucesso.");
         onOpenChange(false);
         onSaved();
         return;
@@ -253,7 +282,7 @@ export function ExpenseFormModal({
           issueDate: values.issueDate,
           dueDate: values.dueDate,
         });
-        success(t("expenses.feedback.singleCreated"));
+        success(labels?.singleCreatedSuccess ?? t("expenses.feedback.singleCreated"));
         onOpenChange(false);
         onSaved();
         return;
@@ -319,7 +348,7 @@ export function ExpenseFormModal({
           notes: previewContext.notes,
           entries,
         });
-        success(t("expenses.feedback.batchCreated"));
+        success(labels?.batchCreatedSuccess ?? t("expenses.feedback.batchCreated"));
         setPreviewOpen(false);
         onOpenChange(false);
         onSaved();
@@ -330,7 +359,16 @@ export function ExpenseFormModal({
         error(message);
       }
     },
-    [createBatchMutation, error, onOpenChange, onSaved, previewContext, success, t],
+    [
+      createBatchMutation,
+      error,
+      labels?.batchCreatedSuccess,
+      onOpenChange,
+      onSaved,
+      previewContext,
+      success,
+      t,
+    ],
   );
 
   const isSubmitting =
@@ -342,7 +380,11 @@ export function ExpenseFormModal({
         {/* //AQUI MUDA CSS MODAL */}
         <DialogContent className="flex max-h-[95vh] min-h-0 w-[min(100%,48rem)] max-w-2.1xl flex-col overflow-hidden">
           <DialogHeader className="shrink-0">
-            <DialogTitle>{isEdit ? "Editar despesa" : "Nova despesa"}</DialogTitle>
+            <DialogTitle>
+              {isEdit
+                ? labels?.editTitle ?? "Editar despesa"
+                : labels?.createTitle ?? "Nova despesa"}
+            </DialogTitle>
           </DialogHeader>
 
           <form
@@ -384,7 +426,7 @@ export function ExpenseFormModal({
                   name="expense_category_id"
                   value={form.watch("categoryId") || ""}
                   onChange={(value) => form.setValue("categoryId", value, { shouldDirty: true })}
-                  options={expenseCategories.map((category) => ({
+                  options={supportedCategories.map((category) => ({
                     value: category.id,
                     label: truncate(category.name, 40),
                   }))}
@@ -409,7 +451,9 @@ export function ExpenseFormModal({
                 />
               </div>
               <div className="flex min-h-0 min-w-0 flex-col gap-1.5">
-                <Label htmlFor="expense-modal-account">{t("expenses.form.suggestedAccount")}</Label>
+                <Label htmlFor="expense-modal-account">
+                  {labels?.accountLabel ?? t("expenses.form.suggestedAccount")}
+                </Label>
                 <FilterSelect
                   id="expense-modal-account"
                   name="expense_account_id"

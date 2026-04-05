@@ -12,6 +12,7 @@ import type {
   NotificationsApi,
   KpisApi,
   ExpensesApi,
+  IncomeApi,
   HolidaysApi,
 } from "./resources";
 
@@ -30,6 +31,7 @@ import {
   createNotificationsApi,
   createKpisApi,
   createExpensesApi,
+  createIncomeApi,
   createHolidaysApi,
 } from "./resources";
 
@@ -47,6 +49,7 @@ export type MeuFluxoApi = {
   notifications: NotificationsApi;
   kpis: KpisApi;
   expenses: ExpensesApi;
+  income: IncomeApi;
   holidays: HolidaysApi;
 };
 
@@ -65,6 +68,7 @@ export function createMeuFluxoApi(http: HttpClient): MeuFluxoApi {
     notifications: createNotificationsApi(http),
     kpis: createKpisApi(http),
     expenses: createExpensesApi(http),
+    income: createIncomeApi(http),
     holidays: createHolidaysApi(http),
   };
 }

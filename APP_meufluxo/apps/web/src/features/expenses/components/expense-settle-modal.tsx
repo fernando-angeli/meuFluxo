@@ -20,7 +20,7 @@ import {
 import { useToast } from "@/components/toast";
 import { extractApiError } from "@/lib/api-error";
 import { useLocale } from "@/lib/i18n";
-import { useSettleExpense } from "@/hooks/api";
+import { useSettleExpense, useSettleIncome } from "@/hooks/api";
 
 type SettleFormValues = {
   actualAmount: string;
@@ -52,6 +52,8 @@ export function ExpenseSettleModal({
   subCategoryName,
   accounts,
   onSettled,
+  mode = "expense",
+  labels,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -60,11 +62,27 @@ export function ExpenseSettleModal({
   subCategoryName: string | null;
   accounts: Array<{ id: string; name: string }>;
   onSettled: () => void;
+  mode?: "expense" | "income";
+  labels?: {
+    title?: string;
+    expectedAmount?: string;
+    dueDate?: string;
+    suggestedAccount?: string;
+    actualAmount?: string;
+    settledDate?: string;
+    settledAccount?: string;
+    success?: string;
+    submit?: string;
+    submitting?: string;
+    submitError?: string;
+  };
 }) {
   const { success, error } = useToast();
   const { locale: appLocale } = useLocale();
   const intlLocale = intlLocaleFromAppLocale(appLocale);
-  const settleMutation = useSettleExpense();
+  const settleExpenseMutation = useSettleExpense();
+  const settleIncomeMutation = useSettleIncome();
+  const settleMutation = mode === "income" ? settleIncomeMutation : settleExpenseMutation;
 
   const form = useForm<SettleFormValues>({
     defaultValues: {
@@ -94,12 +112,22 @@ export function ExpenseSettleModal({
 
     const actualAmount = parseMoneyInput(values.actualAmount);
     if (!Number.isFinite(actualAmount) || actualAmount <= 0) {
-      form.setError("actualAmount", { message: "Informe um valor pago maior que zero." });
+      form.setError("actualAmount", {
+        message:
+          mode === "income"
+            ? "Informe um valor recebido maior que zero."
+            : "Informe um valor pago maior que zero.",
+      });
       return;
     }
 
     if (!values.settledAt) {
-      form.setError("settledAt", { message: "Informe a data da baixa." });
+      form.setError("settledAt", {
+        message:
+          mode === "income"
+            ? "Informe a data do recebimento."
+            : "Informe a data da baixa.",
+      });
       return;
     }
 
@@ -113,12 +141,23 @@ export function ExpenseSettleModal({
           notes: values.notes?.trim() ? values.notes.trim() : null,
         },
       });
-      success("Despesa baixada com sucesso.");
+      success(
+        labels?.success ??
+          (mode === "income"
+            ? "Recebimento confirmado com sucesso."
+            : "Despesa baixada com sucesso."),
+      );
       onOpenChange(false);
       onSettled();
     } catch (err) {
       const apiError = extractApiError(err);
-      error(apiError?.detail ?? "Não foi possível concluir a baixa.");
+      error(
+        apiError?.detail ??
+          labels?.submitError ??
+          (mode === "income"
+            ? "Não foi possível confirmar o recebimento."
+            : "Não foi possível concluir a baixa."),
+      );
     }
   });
 
@@ -126,7 +165,10 @@ export function ExpenseSettleModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xl">
         <DialogHeader>
-          <DialogTitle>Baixa manual da despesa</DialogTitle>
+          <DialogTitle>
+            {labels?.title ??
+              (mode === "income" ? "Confirmação manual de recebimento" : "Baixa manual da despesa")}
+          </DialogTitle>
         </DialogHeader>
 
         {expense ? (
@@ -138,16 +180,18 @@ export function ExpenseSettleModal({
                 {subCategoryName ? ` / ${subCategoryName}` : ""}
               </p>
               <div className="mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
-                <p>Valor previsto: {formatMoney(expense.expectedAmount)}</p>
-                <p>Vencimento: {formatDate(expense.dueDate)}</p>
+                <p>{labels?.expectedAmount ?? "Valor previsto"}: {formatMoney(expense.expectedAmount)}</p>
+                <p>{labels?.dueDate ?? "Vencimento"}: {formatDate(expense.dueDate)}</p>
                 <p>Tipo: {expense.amountBehavior === "FIXED" ? "Fixo" : "Estimado"}</p>
-                <p>Conta sugerida: {selectedAccountName}</p>
+                <p>{labels?.suggestedAccount ?? "Conta sugerida"}: {selectedAccountName}</p>
               </div>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="expense-settle-actual-amount">Valor pago/real</Label>
+                <Label htmlFor="expense-settle-actual-amount">
+                  {labels?.actualAmount ?? (mode === "income" ? "Valor recebido/real" : "Valor pago/real")}
+                </Label>
                 <Controller
                   name="actualAmount"
                   control={form.control}
@@ -168,7 +212,10 @@ export function ExpenseSettleModal({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="expense-settle-date">Data da baixa/pagamento</Label>
+                <Label htmlFor="expense-settle-date">
+                  {labels?.settledDate ??
+                    (mode === "income" ? "Data do recebimento" : "Data da baixa/pagamento")}
+                </Label>
                 <Input
                   id="expense-settle-date"
                   type="date"
@@ -181,7 +228,12 @@ export function ExpenseSettleModal({
               </div>
 
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="expense-settle-account">Conta utilizada para débito</Label>
+                <Label htmlFor="expense-settle-account">
+                  {labels?.settledAccount ??
+                    (mode === "income"
+                      ? "Conta de destino do recebimento"
+                      : "Conta utilizada para débito")}
+                </Label>
                 <Select
                   value={form.watch("settledAccountId") || "__none"}
                   onValueChange={(value) =>
@@ -222,7 +274,9 @@ export function ExpenseSettleModal({
                 Cancelar
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Confirmando..." : "Confirmar baixa"}
+                {isSubmitting
+                  ? labels?.submitting ?? "Confirmando..."
+                  : labels?.submit ?? (mode === "income" ? "Confirmar recebimento" : "Confirmar baixa")}
               </Button>
             </DialogFooter>
           </form>

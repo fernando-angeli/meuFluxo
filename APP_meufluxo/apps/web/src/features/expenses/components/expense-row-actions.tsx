@@ -11,34 +11,43 @@ export function ExpenseRowActions({
   onDelete,
   onSettle,
   deleting,
+  labels,
 }: {
   expense: ExpenseRecord;
   onEdit: (expense: ExpenseRecord) => void;
   onDelete: (expense: ExpenseRecord) => void;
   onSettle: (expense: ExpenseRecord) => void;
   deleting?: boolean;
+  labels?: {
+    edit?: string;
+    delete?: string;
+    settle?: string;
+    editAria?: string;
+    deleteAria?: string;
+    settleAria?: string;
+  };
 }) {
   const actions: RowActionButtonItem[] = [
     {
       key: "edit",
-      label: "Editar",
+      label: labels?.edit ?? "Editar",
       icon: Pencil,
-      ariaLabel: "Editar despesa",
+      ariaLabel: labels?.editAria ?? "Editar despesa",
       onClick: () => onEdit(expense),
     },
     {
       key: "delete",
-      label: "Excluir",
+      label: labels?.delete ?? "Excluir",
       icon: Trash2,
-      ariaLabel: "Excluir despesa",
+      ariaLabel: labels?.deleteAria ?? "Excluir despesa",
       disabled: deleting,
       onClick: () => onDelete(expense),
     },
     {
       key: "settle",
-      label: "Baixar",
+      label: labels?.settle ?? "Baixar",
       icon: CheckCircle2,
-      ariaLabel: "Baixar despesa",
+      ariaLabel: labels?.settleAria ?? "Baixar despesa",
       onClick: () => onSettle(expense),
     },
   ];

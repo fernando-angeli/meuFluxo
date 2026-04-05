@@ -34,24 +34,29 @@ export type ExpensesListParams = Partial<Omit<PageQueryParams, "page" | "size">>
   size?: number;
   sort?: string;
   status?: PlannedEntryStatus;
+  issueDateStart?: string;
+  issueDateEnd?: string;
   dueDateStart?: string;
   dueDateEnd?: string;
   categoryId?: number;
   subCategoryId?: number;
 };
 
-export function createExpensesApi(http: HttpClient): ExpensesApi {
-  const base = "/expenses";
-
+export function createPlannedEntriesApi(
+  http: HttpClient,
+  basePath: string,
+): ExpensesApi {
   return {
     list: (params) =>
-      http.request<PageResponse<ExpenseRecord>>(base, {
+      http.request<PageResponse<ExpenseRecord>>(basePath, {
         method: "GET",
         query: {
           ...(params?.page !== undefined ? { page: params.page } : {}),
           ...(params?.size !== undefined ? { size: params.size } : {}),
           ...(params?.sort ? { sort: params.sort } : {}),
           ...(params?.status ? { status: params.status } : {}),
+          ...(params?.issueDateStart ? { issueDateStart: params.issueDateStart } : {}),
+          ...(params?.issueDateEnd ? { issueDateEnd: params.issueDateEnd } : {}),
           ...(params?.dueDateStart ? { dueDateStart: params.dueDateStart } : {}),
           ...(params?.dueDateEnd ? { dueDateEnd: params.dueDateEnd } : {}),
           ...(params?.categoryId != null ? { categoryId: params.categoryId } : {}),
@@ -59,33 +64,37 @@ export function createExpensesApi(http: HttpClient): ExpensesApi {
         },
       }),
     createSingle: (request) =>
-      http.request<ExpenseCreateResponse>(base, {
+      http.request<ExpenseCreateResponse>(basePath, {
         method: "POST",
         body: request,
       }),
     update: (id, request) =>
-      http.request<ExpenseCreateResponse>(`${base}/${encodeURIComponent(id)}`, {
+      http.request<ExpenseCreateResponse>(`${basePath}/${encodeURIComponent(id)}`, {
         method: "PUT",
         body: request,
       }),
     previewBatch: (request) =>
-      http.request<ExpenseBatchPreviewResponse>(`${base}/batch/preview`, {
+      http.request<ExpenseBatchPreviewResponse>(`${basePath}/batch/preview`, {
         method: "POST",
         body: request,
       }),
     createBatch: (request) =>
-      http.request<ExpenseBatchCreateResponse>(`${base}/batch`, {
+      http.request<ExpenseBatchCreateResponse>(`${basePath}/batch`, {
         method: "POST",
         body: request,
       }),
     cancel: (id) =>
-      http.request<ExpenseRecord>(`${base}/${encodeURIComponent(id)}/cancel`, {
+      http.request<ExpenseRecord>(`${basePath}/${encodeURIComponent(id)}/cancel`, {
         method: "PATCH",
       }),
     settle: (id, request) =>
-      http.request<ExpenseRecord>(`${base}/${encodeURIComponent(id)}/settle`, {
+      http.request<ExpenseRecord>(`${basePath}/${encodeURIComponent(id)}/settle`, {
         method: "PATCH",
         body: request,
       }),
   };
+}
+
+export function createExpensesApi(http: HttpClient): ExpensesApi {
+  return createPlannedEntriesApi(http, "/expenses");
 }
