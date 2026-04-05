@@ -62,6 +62,13 @@ export function getExpensesTableColumns({
       cellClassName: "min-w-[5rem] font-medium",
     },
     {
+      key: "document",
+      title: "Documento",
+      dataIndex: "document",
+      render: (row) => (row.document?.trim() ? row.document : "—"),
+      cellClassName: "whitespace-nowrap",
+    },
+    {
       key: "category",
       title: "Categoria",
       sortable: true,

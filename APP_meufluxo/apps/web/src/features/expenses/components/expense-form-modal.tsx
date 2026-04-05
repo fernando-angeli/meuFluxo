@@ -165,9 +165,9 @@ export function ExpenseFormModal({
         subCategoryId: expense.subCategoryId ?? "",
         expectedAmount: String(expense.expectedAmount),
         amountBehavior: expense.amountBehavior,
-        issueDate: "",
+        issueDate: expense.issueDate || expense.dueDate || "",
         dueDate: expense.dueDate,
-        document: "",
+        document: expense.document ?? "",
         defaultAccountId: expense.defaultAccountId ?? "",
         notes: expense.notes ?? "",
         repetitionsCount: "",
@@ -200,6 +200,8 @@ export function ExpenseFormModal({
   React.useEffect(() => {
     const currentSubCategory = form.getValues("subCategoryId");
     if (!currentSubCategory) return;
+    // Keep server-provided edit values; only clear after a real category change by user.
+    if (!form.getFieldState("categoryId").isDirty) return;
     const stillValid = availableSubCategories.some((item) => item.id === currentSubCategory);
     if (!stillValid) {
       form.setValue("subCategoryId", "");
@@ -229,10 +231,6 @@ export function ExpenseFormModal({
       values.issueDate = fallbackIssueDate;
     }
 
-    // issueDate e document: formulário pronto para persistência futura; API atual não expõe esses campos em PlannedEntry.
-    void values.issueDate;
-    void values.document;
-
     const category = supportedCategories.find((item) => item.id === values.categoryId);
     if (!category) {
       form.setError("categoryId", { message: t("expenses.validation.categoryRequired") });
@@ -256,6 +254,7 @@ export function ExpenseFormModal({
       subCategoryId: values.subCategoryId ? Number(values.subCategoryId) : null,
       expectedAmount: parseMoneyInput(values.expectedAmount),
       amountBehavior: values.amountBehavior,
+      document: values.document?.trim() ? values.document.trim() : null,
       defaultAccountId: values.defaultAccountId ? Number(values.defaultAccountId) : null,
       notes: values.notes?.trim() ? values.notes.trim() : null,
     } as const;
@@ -341,6 +340,7 @@ export function ExpenseFormModal({
         setBatchConfirmError(null);
         await createBatchMutation.mutateAsync({
           description: previewContext.description,
+          document: previewContext.baseDocument,
           categoryId: previewContext.categoryId,
           subCategoryId: previewContext.subCategoryId,
           amountBehavior: previewContext.amountBehavior,

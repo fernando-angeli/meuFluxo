@@ -120,6 +120,7 @@ export function ExpenseBatchPreviewModal({
   const handleConfirm = React.useCallback(async () => {
     const payload: ExpenseBatchConfirmEntry[] = draftEntries.map((entry) => ({
       order: entry.order,
+      document: entry.document.trim() ? entry.document.trim() : null,
       issueDate: entry.issueDate || entry.dueDate,
       dueDate: entry.dueDate,
       expectedAmount: Number(entry.expectedAmount),

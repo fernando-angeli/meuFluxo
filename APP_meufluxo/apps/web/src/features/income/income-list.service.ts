@@ -25,6 +25,7 @@ function normalizeIncomeFromApi(raw: unknown): ExpenseRecord {
     expectedAmount: toNumber(r.expectedAmount),
     actualAmount: r.actualAmount == null ? null : toNumber(r.actualAmount),
     amountBehavior: String(r.amountBehavior ?? "FIXED") as ExpenseRecord["amountBehavior"],
+    document: r.document != null ? String(r.document) : null,
     issueDate: String(r.issueDate ?? r.dueDate ?? ""),
     dueDate: String(r.dueDate ?? ""),
     status: String(r.status ?? "OPEN") as ExpenseRecord["status"],
