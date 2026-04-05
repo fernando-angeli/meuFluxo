@@ -3,9 +3,6 @@
 import type {
   ExpenseBatchCreateRequest,
   ExpenseBatchCreateResponse,
-  ExpenseBatchPreviewEntry,
-  ExpenseBatchPreviewRequest,
-  ExpenseBatchPreviewResponse,
   ExpenseCreateRequest,
   ExpenseCreateResponse,
   ExpenseUpdateRequest,
@@ -18,33 +15,6 @@ function toNumber(value: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-function normalizePreviewEntry(raw: unknown, index: number): ExpenseBatchPreviewEntry {
-  const r = raw as Record<string, unknown>;
-  const dueDate = String(r.dueDate ?? "");
-  const originalDueDate =
-    r.originalDueDate != null && String(r.originalDueDate).trim() !== ""
-      ? String(r.originalDueDate)
-      : null;
-
-  return {
-    order: toNumber(r.order ?? r.installment ?? index + 1),
-    dueDate,
-    expectedAmount: toNumber(r.expectedAmount ?? r.amount),
-    adjustedAutomatically:
-      Boolean(r.adjustedAutomatically ?? r.autoAdjusted) ||
-      (Boolean(originalDueDate) && originalDueDate !== dueDate),
-    originalDueDate,
-  };
-}
-
-function normalizePreviewResponse(raw: unknown): ExpenseBatchPreviewResponse {
-  const r = raw as Record<string, unknown>;
-  const entriesRaw = Array.isArray(r.entries) ? r.entries : [];
-  return {
-    entries: entriesRaw.map((item, index) => normalizePreviewEntry(item, index)),
-  };
-}
-
 function normalizeCreatedExpense(raw: unknown): ExpenseCreateResponse {
   const r = raw as Record<string, unknown>;
   return {
@@ -55,6 +25,7 @@ function normalizeCreatedExpense(raw: unknown): ExpenseCreateResponse {
     subCategoryId: r.subCategoryId != null ? String(r.subCategoryId) : null,
     expectedAmount: toNumber(r.expectedAmount),
     amountBehavior: String(r.amountBehavior ?? "FIXED") as ExpenseCreateResponse["amountBehavior"],
+    issueDate: String(r.issueDate ?? r.dueDate ?? ""),
     dueDate: String(r.dueDate ?? ""),
   };
 }
@@ -81,13 +52,6 @@ export async function updateExpense(
 ): Promise<ExpenseCreateResponse> {
   const raw = await api.expenses.update(id, request);
   return normalizeCreatedExpense(raw);
-}
-
-export async function previewExpenseBatch(
-  request: ExpenseBatchPreviewRequest,
-): Promise<ExpenseBatchPreviewResponse> {
-  const raw = await api.expenses.previewBatch(request);
-  return normalizePreviewResponse(raw);
 }
 
 export async function createExpenseBatch(

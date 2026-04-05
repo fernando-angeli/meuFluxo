@@ -25,6 +25,7 @@ export function normalizeExpenseFromApi(raw: unknown): ExpenseRecord {
     expectedAmount: toNumber(r.expectedAmount),
     actualAmount: r.actualAmount == null ? null : toNumber(r.actualAmount),
     amountBehavior: String(r.amountBehavior ?? "FIXED") as ExpenseRecord["amountBehavior"],
+    issueDate: String(r.issueDate ?? r.dueDate ?? ""),
     dueDate: String(r.dueDate ?? ""),
     status: String(r.status ?? "OPEN") as ExpenseRecord["status"],
     notes: r.notes != null ? String(r.notes) : null,

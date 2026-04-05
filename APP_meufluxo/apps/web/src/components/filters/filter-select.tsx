@@ -64,6 +64,7 @@ export function FilterSelect<T extends string>({
         className={cn(
           "h-10 min-h-10 min-w-0 w-full items-center gap-2 py-2 pr-10 text-sm leading-normal box-border",
           "data-[state=open]:border-primary data-[state=open]:shadow-md data-[state=open]:ring-2 data-[state=open]:ring-primary/25 data-[state=open]:ring-offset-2 data-[state=open]:ring-offset-background dark:data-[state=open]:ring-primary/35",
+          className,
           triggerClassName,
         )}
       >

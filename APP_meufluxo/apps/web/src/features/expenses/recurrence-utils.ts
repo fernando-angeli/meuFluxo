@@ -26,12 +26,14 @@ function getLastDayOfMonth(year: number, monthIndex0: number): number {
 
 export function generateRecurringPreviewEntries(args: {
   recurrenceType: ExpenseRecurrenceType;
+  issueDate?: string; // yyyy-MM-dd
   firstDueDate: string; // yyyy-MM-dd
   repetitionsCount: number;
   intervalDays?: number;
   expectedAmount: number;
 }): ExpenseBatchPreviewEntry[] {
   const { recurrenceType, firstDueDate, repetitionsCount, expectedAmount } = args;
+  const issueDate = args.issueDate?.trim() ? args.issueDate : firstDueDate;
 
   if (repetitionsCount < 1) return [];
 
@@ -46,6 +48,7 @@ export function generateRecurringPreviewEntries(args: {
     for (let i = 0; i < repetitionsCount; i++) {
       entries.push({
         order: i + 1,
+        issueDate,
         dueDate: toISODate(addDays(start, i * intervalDays)),
         expectedAmount,
         adjustedAutomatically: false,
@@ -75,6 +78,7 @@ export function generateRecurringPreviewEntries(args: {
     const due = new Date(year, month0, day);
     entries.push({
       order: i + 1,
+      issueDate,
       dueDate: toISODate(due),
       expectedAmount,
       adjustedAutomatically: false,

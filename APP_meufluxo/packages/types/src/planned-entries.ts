@@ -11,6 +11,7 @@ export type ExpenseCreateRequest = {
   subCategoryId?: number | null;
   expectedAmount: number;
   amountBehavior: PlannedAmountBehavior;
+  issueDate: string;
   dueDate: string;
   defaultAccountId?: number | null;
   notes?: string | null;
@@ -22,6 +23,7 @@ export type ExpenseUpdateRequest = {
   subCategoryId?: number | null;
   expectedAmount?: number;
   amountBehavior?: PlannedAmountBehavior;
+  issueDate?: string;
   dueDate?: string;
   defaultAccountId?: number | null;
   notes?: string | null;
@@ -48,6 +50,7 @@ export type ExpenseBatchPreviewRequest = {
 
 export type ExpenseBatchPreviewEntry = {
   order: number;
+  issueDate: string;
   dueDate: string;
   expectedAmount: number;
   adjustedAutomatically?: boolean;
@@ -60,6 +63,7 @@ export type ExpenseBatchPreviewResponse = {
 
 export type ExpenseBatchConfirmEntry = {
   order: number;
+  issueDate: string;
   dueDate: string;
   expectedAmount: number;
 };
@@ -82,6 +86,7 @@ export type ExpenseCreateResponse = {
   subCategoryId?: string | null;
   expectedAmount: number;
   amountBehavior: PlannedAmountBehavior;
+  issueDate: string;
   dueDate: string;
   status?: PlannedEntryStatus;
   notes?: string | null;
@@ -100,6 +105,7 @@ export type ExpenseRecord = {
   subCategoryId?: string | null;
   expectedAmount: number;
   amountBehavior: PlannedAmountBehavior;
+  issueDate: string;
   dueDate: string;
   status: PlannedEntryStatus;
   notes?: string | null;

@@ -42,7 +42,15 @@ export function getExpensesTableColumns({
   renderActions: (row: ExpenseRecord) => ReactNode;
 }): Array<DataTableColumn<ExpenseRecord>> {
   return [
-    { key: "description", title: "Descrição", dataIndex: "description", sortable: true, sortKey: "description", cellClassName: "font-medium" },
+    {
+      key: "description",
+      title: "Descrição",
+      dataIndex: "description",
+      sortable: true,
+      sortKey: "description",
+      width: "20%",
+      cellClassName: "min-w-[5rem] font-medium",
+    },
     {
       key: "category",
       title: "Categoria",
@@ -57,11 +65,20 @@ export function getExpensesTableColumns({
     },
     {
       key: "expectedAmount",
-      title: "Valor previsto",
+      title: "Valor",
       sortable: true,
       sortKey: "expectedAmount",
       align: "right",
+      width: 132,
+      cellClassName: "whitespace-nowrap tabular-nums",
       render: (row) => formatMoney(row.expectedAmount),
+    },
+    {
+      key: "issueDate",
+      title: "Emissão",
+      sortable: true,
+      sortKey: "issueDate",
+      render: (row) => formatDate(row.issueDate),
     },
     {
       key: "dueDate",
@@ -89,9 +106,10 @@ export function getExpensesTableColumns({
     {
       key: "actions",
       title: "Ações",
-      align: "right",
-      width: 132,
-      cellClassName: "text-right",
+      align: "center",
+      width: 144,
+      headerClassName: "text-center",
+      cellClassName: "text-center",
       render: (row) => renderActions(row),
     },
   ];
