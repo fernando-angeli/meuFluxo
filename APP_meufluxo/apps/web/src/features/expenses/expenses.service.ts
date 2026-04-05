@@ -25,6 +25,7 @@ function normalizeCreatedExpense(raw: unknown): ExpenseCreateResponse {
     subCategoryId: r.subCategoryId != null ? String(r.subCategoryId) : null,
     expectedAmount: toNumber(r.expectedAmount),
     amountBehavior: String(r.amountBehavior ?? "FIXED") as ExpenseCreateResponse["amountBehavior"],
+    document: r.document != null ? String(r.document) : null,
     issueDate: String(r.issueDate ?? r.dueDate ?? ""),
     dueDate: String(r.dueDate ?? ""),
   };
