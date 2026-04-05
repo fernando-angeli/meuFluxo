@@ -36,11 +36,21 @@ export function getExpensesTableColumns({
   categoryNameById,
   subCategoryNameById,
   renderActions,
+  labels,
 }: {
   categoryNameById: Map<string, string>;
   subCategoryNameById: Map<string, string>;
   renderActions: (row: ExpenseRecord) => ReactNode;
+  labels?: Partial<Record<PlannedEntryStatus, string>> & {
+    amountTitle?: string;
+    overdueTitle?: string;
+  };
 }): Array<DataTableColumn<ExpenseRecord>> {
+  const resolvedStatusLabel = {
+    ...statusLabel,
+    ...labels,
+  };
+
   return [
     {
       key: "description",
@@ -65,7 +75,7 @@ export function getExpensesTableColumns({
     },
     {
       key: "expectedAmount",
-      title: "Valor",
+      title: labels?.amountTitle ?? "Valor",
       sortable: true,
       sortKey: "expectedAmount",
       align: "right",
@@ -100,7 +110,14 @@ export function getExpensesTableColumns({
       sortable: true,
       sortKey: "status",
       render: (row) => (
-        <StatusIndicator label={statusLabel[row.status]} tone={statusTone[row.status]} />
+        <StatusIndicator
+          label={
+            row.status === "OVERDUE" && labels?.overdueTitle
+              ? labels.overdueTitle
+              : resolvedStatusLabel[row.status]
+          }
+          tone={statusTone[row.status]}
+        />
       ),
     },
     {

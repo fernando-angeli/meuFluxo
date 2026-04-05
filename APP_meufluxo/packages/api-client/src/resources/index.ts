@@ -36,6 +36,7 @@ export { createInvoicesApi, type InvoicesApi } from "./invoices";
 export { createNotificationsApi, type NotificationsApi } from "./notifications";
 export { createKpisApi, type KpisApi } from "./kpis";
 export { createExpensesApi, type ExpensesApi } from "./expenses";
+export { createIncomeApi, type IncomeApi } from "./income";
 export {
   createHolidaysApi,
   type HolidaysApi,
