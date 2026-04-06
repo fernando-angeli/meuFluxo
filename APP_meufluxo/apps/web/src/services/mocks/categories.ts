@@ -1,4 +1,4 @@
-import type { SubCategory } from "@meufluxo/types";
+import type { Category, SubCategory } from "@meufluxo/types";
 
 const now = new Date().toISOString();
 

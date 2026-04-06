@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuthOptional } from "@/hooks/useAuth";
 import { fetchCategoriesListAll } from "@/features/categories/categories.service";
 import { env } from "@/lib/env";
+import { mockCategories } from "@/services/mocks/categories";
 
 export const categoriesQueryKey = ["categories"] as const;
 
