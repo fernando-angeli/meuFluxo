@@ -44,6 +44,12 @@ function toIsoDate(value: Date) {
   return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
 }
 
+function isValidIsoDate(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = new Date(`${value}T00:00:00`);
+  return !Number.isNaN(parsed.getTime());
+}
+
 export function ExpenseSettleModal({
   open,
   onOpenChange,
@@ -97,7 +103,7 @@ export function ExpenseSettleModal({
     if (!open) return;
     form.reset({
       actualAmount: expense ? amountToEditString(expense.expectedAmount, intlLocale) : "",
-      settledAt: toIsoDate(new Date()),
+      settledAt: expense?.dueDate || toIsoDate(new Date()),
       settledAccountId: expense?.defaultAccountId ?? "",
       notes: expense?.notes ?? "",
     });
@@ -130,6 +136,24 @@ export function ExpenseSettleModal({
       });
       return;
     }
+    if (!isValidIsoDate(values.settledAt)) {
+      form.setError("settledAt", {
+        message:
+          mode === "income"
+            ? "Informe uma data de recebimento válida."
+            : "Informe uma data de pagamento válida.",
+      });
+      return;
+    }
+    if (!values.settledAccountId) {
+      form.setError("settledAccountId", {
+        message:
+          mode === "income"
+            ? "Selecione a conta de destino do recebimento."
+            : "Selecione a conta utilizada para o pagamento.",
+      });
+      return;
+    }
 
     try {
       await settleMutation.mutateAsync({
@@ -137,7 +161,7 @@ export function ExpenseSettleModal({
         request: {
           actualAmount,
           settledAt: values.settledAt,
-          settledAccountId: values.settledAccountId ? Number(values.settledAccountId) : null,
+          settledAccountId: Number(values.settledAccountId),
           notes: values.notes?.trim() ? values.notes.trim() : null,
         },
       });
@@ -182,6 +206,7 @@ export function ExpenseSettleModal({
               <div className="mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
                 <p>{labels?.expectedAmount ?? "Valor previsto"}: {formatMoney(expense.expectedAmount)}</p>
                 <p>{labels?.dueDate ?? "Vencimento"}: {formatDate(expense.dueDate)}</p>
+                <p>Documento: {expense.document?.trim() ? expense.document : "—"}</p>
                 <p>Tipo: {expense.amountBehavior === "FIXED" ? "Fixo" : "Estimado"}</p>
                 <p>{labels?.suggestedAccount ?? "Conta sugerida"}: {selectedAccountName}</p>
               </div>
@@ -236,19 +261,27 @@ export function ExpenseSettleModal({
                 </Label>
                 <Select
                   value={form.watch("settledAccountId") || "__none"}
-                  onValueChange={(value) =>
-                    form.setValue("settledAccountId", value === "__none" ? "" : value, { shouldDirty: true })
-                  }
+                  onValueChange={(value) => {
+                    form.setValue("settledAccountId", value === "__none" ? "" : value, {
+                      shouldDirty: true,
+                      shouldTouch: true,
+                    });
+                    form.clearErrors("settledAccountId");
+                  }}
                 >
                   <SelectTrigger
                     id="expense-settle-account"
-                    className="h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors hover:bg-muted/50 hover:border-input focus:ring-2 focus:ring-ring focus:ring-offset-2 data-[state=open]:border-primary/50 data-[state=open]:ring-2 data-[state=open]:ring-primary/20"
+                    className={`h-10 w-full rounded-xl border bg-background px-3 py-2 text-sm shadow-sm transition-colors hover:bg-muted/50 focus:ring-2 focus:ring-ring focus:ring-offset-2 data-[state=open]:border-primary/50 data-[state=open]:ring-2 data-[state=open]:ring-primary/20 ${
+                      form.formState.errors.settledAccountId
+                        ? "border-destructive focus:ring-destructive/20"
+                        : "border-input hover:border-input"
+                    }`}
                   >
-                    <SelectValue placeholder="Selecione uma conta (opcional)" />
+                    <SelectValue placeholder="Selecione uma conta" />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl border bg-popover shadow-lg" position="popper" sideOffset={6}>
                     <SelectItem value="__none" className="rounded-lg py-2 cursor-pointer focus:bg-accent">
-                      Selecione uma conta (opcional)
+                      Selecione uma conta
                     </SelectItem>
                     {accounts.map((account) => (
                       <SelectItem key={account.id} value={account.id} className="rounded-lg py-2 cursor-pointer focus:bg-accent">
@@ -257,6 +290,11 @@ export function ExpenseSettleModal({
                     ))}
                   </SelectContent>
                 </Select>
+                {form.formState.errors.settledAccountId ? (
+                  <p className="text-xs text-destructive">
+                    {form.formState.errors.settledAccountId.message}
+                  </p>
+                ) : null}
               </div>
 
               <div className="space-y-2 md:col-span-2">
