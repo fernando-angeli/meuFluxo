@@ -39,4 +39,5 @@ build/
 out/
 .nuxt/
 .output/
+.turbo/
 
