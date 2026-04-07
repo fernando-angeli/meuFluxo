@@ -132,6 +132,26 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile prod -
 - Loki API: `http://localhost:3100`
 - Kafka UI: `http://localhost:8088`
 
+## Módulo de cartão/fatura
+
+Principais endpoints REST implementados:
+
+- `GET /credit-cards?active=&page=&size=&sort=`
+- `POST /credit-cards`
+- `PUT /credit-cards/{id}`
+- `PATCH /credit-cards/{id}/active`
+- `GET /credit-card-invoices?page=&size=&sort=&creditCardId=&status=&referenceYear=&referenceMonth=&dueDateStart=&dueDateEnd=`
+- `GET /credit-card-invoices/{id}`
+- `GET /credit-card-invoices/{id}/details`
+- `POST /credit-card-expenses`
+- `GET /credit-card-expenses?page=&size=&sort=&creditCardId=&invoiceId=&categoryId=&subcategoryId=&installmentGroupId=&purchaseDateStart=&purchaseDateEnd=`
+- `GET /credit-card-expenses/{id}`
+- `PUT /credit-card-expenses/{id}`
+- `PATCH /credit-card-expenses/{id}/cancel`
+- `POST /credit-card-invoice-payments`
+- `GET /credit-card-invoice-payments?page=&size=&sort=&invoiceId=&accountId=&paymentDateStart=&paymentDateEnd=`
+- `GET /credit-card-invoice-payments/{id}`
+
 ## Exemplo de endpoint KPI
 
 ```http
