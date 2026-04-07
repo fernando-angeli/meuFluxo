@@ -1,22 +1,23 @@
 package com.meufluxo.dto.creditCard;
 
-import com.meufluxo.dto.BaseResponse;
 import com.meufluxo.enums.BrandCard;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 public record CreditCardResponse(
         Long id,
         String name,
-        String lastFourDigits,
-        BigDecimal creditLimit,
+        String cardDisplayName,
+        BrandCard brand,
         Integer closingDay,
         Integer dueDay,
-        Boolean annualFeeEnabled,
-        BigDecimal annualFeeAmount,
-        BrandCard brandCard,
-        BigDecimal annualFeeWaiverThreshold,
+        BigDecimal creditLimit,
         Long defaultPaymentAccountId,
-        BaseResponse meta
-){}
-
+        String defaultPaymentAccountName,
+        String notes,
+        boolean active,
+        LocalDateTime createdAt,
+        LocalDateTime updatedAt
+) {
+}

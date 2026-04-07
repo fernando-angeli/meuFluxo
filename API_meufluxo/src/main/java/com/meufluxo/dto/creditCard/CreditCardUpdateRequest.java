@@ -9,7 +9,7 @@ import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 
-public record CreditCardRequest(
+public record CreditCardUpdateRequest(
         @NotBlank(message = "O nome do cartão é obrigatório")
         @Size(min = 3, max = 120, message = "O nome do cartão deve conter entre 3 e 120 caracteres")
         String name,
