@@ -1,13 +1,12 @@
 package com.meufluxo.enums;
 
-public enum CreditCardTransactionStatus {
-    ACTIVE("Ativa"),
-    CANCELED("Cancelada"),
-    REVERSED("Revertida");
+public enum CreditCardExpenseStatus {
+    OPEN("Em aberto"),
+    CANCELED("Cancelada");
 
     private final String labelPtBr;
 
-    CreditCardTransactionStatus(String labelPtBr) {
+    CreditCardExpenseStatus(String labelPtBr) {
         this.labelPtBr = labelPtBr;
     }
 
