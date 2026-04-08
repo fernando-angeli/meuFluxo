@@ -1,5 +1,6 @@
 import type { AccountType } from "./accounts";
 import type { BrandCard } from "./credit-cards";
+import type { CreditCardExpenseStatus } from "./credit-card-expenses";
 import type { UserLanguage, UserTheme, WorkspaceMembershipRole } from "./session";
 
 export type CreditCardInstallmentStatus =
@@ -85,6 +86,14 @@ export const CREDIT_CARD_INVOICE_STATUS_LABELS: Record<
   OVERDUE: "Atrasada",
 };
 
+export const CREDIT_CARD_EXPENSE_STATUS_LABELS: Record<
+  CreditCardExpenseStatus,
+  string
+> = {
+  OPEN: "Aberta",
+  CANCELED: "Cancelada",
+};
+
 export const CREDIT_CARD_TRANSACTION_STATUS_LABELS: Record<
   CreditCardTransactionStatus,
   string
@@ -168,6 +177,12 @@ export function getCreditCardInvoiceStatusLabel(
   value: CreditCardInvoiceStatus,
 ): string {
   return getLabel(value, CREDIT_CARD_INVOICE_STATUS_LABELS);
+}
+
+export function getCreditCardExpenseStatusLabel(
+  value: CreditCardExpenseStatus,
+): string {
+  return getLabel(value, CREDIT_CARD_EXPENSE_STATUS_LABELS);
 }
 
 export function getCreditCardTransactionStatusLabel(
