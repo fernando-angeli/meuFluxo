@@ -15,6 +15,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+
 @Service
 public class CreditCardService extends BaseUserService {
 
@@ -37,11 +39,13 @@ public class CreditCardService extends BaseUserService {
         this.workspaceSyncStateService = workspaceSyncStateService;
     }
 
+    @Transactional(readOnly = true)
     public CreditCardResponse getById(Long id) {
         CreditCard creditCard = findByIdOrThrow(id);
         return creditCardMapper.toResponse(creditCard);
     }
 
+    @Transactional(readOnly = true)
     public PageResponse<CreditCardResponse> getAll(Boolean active, Pageable pageable) {
         Page<CreditCard> creditCards = active == null
                 ? creditCardRepository.findAllByWorkspaceId(getCurrentWorkspaceId(), pageable)
@@ -59,6 +63,8 @@ public class CreditCardService extends BaseUserService {
         newCreditCard.setNotes(trimToNull(request.notes()));
         newCreditCard.setDefaultPaymentAccount(resolveAccount(request.defaultPaymentAccountId()));
         newCreditCard.setWorkspace(getCurrentWorkspace());
+        newCreditCard.setAnnualFeeEnabled(false);
+        newCreditCard.setLimitAmount(request.creditLimit() != null ? request.creditLimit() : BigDecimal.ZERO);
 
         CreditCard saved = creditCardRepository.save(newCreditCard);
         if (!request.active()) {
@@ -79,6 +85,8 @@ public class CreditCardService extends BaseUserService {
         existing.setClosingDay(request.closingDay());
         existing.setDueDay(request.dueDay());
         existing.setCreditLimit(request.creditLimit());
+        existing.setAnnualFeeEnabled(false);
+        existing.setLimitAmount(request.creditLimit() != null ? request.creditLimit() : BigDecimal.ZERO);
         existing.setDefaultPaymentAccount(resolveAccount(request.defaultPaymentAccountId()));
         existing.setNotes(trimToNull(request.notes()));
         existing.setActive(request.active());
@@ -97,6 +105,7 @@ public class CreditCardService extends BaseUserService {
         return creditCardMapper.toResponse(saved);
     }
 
+    @Transactional(readOnly = true)
     public CreditCard findByIdOrThrow(Long id) {
         return creditCardRepository.findByIdAndWorkspaceId(id, getCurrentWorkspaceId())
                 .orElseThrow(() -> new NotFoundException("Cartão de crédito não encontrado com ID: " + id));
