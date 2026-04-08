@@ -15,6 +15,7 @@ export * from "./categories";
 export * from "./cash-movements";
 export * from "./scheduled-movements";
 export * from "./credit-cards";
+export * from "./credit-card-expenses";
 export * from "./invoices";
 export * from "./notifications";
 export * from "./dashboard";

@@ -3,9 +3,11 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { useAuthOptional } from "@/hooks/useAuth";
+import { buildPageableParams } from "@/lib/pageable";
 import { api } from "@/services/api";
 import { env } from "@/lib/env";
 import { mockCreditCards } from "@/services/mocks/credit-cards";
+import { normalizeCreditCardFromApi } from "@/features/credit-cards/credit-cards.service";
 
 export const creditCardsQueryKey = ["credit-cards"] as const;
 
@@ -14,8 +16,17 @@ export function useCreditCards() {
 
   return useQuery({
     queryKey: creditCardsQueryKey,
-    queryFn: () =>
-      env.useMocks ? Promise.resolve(mockCreditCards) : api.creditCards.list(),
+    queryFn: async () => {
+      if (env.useMocks) return mockCreditCards;
+      const params = buildPageableParams({
+        page: 0,
+        size: 1000,
+        sortField: "name",
+        sortDirection: "ASC",
+      });
+      const page = await api.creditCards.list(params);
+      return (page.content ?? []).map((item) => normalizeCreditCardFromApi(item));
+    },
     enabled: !auth?.isBootstrapping && !!auth?.isAuthenticated,
   });
 }

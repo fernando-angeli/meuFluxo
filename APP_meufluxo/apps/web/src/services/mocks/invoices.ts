@@ -1,20 +1,99 @@
-import type { Invoice } from "@meufluxo/types";
-import { isoDate, isoMonth } from "@meufluxo/utils";
+import type { CreditCardInvoiceListItem, CreditCardInvoiceDetails } from "@meufluxo/types";
+import { isoDate } from "@meufluxo/utils";
 
 const now = new Date();
 
-export const mockInvoices: Invoice[] = [
+export const mockInvoices: CreditCardInvoiceListItem[] = [
   {
     id: "inv_1",
-    workspaceId: "ws_1",
     creditCardId: "cc_1",
-    referenceMonth: isoMonth(now),
-    total: 1249.32,
-    currency: "BRL",
+    creditCardName: "Nubank Platinum",
+    cardDisplayName: "Nubank Platinum - MASTERCARD",
+    referenceLabel: `${now.getMonth() + 1}/${now.getFullYear()}`,
+    dueDate: isoDate(new Date(now.getFullYear(), now.getMonth(), 15)),
+    purchasesAmount: 1130.52,
+    previousBalance: 118.8,
+    totalAmount: 1249.32,
+    paidAmount: 300,
+    remainingAmount: 949.32,
     status: "OPEN",
-    dueAt: isoDate(new Date(now.getFullYear(), now.getMonth(), 15)),
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    statusLabel: "Aberta",
   },
 ];
+
+export const mockInvoiceDetailsById: Record<string, CreditCardInvoiceDetails> = {
+  inv_1: {
+    id: "inv_1",
+    creditCardId: "cc_1",
+    creditCardName: "Nubank Platinum",
+    cardDisplayName: "Nubank Platinum - MASTERCARD",
+    creditCardBrand: "MASTERCARD",
+    closingDay: 5,
+    dueDay: 15,
+    referenceYear: now.getFullYear(),
+    referenceMonth: now.getMonth() + 1,
+    referenceLabel: `${now.getMonth() + 1}/${now.getFullYear()}`,
+    periodStart: isoDate(new Date(now.getFullYear(), now.getMonth() - 1, 6)),
+    periodEnd: isoDate(new Date(now.getFullYear(), now.getMonth(), 5)),
+    closingDate: isoDate(new Date(now.getFullYear(), now.getMonth(), 5)),
+    dueDate: isoDate(new Date(now.getFullYear(), now.getMonth(), 15)),
+    purchasesAmount: 1130.52,
+    previousBalance: 118.8,
+    revolvingInterest: 0,
+    lateFee: 0,
+    otherCharges: 0,
+    totalAmount: 1249.32,
+    paidAmount: 300,
+    remainingAmount: 949.32,
+    currentBalance: 949.32,
+    status: "OPEN",
+    statusLabel: "Aberta",
+    canClose: true,
+    canPay: true,
+    canEditCharges: true,
+    canEditExpenses: true,
+    expenses: [
+      {
+        id: "exp_1",
+        description: "Mercado",
+        purchaseDate: isoDate(new Date(now.getFullYear(), now.getMonth(), 2)),
+        categoryId: "10",
+        categoryName: "Alimentação",
+        subcategoryId: "11",
+        subcategoryName: "Supermercado",
+        amount: 350.5,
+        installmentNumber: 1,
+        installmentCount: 1,
+        installmentGroupId: null,
+        status: "ACTIVE",
+        statusLabel: "Ativa",
+      },
+      {
+        id: "exp_2",
+        description: "Assinatura streaming",
+        purchaseDate: isoDate(new Date(now.getFullYear(), now.getMonth(), 3)),
+        categoryId: "20",
+        categoryName: "Lazer",
+        subcategoryId: "22",
+        subcategoryName: "Streaming",
+        amount: 79.9,
+        installmentNumber: 1,
+        installmentCount: 1,
+        installmentGroupId: null,
+        status: "ACTIVE",
+        statusLabel: "Ativa",
+      },
+    ],
+    payments: [
+      {
+        id: "pay_1",
+        accountId: "1",
+        accountName: "Conta principal",
+        paymentDate: isoDate(new Date(now.getFullYear(), now.getMonth(), 10)),
+        amount: 300,
+        notes: "Pagamento parcial",
+      },
+    ],
+  },
+};
 

@@ -40,6 +40,7 @@ export const mainNav: NavItem[] = [
     children: [
       { titleKey: "nav.creditCards", href: "/cards" },
       { titleKey: "nav.invoices", href: "/cards/invoices" },
+      { titleKey: "nav.cardExpenses", href: "/cards/expenses" },
     ],
   },
 ];
