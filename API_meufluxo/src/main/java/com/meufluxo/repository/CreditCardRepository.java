@@ -4,6 +4,7 @@ import com.meufluxo.model.CreditCard;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 import java.util.Optional;
@@ -16,6 +17,8 @@ public interface CreditCardRepository extends JpaRepository<CreditCard, Long> {
     List<CreditCard> findAllByWorkspaceIdOrderByIdAsc(Long workspaceId);
 
     Optional<CreditCard> findByIdAndWorkspaceId(Long id, Long workspaceId);
+    @Query("select c.workspace.id from CreditCard c where c.id = :id")
+    Optional<Long> findWorkspaceIdById(Long id);
 
     boolean existsByNameAndWorkspaceId(String name, Long workspaceId);
 

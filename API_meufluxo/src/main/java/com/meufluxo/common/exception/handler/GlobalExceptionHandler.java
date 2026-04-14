@@ -13,6 +13,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.time.Instant;
 import java.util.List;
@@ -159,6 +160,22 @@ public class GlobalExceptionHandler {
                 HttpStatus.BAD_REQUEST,
                 "Malformed JSON request",
                 "Request body is invalid or contains incorrect field values.",
+                List.of(),
+                request
+        );
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<StandardError> handleTypeMismatch(
+            MethodArgumentTypeMismatchException e,
+            HttpServletRequest request
+    ) {
+        String parameter = e.getName();
+        String value = e.getValue() == null ? "null" : e.getValue().toString();
+        return buildError(
+                HttpStatus.BAD_REQUEST,
+                "Invalid parameter format",
+                "Parâmetro '" + parameter + "' com valor inválido: '" + value + "'.",
                 List.of(),
                 request
         );

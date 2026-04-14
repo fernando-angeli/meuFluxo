@@ -15,6 +15,8 @@ import com.meufluxo.model.CreditCardExpense;
 import com.meufluxo.model.CreditCardInvoice;
 import com.meufluxo.model.SubCategory;
 import com.meufluxo.repository.CreditCardExpenseRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -32,6 +34,7 @@ import java.util.UUID;
 
 @Service
 public class CreditCardExpenseService extends BaseUserService {
+    private static final Logger log = LoggerFactory.getLogger(CreditCardExpenseService.class);
 
     private final CreditCardExpenseRepository creditCardExpenseRepository;
     private final CreditCardExpenseMapper creditCardExpenseMapper;
@@ -116,6 +119,16 @@ public class CreditCardExpenseService extends BaseUserService {
 
     @Transactional
     public CreditCardExpenseCreateResponse create(CreditCardExpenseRequest request) {
+        log.info(
+                "Criando lançamento de cartão. creditCardIdRecebido={}, workspaceId={}, userId={}, categoryId={}, subcategoryId={}, purchaseDate={}, installmentCount={}",
+                request.creditCardId(),
+                getCurrentWorkspaceId(),
+                currentUserService.getCurrentUserId(),
+                request.categoryId(),
+                request.subcategoryId(),
+                request.purchaseDate(),
+                request.installmentCount()
+        );
         CreditCard creditCard = creditCardService.findByIdOrThrow(request.creditCardId());
         Category category = categoryService.findByIdOrThrow(request.categoryId());
         SubCategory subCategory = subCategoryService.findByIdOrThrow(request.subcategoryId());
