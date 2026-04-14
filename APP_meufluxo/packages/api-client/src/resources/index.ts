@@ -32,7 +32,16 @@ export {
   type ScheduledMovementsApi,
 } from "./scheduled-movements";
 export { createCreditCardsApi, type CreditCardsApi } from "./credit-cards";
-export { createInvoicesApi, type InvoicesApi } from "./invoices";
+export {
+  createCreditCardExpensesApi,
+  type CreditCardExpensesApi,
+  type CreditCardExpensesListParams,
+} from "./credit-card-expenses";
+export {
+  createInvoicesApi,
+  type InvoicesApi,
+  type InvoicesListParams,
+} from "./invoices";
 export { createNotificationsApi, type NotificationsApi } from "./notifications";
 export { createKpisApi, type KpisApi } from "./kpis";
 export { createExpensesApi, type ExpensesApi } from "./expenses";

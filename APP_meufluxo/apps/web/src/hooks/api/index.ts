@@ -10,6 +10,7 @@ export {
 } from "./use-scheduled-movements";
 export { useCreditCards, creditCardsQueryKey } from "./use-credit-cards";
 export { useInvoices, invoicesQueryKey } from "./use-invoices";
+export { useInvoiceDetails, invoiceDetailsQueryKey } from "./use-invoice-details";
 export {
   useNotifications,
   notificationsQueryKey,
@@ -45,3 +46,15 @@ export {
   useCancelIncome,
   useSettleIncome,
 } from "./use-income-mutations";
+export {
+  useCreateCreditCardExpense,
+  useUpdateCreditCardExpense,
+  useCancelCreditCardExpense,
+  creditCardExpensesQueryKey,
+} from "./use-credit-card-expense-mutations";
+export {
+  useCloseInvoice,
+  useCreateInvoicePayment,
+  useReopenInvoice,
+  useUpdateInvoiceCharges,
+} from "./use-invoice-mutations";

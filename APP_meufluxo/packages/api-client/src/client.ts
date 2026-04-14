@@ -8,6 +8,7 @@ import type {
   CashMovementsApi,
   ScheduledMovementsApi,
   CreditCardsApi,
+  CreditCardExpensesApi,
   InvoicesApi,
   NotificationsApi,
   KpisApi,
@@ -27,6 +28,7 @@ import {
   createCashMovementsApi,
   createScheduledMovementsApi,
   createCreditCardsApi,
+  createCreditCardExpensesApi,
   createInvoicesApi,
   createNotificationsApi,
   createKpisApi,
@@ -45,6 +47,7 @@ export type MeuFluxoApi = {
   cashMovements: CashMovementsApi;
   scheduledMovements: ScheduledMovementsApi;
   creditCards: CreditCardsApi;
+  creditCardExpenses: CreditCardExpensesApi;
   invoices: InvoicesApi;
   notifications: NotificationsApi;
   kpis: KpisApi;
@@ -64,6 +67,7 @@ export function createMeuFluxoApi(http: HttpClient): MeuFluxoApi {
     cashMovements: createCashMovementsApi(http),
     scheduledMovements: createScheduledMovementsApi(http),
     creditCards: createCreditCardsApi(http),
+    creditCardExpenses: createCreditCardExpensesApi(http),
     invoices: createInvoicesApi(http),
     notifications: createNotificationsApi(http),
     kpis: createKpisApi(http),
