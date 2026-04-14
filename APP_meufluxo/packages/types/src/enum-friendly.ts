@@ -1,4 +1,5 @@
 import type { AccountType } from "./accounts";
+import type { CreditCardExpenseStatus } from "./credit-card-expenses";
 import type { BrandCard } from "./credit-cards";
 import type { CreditCardExpenseStatus } from "./credit-card-expenses";
 import type { UserLanguage, UserTheme, WorkspaceMembershipRole } from "./session";
@@ -71,6 +72,16 @@ export const CREDIT_CARD_INSTALLMENT_STATUS_LABELS: Record<
 > = {
   OPEN: "Aberta",
   INVOICED: "Na fatura",
+  PAID: "Paga",
+  CANCELED: "Cancelada",
+};
+
+export const CREDIT_CARD_EXPENSE_STATUS_LABELS: Record<
+  CreditCardExpenseStatus,
+  string
+> = {
+  OPEN: "Em aberto",
+  INVOICED: "Faturada",
   PAID: "Paga",
   CANCELED: "Cancelada",
 };
@@ -171,6 +182,12 @@ export function getCreditCardInstallmentStatusLabel(
   value: CreditCardInstallmentStatus,
 ): string {
   return getLabel(value, CREDIT_CARD_INSTALLMENT_STATUS_LABELS);
+}
+
+export function getCreditCardExpenseStatusLabel(
+  value: CreditCardExpenseStatus,
+): string {
+  return getLabel(value, CREDIT_CARD_EXPENSE_STATUS_LABELS);
 }
 
 export function getCreditCardInvoiceStatusLabel(

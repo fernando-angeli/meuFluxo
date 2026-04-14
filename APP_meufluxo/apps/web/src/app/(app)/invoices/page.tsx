@@ -1,168 +1,191 @@
 "use client";
 
 import * as React from "react";
-
+import { useRouter, useSearchParams } from "next/navigation";
+import { CardsModuleNav } from "@/components/credit-cards";
+import { FilterSelect } from "@/components/filters/filter-select";
+import { DateRangePicker, type DateRangeValue } from "@/components/filters/date-range-picker";
+import { InvoicesTable, InvoiceDetailsPanel } from "@/components/invoices";
+import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
+import { DetailsDrawer } from "@/components/details";
+import { SectionErrorState, SectionLoadingState } from "@/components/patterns";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { DateRangePicker, FilterSelect } from "@/components/filters";
-import { DetailsDrawer } from "@/components/details";
-import { InvoiceDetails, InvoicesTable } from "@/components/invoices";
+import { InvoiceChargesModal } from "@/features/invoices/components/invoice-charges-modal";
+import { InvoicePaymentModal } from "@/features/invoices/components/invoice-payment-modal";
+import { InvoiceRowActions } from "@/features/invoices/components/invoice-row-actions";
+import { getInvoicesTableColumns } from "@/features/invoices/invoices.columns";
+import { fetchInvoicesPage } from "@/features/invoices/invoices.service";
 import {
-  invoicesQueryKey,
+  creditCardsQueryKey,
+  useAccounts,
+  useCloseInvoice,
   useCreditCards,
   useInvoiceDetails,
 } from "@/hooks/api";
 import { useAuthOptional } from "@/hooks/useAuth";
-import { useServerDataTable } from "@/hooks/useServerDataTable";
 import { useTranslation } from "@/lib/i18n";
 import { getQueryErrorMessage } from "@/lib/query-error";
+import { useServerDataTable } from "@/hooks/useServerDataTable";
 import { useToast } from "@/components/toast";
-import type { CreditCardInvoiceListItem } from "@meufluxo/types";
-
-import { getInvoicesTableColumns } from "@/features/invoices/invoices.columns";
-import { fetchInvoicesPage } from "@/features/invoices/invoices.service";
-import { InvoicePaymentModal } from "@/features/invoices/components/invoice-payment-modal";
-import { InvoiceRowActions } from "@/features/invoices/components/invoice-row-actions";
-
-type InvoiceStatusFilter =
-  | ""
-  | "OPEN"
-  | "CLOSED"
-  | "PARTIALLY_PAID"
-  | "PAID"
-  | "OVERDUE";
+import type { Invoice, InvoiceStatus } from "@meufluxo/types";
 
 export default function InvoicesPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useTranslation();
   const auth = useAuthOptional();
-  const { error: toastError } = useToast();
+  const { success, error: showError } = useToast();
+  const closeInvoiceMutation = useCloseInvoice();
   const { data: creditCards = [] } = useCreditCards();
+  const { data: accounts = [] } = useAccounts();
 
-  const currency = (auth?.preferences?.currency as "BRL" | "USD" | "EUR") ?? "BRL";
-
-  const [search, setSearch] = React.useState("");
-  const [creditCardId, setCreditCardId] = React.useState<string>("");
-  const [status, setStatus] = React.useState<InvoiceStatusFilter>("");
-  const [dueDateRange, setDueDateRange] = React.useState<{
-    startDate: string;
-    endDate: string;
-  } | null>(null);
-
+  const [filters, setFilters] = React.useState<{
+    creditCardId: string;
+    status: InvoiceStatus | "";
+    dueDateRange: DateRangeValue | null;
+  }>({
+    creditCardId: searchParams.get("creditCardId") ?? "",
+    status: (searchParams.get("status") as InvoiceStatus | null) ?? "",
+    dueDateRange: null,
+  });
   const [detailsOpen, setDetailsOpen] = React.useState(false);
   const [selectedInvoiceId, setSelectedInvoiceId] = React.useState<string | null>(null);
-  const [selectedInvoicePreview, setSelectedInvoicePreview] =
-    React.useState<CreditCardInvoiceListItem | null>(null);
+  const [selectedInvoicePreview, setSelectedInvoicePreview] = React.useState<Invoice | null>(null);
+  const [closeConfirmOpen, setCloseConfirmOpen] = React.useState(false);
   const [paymentModalOpen, setPaymentModalOpen] = React.useState(false);
-  const [invoiceForPayment, setInvoiceForPayment] = React.useState<CreditCardInvoiceListItem | null>(
-    null,
-  );
+  const [chargesModalOpen, setChargesModalOpen] = React.useState(false);
 
-  const normalizedSearch = search.trim().toLowerCase();
+  React.useEffect(() => {
+    const nextCreditCardId = searchParams.get("creditCardId") ?? "";
+    const nextStatus = (searchParams.get("status") as InvoiceStatus | null) ?? "";
+    setFilters((prev) => {
+      if (prev.creditCardId === nextCreditCardId && prev.status === nextStatus) {
+        return prev;
+      }
+      return {
+        ...prev,
+        creditCardId: nextCreditCardId,
+        status: nextStatus,
+      };
+    });
+  }, [searchParams]);
 
-  const invoicesTable = useServerDataTable<CreditCardInvoiceListItem>({
-    queryKey: invoicesQueryKey,
+  const table = useServerDataTable<Invoice>({
+    queryKey: ["invoices", ...creditCardsQueryKey],
     fetchPage: fetchInvoicesPage,
     initialPageSize: 10,
     initialSortKey: "dueDate",
     initialDirection: "desc",
     enabled: !auth?.isBootstrapping && !!auth?.isAuthenticated,
     extraQueryParams: {
-      ...(creditCardId ? { creditCardId } : {}),
-      ...(status ? { status } : {}),
-      ...(dueDateRange?.startDate ? { dueDateStart: dueDateRange.startDate } : {}),
-      ...(dueDateRange?.endDate ? { dueDateEnd: dueDateRange.endDate } : {}),
+      ...(filters.creditCardId ? { creditCardId: filters.creditCardId } : {}),
+      ...(filters.status ? { status: filters.status } : {}),
+      ...(filters.dueDateRange?.startDate ? { dueDateStart: filters.dueDateRange.startDate } : {}),
+      ...(filters.dueDateRange?.endDate ? { dueDateEnd: filters.dueDateRange.endDate } : {}),
     },
   });
 
-  const invoiceDetailsQuery = useInvoiceDetails(selectedInvoiceId, detailsOpen);
+  const filterKey = React.useMemo(
+    () =>
+      JSON.stringify({
+        creditCardId: filters.creditCardId,
+        status: filters.status,
+        dueDateRange: filters.dueDateRange,
+      }),
+    [filters],
+  );
 
   React.useEffect(() => {
-    invoicesTable.onReset();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [normalizedSearch, creditCardId, status, dueDateRange?.startDate, dueDateRange?.endDate]);
+    table.onReset();
+  }, [filterKey, table]);
 
-  const pageResponse = invoicesTable.pageResponseQuery.data ?? null;
-  const invoices = pageResponse?.content ?? [];
-  const filteredInvoices = React.useMemo(() => {
-    if (!normalizedSearch) return invoices;
-    return invoices.filter((invoice) => {
-      const card = invoice.creditCardName.toLowerCase();
-      const reference = invoice.referenceLabel.toLowerCase();
-      return card.includes(normalizedSearch) || reference.includes(normalizedSearch);
-    });
-  }, [invoices, normalizedSearch]);
-
-  const listErrorMessage = invoicesTable.pageResponseQuery.isError
-    ? getQueryErrorMessage(
-        invoicesTable.pageResponseQuery.error,
-        "Não foi possível carregar as faturas.",
-      )
-    : null;
-  const detailsErrorMessage = invoiceDetailsQuery.isError
-    ? getQueryErrorMessage(
-        invoiceDetailsQuery.error,
-        "Não foi possível carregar os detalhes da fatura.",
-      )
+  const pageResponse = table.pageResponseQuery.data ?? null;
+  const rows = pageResponse?.content ?? [];
+  const errorMessage = table.pageResponseQuery.isError
+    ? getQueryErrorMessage(table.pageResponseQuery.error, "Não foi possível carregar as faturas.")
     : null;
 
-  const openDetails = React.useCallback((invoice: CreditCardInvoiceListItem) => {
-    setSelectedInvoiceId(invoice.id);
-    setSelectedInvoicePreview(invoice);
-    setDetailsOpen(true);
-  }, []);
+  const detailsQuery = useInvoiceDetails(selectedInvoiceId, detailsOpen || paymentModalOpen || chargesModalOpen);
+  const selectedInvoice = detailsQuery.data ?? selectedInvoicePreview;
+  const detailsErrorMessage = detailsQuery.isError
+    ? getQueryErrorMessage(detailsQuery.error, "Não foi possível carregar os detalhes da fatura.")
+    : null;
 
-  const openPaymentModal = React.useCallback((invoice: CreditCardInvoiceListItem) => {
-    setInvoiceForPayment(invoice);
-    setPaymentModalOpen(true);
-  }, []);
+  const refreshAll = React.useCallback(async () => {
+    await table.pageResponseQuery.refetch();
+    if (selectedInvoiceId) {
+      await detailsQuery.refetch();
+    }
+  }, [detailsQuery, selectedInvoiceId, table.pageResponseQuery]);
 
-  const unavailableAction = React.useCallback((label: string) => {
-    toastError(`${label} ainda não está disponível nesta etapa.`);
-  }, [toastError]);
+  const handleViewDetails = React.useCallback(
+    (invoice: Invoice) => {
+      setSelectedInvoiceId(invoice.id);
+      setSelectedInvoicePreview(invoice);
+      setDetailsOpen(true);
+    },
+    [],
+  );
+
+  const handleCloseInvoice = React.useCallback(
+    (invoice: Invoice) => {
+      setSelectedInvoiceId(invoice.id);
+      setSelectedInvoicePreview(invoice);
+      setCloseConfirmOpen(true);
+    },
+    [],
+  );
+
+  const handlePayInvoice = React.useCallback(
+    (invoice: Invoice) => {
+      setSelectedInvoiceId(invoice.id);
+      setSelectedInvoicePreview(invoice);
+      setPaymentModalOpen(true);
+    },
+    [],
+  );
 
   const renderActions = React.useCallback(
-    (invoice: CreditCardInvoiceListItem) => (
+    (invoice: Invoice) => (
       <InvoiceRowActions
         invoice={invoice}
-        onViewDetails={openDetails}
-        onPay={openPaymentModal}
-        onCloseInvoice={() => unavailableAction("Fechar fatura")}
-        onEditCharges={() => unavailableAction("Editar encargos")}
+        onViewDetails={handleViewDetails}
+        onCloseInvoice={handleCloseInvoice}
+        onPayInvoice={handlePayInvoice}
       />
     ),
-    [openDetails, openPaymentModal, unavailableAction],
+    [handleCloseInvoice, handlePayInvoice, handleViewDetails],
   );
 
   const columns = React.useMemo(
-    () => getInvoicesTableColumns({ currency, renderActions }),
-    [currency, renderActions],
+    () => getInvoicesTableColumns({ renderActions }),
+    [renderActions],
   );
-
-  const detailsInvoice = invoiceDetailsQuery.data ?? null;
 
   return (
     <>
       <div className="space-y-6">
         <PageHeader
           title={t("pages.invoices.title")}
-          description="Acompanhe faturas, totais, pagamentos e saldo pendente dos cartões."
+          description="Faturas de cartão com filtros, paginação e ordenação."
+          right={<CardsModuleNav />}
         />
 
-        <Card className="border-none bg-transparent shadow-none">
+        <Card>
           <CardHeader className="pb-2">
             <div className="flex flex-col gap-3">
               <CardTitle className="text-base">Lista</CardTitle>
-              <div className="grid w-full gap-2 md:grid-cols-2 xl:grid-cols-4">
-                <Input
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Buscar por cartão ou referência..."
-                />
+              <div className="grid gap-3 md:grid-cols-3">
                 <FilterSelect
-                  value={creditCardId}
-                  onChange={setCreditCardId}
+                  value={filters.creditCardId}
+                  onChange={(value) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      creditCardId: value,
+                    }))
+                  }
+                  placeholder="Todos os cartões"
                   options={[
                     { value: "", label: "Todos os cartões" },
                     ...creditCards.map((card) => ({
@@ -171,9 +194,15 @@ export default function InvoicesPage() {
                     })),
                   ]}
                 />
-                <FilterSelect<InvoiceStatusFilter>
-                  value={status}
-                  onChange={setStatus}
+                <FilterSelect<InvoiceStatus | "">
+                  value={filters.status}
+                  onChange={(value) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      status: value,
+                    }))
+                  }
+                  placeholder="Todos os status"
                   options={[
                     { value: "", label: "Todos os status" },
                     { value: "OPEN", label: "Aberta" },
@@ -184,29 +213,32 @@ export default function InvoicesPage() {
                   ]}
                 />
                 <DateRangePicker
-                  value={dueDateRange}
-                  onChange={setDueDateRange}
+                  value={filters.dueDateRange}
+                  onChange={(value) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      dueDateRange: value,
+                    }))
+                  }
                   placeholder="Período de vencimento"
                 />
               </div>
             </div>
           </CardHeader>
-
-          <CardContent className="space-y-4">
+          <CardContent>
             <InvoicesTable
               columns={columns}
-              data={filteredInvoices}
-              loading={invoicesTable.pageResponseQuery.isLoading}
-              error={listErrorMessage}
+              data={rows}
+              loading={table.pageResponseQuery.isLoading}
+              error={errorMessage}
               pageResponse={pageResponse}
               sortState={{
-                sortKey: invoicesTable.sortKey,
-                direction: invoicesTable.direction,
+                sortKey: table.sortKey,
+                direction: table.direction,
               }}
-              onSortChange={invoicesTable.onSortChange}
-              onPageChange={invoicesTable.onPageChange}
-              onPageSizeChange={invoicesTable.onPageSizeChange}
-              onRowClick={openDetails}
+              onSortChange={table.onSortChange}
+              onPageChange={table.onPageChange}
+              onPageSizeChange={table.onPageSizeChange}
             />
           </CardContent>
         </Card>
@@ -215,78 +247,63 @@ export default function InvoicesPage() {
       <DetailsDrawer
         isOpen={detailsOpen}
         onClose={() => setDetailsOpen(false)}
-        title={
-          detailsInvoice?.referenceLabel ??
-          selectedInvoicePreview?.referenceLabel ??
-          "Detalhes da fatura"
-        }
-        description={
-          detailsInvoice?.creditCardName ??
-          selectedInvoicePreview?.creditCardName ??
-          "Visualize os lançamentos e pagamentos da fatura."
-        }
-        widthClassName="w-full sm:max-w-6xl"
-        footer={
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setDetailsOpen(false)}>
-              Fechar
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => unavailableAction("Fechar fatura")}
-              disabled={!detailsInvoice?.canClose}
-            >
-              Fechar fatura
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => unavailableAction("Editar encargos")}
-              disabled={!detailsInvoice?.canEditCharges}
-            >
-              Editar encargos
-            </Button>
-            <Button
-              type="button"
-              onClick={() => {
-                if (!selectedInvoicePreview) return;
-                openPaymentModal(selectedInvoicePreview);
-              }}
-              disabled={!detailsInvoice?.canPay || !selectedInvoicePreview}
-            >
-              Pagar fatura
-            </Button>
-          </div>
-        }
+        title={selectedInvoice?.referenceLabel ?? "Detalhes da fatura"}
+        description="Gestão operacional da fatura selecionada."
+        widthClassName="w-full sm:max-w-5xl"
       >
-        <InvoiceDetails
-          invoice={detailsInvoice}
-          currency={currency}
-          loading={invoiceDetailsQuery.isLoading || invoiceDetailsQuery.isFetching}
-          error={detailsErrorMessage}
-        />
+        {detailsQuery.isLoading ? (
+          <SectionLoadingState message="Carregando detalhes da fatura..." />
+        ) : detailsErrorMessage ? (
+          <SectionErrorState message={detailsErrorMessage} />
+        ) : detailsQuery.data ? (
+          <InvoiceDetailsPanel
+            invoice={detailsQuery.data}
+            closing={closeInvoiceMutation.isPending}
+            onCloseInvoice={() => setCloseConfirmOpen(true)}
+            onPayInvoice={() => setPaymentModalOpen(true)}
+            onEditCharges={() => setChargesModalOpen(true)}
+            onEditExpenses={() => {
+              router.push(`/card-expenses?invoiceId=${detailsQuery.data.id}`);
+            }}
+          />
+        ) : (
+          <SectionErrorState message="Nenhum detalhe disponível para esta fatura." />
+        )}
       </DetailsDrawer>
+
+      <ConfirmDialog
+        open={closeConfirmOpen}
+        onOpenChange={setCloseConfirmOpen}
+        title="Fechar fatura"
+        description="Confirma o fechamento desta fatura?"
+        confirmText="Fechar fatura"
+        isConfirming={closeInvoiceMutation.isPending}
+        onConfirm={async () => {
+          if (!selectedInvoiceId) return;
+          try {
+            await closeInvoiceMutation.mutateAsync(selectedInvoiceId);
+            success("Fatura fechada com sucesso.");
+            await refreshAll();
+          } catch (err) {
+            showError(getQueryErrorMessage(err, "Não foi possível fechar a fatura."));
+          }
+        }}
+      />
 
       <InvoicePaymentModal
         open={paymentModalOpen}
         onOpenChange={setPaymentModalOpen}
-        invoice={invoiceForPayment}
-        invoiceDetails={
-          invoiceDetailsQuery.data &&
-          invoiceForPayment &&
-          invoiceDetailsQuery.data.id === invoiceForPayment.id
-            ? invoiceDetailsQuery.data
-            : null
-        }
-        onPaid={() => {
-          void invoicesTable.pageResponseQuery.refetch();
-          if (selectedInvoiceId) {
-            void invoiceDetailsQuery.refetch();
-          }
-        }}
+        invoice={detailsQuery.data ?? null}
+        accounts={accounts.map((account) => ({ id: account.id, name: account.name }))}
+        onSaved={refreshAll}
+      />
+
+      <InvoiceChargesModal
+        open={chargesModalOpen}
+        onOpenChange={setChargesModalOpen}
+        invoice={detailsQuery.data ?? null}
+        onSaved={refreshAll}
       />
     </>
   );
 }
-

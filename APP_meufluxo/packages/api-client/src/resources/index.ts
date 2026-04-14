@@ -31,24 +31,16 @@ export {
   createScheduledMovementsApi,
   type ScheduledMovementsApi,
 } from "./scheduled-movements";
-export {
-  createCreditCardsApi,
-  type CreditCardsApi,
-  type CreditCardsListParams,
-  type CreditCardCreateRequest,
-  type CreditCardUpdateRequest,
-  type CreditCardActiveRequest,
-} from "./credit-cards";
+export { createCreditCardsApi, type CreditCardsApi } from "./credit-cards";
 export {
   createCreditCardExpensesApi,
   type CreditCardExpensesApi,
+  type CreditCardExpensesListParams,
 } from "./credit-card-expenses";
 export {
   createInvoicesApi,
   type InvoicesApi,
   type InvoicesListParams,
-  type InvoicePaymentsListParams,
-  type InvoiceCreatePaymentRequest,
 } from "./invoices";
 export { createNotificationsApi, type NotificationsApi } from "./notifications";
 export { createKpisApi, type KpisApi } from "./kpis";

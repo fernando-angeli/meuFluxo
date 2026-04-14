@@ -4,5 +4,4 @@ export {
   createCreditCardExpense,
   updateCreditCardExpense,
   cancelCreditCardExpense,
-  normalizeCreditCardExpenseFromApi,
 } from "./credit-card-expenses.service";

@@ -1,112 +1,67 @@
 "use client";
 
-import type {
-  CreditCard,
-  CreditCardId,
-  PageQueryParams,
-  PageResponse,
-} from "@meufluxo/types";
-import type {
-  CreditCardActiveRequest,
-  CreditCardCreateRequest,
-  CreditCardUpdateRequest,
-} from "@meufluxo/api-client";
+import type { CreditCard, PageQueryParams, PageResponse } from "@meufluxo/types";
 
+import { env } from "@/lib/env";
 import { api } from "@/services/api";
+import { mockCreditCards } from "@/services/mocks/credit-cards";
 
-type UnknownRecord = Record<string, unknown>;
+function toSortParts(sort?: string): { key: string; direction: "asc" | "desc" } {
+  if (!sort) return { key: "name", direction: "asc" };
+  const [key, directionRaw] = sort.split(",");
+  const direction = String(directionRaw ?? "ASC").toLowerCase() === "desc" ? "desc" : "asc";
+  return { key: key || "name", direction };
+}
 
-export function normalizeCreditCardFromApi(raw: unknown): CreditCard {
-  const record = raw as UnknownRecord;
-  const active =
-    typeof record.active === "boolean"
-      ? record.active
-      : Boolean((record.meta as UnknownRecord | undefined)?.active);
-  const createdAt =
-    (record.createdAt as string | undefined) ??
-    ((record.meta as UnknownRecord | undefined)?.createdAt as string | undefined) ??
-    "";
-  const updatedAt =
-    (record.updatedAt as string | undefined) ??
-    ((record.meta as UnknownRecord | undefined)?.updatedAt as string | undefined) ??
-    "";
-  const brandRaw =
-    (record.brand as string | undefined) ??
-    (record.brandCard as string | undefined) ??
-    "VISA";
-  const brand = brandRaw === "MASTERCARD" ? "MASTERCARD" : "VISA";
+function getSortableValue(card: CreditCard, key: string): string | number {
+  switch (key) {
+    case "name":
+      return card.name ?? "";
+    case "brandCard":
+      return card.brandCard ?? "";
+    case "closingDay":
+      return card.closingDay ?? 0;
+    case "dueDay":
+      return card.dueDay ?? 0;
+    case "creditLimit":
+      return card.creditLimit ?? 0;
+    case "status":
+      return card.meta.active ? 1 : 0;
+    default:
+      return card.name ?? "";
+  }
+}
+
+function compareCards(a: CreditCard, b: CreditCard, key: string, direction: "asc" | "desc"): number {
+  const va = getSortableValue(a, key);
+  const vb = getSortableValue(b, key);
+  const base =
+    typeof va === "number" && typeof vb === "number"
+      ? va - vb
+      : String(va).localeCompare(String(vb), "pt-BR", { sensitivity: "base" });
+  return direction === "asc" ? base : -base;
+}
+
+export async function fetchCreditCardsPage(params: PageQueryParams): Promise<PageResponse<CreditCard>> {
+  const page = Math.max(0, Number(params.page) || 0);
+  const size = Math.max(1, Number(params.size) || 10);
+  const { key, direction } = toSortParts(params.sort);
+
+  const allCards = env.useMocks ? mockCreditCards : await api.creditCards.list();
+  const sorted = [...allCards].sort((a, b) => compareCards(a, b, key, direction));
+
+  const totalElements = sorted.length;
+  const totalPages = Math.max(1, Math.ceil(totalElements / size));
+  const start = page * size;
+  const end = start + size;
 
   return {
-    id: String(record.id ?? ""),
-    name: String(record.name ?? ""),
-    cardDisplayName:
-      record.cardDisplayName != null ? String(record.cardDisplayName) : null,
-    brand,
-    brandCard: brand,
-    creditLimit:
-      typeof record.creditLimit === "number"
-        ? record.creditLimit
-        : record.creditLimit != null
-          ? Number(record.creditLimit)
-          : null,
-    closingDay:
-      typeof record.closingDay === "number" ? record.closingDay : Number(record.closingDay ?? 1),
-    dueDay: typeof record.dueDay === "number" ? record.dueDay : Number(record.dueDay ?? 1),
-    defaultPaymentAccountId:
-      record.defaultPaymentAccountId != null
-        ? String(record.defaultPaymentAccountId)
-        : null,
-    defaultPaymentAccountName:
-      record.defaultPaymentAccountName != null
-        ? String(record.defaultPaymentAccountName)
-        : null,
-    notes: record.notes != null ? String(record.notes) : null,
-    meta: {
-      active,
-      createdAt,
-      updatedAt,
-    },
+    content: sorted.slice(start, end),
+    page,
+    size,
+    totalElements,
+    totalPages,
+    first: page <= 0,
+    last: page >= totalPages - 1,
   };
-}
-
-function normalizePage(page: PageResponse<unknown>): PageResponse<CreditCard> {
-  return {
-    ...page,
-    content: (page.content ?? []).map((item) => normalizeCreditCardFromApi(item)),
-  };
-}
-
-export async function fetchCreditCardsPage(
-  params: PageQueryParams & Record<string, unknown>,
-): Promise<PageResponse<CreditCard>> {
-  const page = await api.creditCards.list({
-    page: params.page,
-    size: params.size,
-    ...(params.sort ? { sort: String(params.sort) } : {}),
-    ...(typeof params.active === "boolean" ? { active: params.active } : {}),
-  });
-  return normalizePage(page as PageResponse<unknown>);
-}
-
-export async function createCreditCard(
-  request: CreditCardCreateRequest,
-): Promise<CreditCard> {
-  const raw = await api.creditCards.create(request);
-  return normalizeCreditCardFromApi(raw);
-}
-
-export async function updateCreditCard(
-  id: CreditCardId,
-  request: CreditCardUpdateRequest,
-): Promise<CreditCard> {
-  const raw = await api.creditCards.update(id, request);
-  return normalizeCreditCardFromApi(raw);
-}
-
-export async function updateCreditCardActive(
-  id: CreditCardId,
-  request: CreditCardActiveRequest,
-): Promise<CreditCard> {
-  const raw = await api.creditCards.updateActive(id, request);
-  return normalizeCreditCardFromApi(raw);
 }

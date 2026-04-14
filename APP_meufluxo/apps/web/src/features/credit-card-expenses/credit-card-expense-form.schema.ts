@@ -1,40 +1,44 @@
 import { z } from "zod";
 
-import { parseMoneyInput } from "@meufluxo/utils";
-
 export const creditCardExpenseFormSchema = z
   .object({
-    creditCardId: z.string().min(1, "O cartão é obrigatório."),
+    creditCardId: z.number().nullable(),
     description: z
       .string()
       .trim()
-      .min(3, "A descrição deve conter ao menos 3 caracteres.")
-      .max(255, "A descrição deve conter no máximo 255 caracteres."),
-    purchaseDate: z.string().min(1, "A data da compra é obrigatória."),
-    categoryId: z.string().min(1, "A categoria é obrigatória."),
-    subcategoryId: z.string().min(1, "A subcategoria é obrigatória."),
-    amount: z
-      .string()
-      .trim()
-      .min(1, "O valor é obrigatório.")
-      .refine(
-        (value) => Number.isFinite(parseMoneyInput(value)) && parseMoneyInput(value) > 0,
-        {
-          message: "Informe um valor válido.",
-        },
-      ),
+      .min(3, "Descrição deve ter ao menos 3 caracteres.")
+      .max(100, "Descrição deve ter no máximo 100 caracteres."),
+    purchaseDate: z.string().min(10, "Data da compra é obrigatória."),
+    categoryId: z.number().nullable(),
+    subcategoryId: z.number().nullable(),
+    totalAmount: z.string().min(1, "Informe o valor da compra."),
     entryType: z.enum(["SINGLE", "INSTALLMENT"]),
-    installmentCount: z.number().int().min(1).max(120),
-    notes: z
-      .string()
-      .max(1000, "As observações devem ter no máximo 1000 caracteres."),
+    installmentCount: z.number().min(2, "Mínimo de 2 parcelas.").max(99, "Máximo de 99 parcelas."),
+    notes: z.string().max(250, "Observação deve ter no máximo 250 caracteres.").optional(),
   })
   .superRefine((values, ctx) => {
-    if (values.entryType === "INSTALLMENT" && values.installmentCount < 2) {
+    if (!Number.isFinite(values.creditCardId) || (values.creditCardId ?? 0) <= 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["creditCardId"],
+        message: "Selecione o cartão.",
+      });
+    }
+
+    if (!Number.isFinite(values.categoryId) || (values.categoryId ?? 0) <= 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["categoryId"],
+        message: "Selecione a categoria.",
+      });
+    }
+
+    if (values.entryType === "SINGLE") return;
+    if (!Number.isFinite(values.installmentCount) || values.installmentCount < 2) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["installmentCount"],
-        message: "Para parcelado, informe no mínimo 2 parcelas.",
+        message: "Informe a quantidade de parcelas para lançamento parcelado.",
       });
     }
   });

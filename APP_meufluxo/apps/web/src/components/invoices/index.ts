@@ -1,2 +1,2 @@
 export { InvoicesTable } from "./InvoicesTable";
-export { InvoiceDetails } from "./InvoiceDetails";
+export { InvoiceDetailsPanel } from "./InvoiceDetailsPanel";

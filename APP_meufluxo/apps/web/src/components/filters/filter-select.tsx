@@ -27,6 +27,7 @@ type FilterSelectProps<T extends string = string> = {
   "data-lpignore"?: "true" | "false";
   "data-1p-ignore"?: "true" | "false";
   "data-form-type"?: "other";
+  parseValue?: (value: string) => T;
 };
 
 /**
@@ -46,13 +47,20 @@ export function FilterSelect<T extends string>({
   "data-lpignore": dataLpIgnore = "true",
   "data-1p-ignore": data1pIgnore = "true",
   "data-form-type": dataFormType = "other",
+  parseValue,
 }: FilterSelectProps<T>) {
   const EMPTY_VALUE = "__empty__";
 
   return (
     <Select
       value={value === "" ? undefined : value}
-      onValueChange={(v) => onChange((v === EMPTY_VALUE ? "" : v) as T)}
+      onValueChange={(v) => {
+        if (v === EMPTY_VALUE) {
+          onChange("" as T);
+          return;
+        }
+        onChange(parseValue ? parseValue(v) : (v as T));
+      }}
       disabled={disabled}
     >
       <SelectTrigger

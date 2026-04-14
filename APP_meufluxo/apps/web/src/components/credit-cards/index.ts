@@ -1,1 +1,1 @@
-export { CreditCardsTable } from "./CreditCardsTable";
+export { CardsModuleNav } from "./CardsModuleNav";

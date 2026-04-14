@@ -1,57 +1,61 @@
 "use client";
 
-import { Coins, Eye, Lock, ReceiptText } from "lucide-react";
+import { Eye, Lock, Wallet } from "lucide-react";
+import type { Invoice } from "@meufluxo/types";
 
-import type { CreditCardInvoiceListItem } from "@meufluxo/types";
+import { RowActionButtons } from "@/components/patterns/row-action-buttons";
 
-import { RowActionButtons, type RowActionButtonItem } from "@/components/patterns";
+type InvoiceRowActionsProps = {
+  invoice: Invoice;
+  onViewDetails: (invoice: Invoice) => void;
+  onCloseInvoice: (invoice: Invoice) => void;
+  onPayInvoice: (invoice: Invoice) => void;
+};
+
+function canCloseInvoice(invoice: Invoice): boolean {
+  if (invoice.canClose != null) return invoice.canClose;
+  return invoice.status === "OPEN";
+}
+
+function canPayInvoice(invoice: Invoice): boolean {
+  if (invoice.canPay != null) return invoice.canPay;
+  if (invoice.status === "PAID") return false;
+  return invoice.remainingAmount > 0;
+}
 
 export function InvoiceRowActions({
   invoice,
   onViewDetails,
-  onPay,
   onCloseInvoice,
-  onEditCharges,
-  isPaying,
-}: {
-  invoice: CreditCardInvoiceListItem;
-  onViewDetails: (invoice: CreditCardInvoiceListItem) => void;
-  onPay: (invoice: CreditCardInvoiceListItem) => void;
-  onCloseInvoice: (invoice: CreditCardInvoiceListItem) => void;
-  onEditCharges: (invoice: CreditCardInvoiceListItem) => void;
-  isPaying?: boolean;
-}) {
-  const actions: RowActionButtonItem[] = [
-    {
-      key: "details",
-      label: "Ver detalhes",
-      icon: Eye,
-      ariaLabel: "Ver detalhes da fatura",
-      onClick: () => onViewDetails(invoice),
-    },
-    {
-      key: "close",
-      label: "Fechar fatura",
-      icon: Lock,
-      ariaLabel: "Fechar fatura",
-      onClick: () => onCloseInvoice(invoice),
-    },
-    {
-      key: "pay",
-      label: "Pagar fatura",
-      icon: Coins,
-      ariaLabel: "Pagar fatura",
-      disabled: isPaying,
-      onClick: () => onPay(invoice),
-    },
-    {
-      key: "charges",
-      label: "Editar encargos",
-      icon: ReceiptText,
-      ariaLabel: "Editar encargos da fatura",
-      onClick: () => onEditCharges(invoice),
-    },
-  ];
-
-  return <RowActionButtons actions={actions} density="default" />;
+  onPayInvoice,
+}: InvoiceRowActionsProps) {
+  return (
+    <RowActionButtons
+      actions={[
+        {
+          key: "details",
+          label: "Ver detalhes",
+          icon: Eye,
+          onClick: () => onViewDetails(invoice),
+          ariaLabel: "Ver detalhes da fatura",
+        },
+        {
+          key: "close",
+          label: "Fechar fatura",
+          icon: Lock,
+          onClick: () => onCloseInvoice(invoice),
+          disabled: !canCloseInvoice(invoice),
+          ariaLabel: "Fechar fatura",
+        },
+        {
+          key: "pay",
+          label: "Pagar fatura",
+          icon: Wallet,
+          onClick: () => onPayInvoice(invoice),
+          disabled: !canPayInvoice(invoice),
+          ariaLabel: "Pagar fatura",
+        },
+      ]}
+    />
+  );
 }

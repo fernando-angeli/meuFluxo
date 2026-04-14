@@ -3,10 +3,7 @@
 import type { CreditCardExpense, PageResponse } from "@meufluxo/types";
 
 import { DataTable } from "@/components/data-table/DataTable";
-import type {
-  DataTableColumn,
-  DataTableSortState,
-} from "@/components/data-table/types";
+import type { DataTableColumn, DataTableSortState } from "@/components/data-table/types";
 
 export function CreditCardExpensesTable({
   columns,
@@ -18,7 +15,6 @@ export function CreditCardExpensesTable({
   onSortChange,
   onPageChange,
   onPageSizeChange,
-  onRowClick,
 }: {
   columns: Array<DataTableColumn<CreditCardExpense>>;
   data: CreditCardExpense[];
@@ -29,7 +25,6 @@ export function CreditCardExpensesTable({
   onSortChange: (sortKey: string) => void;
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
-  onRowClick?: (expense: CreditCardExpense) => void;
 }) {
   return (
     <DataTable
@@ -42,10 +37,9 @@ export function CreditCardExpensesTable({
       onSortChange={onSortChange}
       onPageChange={onPageChange}
       onPageSizeChange={onPageSizeChange}
-      onRowClick={onRowClick}
       getRowKey={(expense) => expense.id}
-      emptyTitle="Nenhum gasto encontrado"
-      emptyDescription="Ajuste os filtros ou cadastre um novo gasto no cartão."
+      emptyTitle="Nenhum lançamento encontrado"
+      emptyDescription="Ajuste os filtros ou cadastre uma nova despesa no cartão."
       pageSizeOptions={[10, 20, 50]}
     />
   );

@@ -22,7 +22,6 @@ export {
 } from "./use-credit-card-expense-mutations";
 export { useInvoices, invoicesQueryKey } from "./use-invoices";
 export { useInvoiceDetails, invoiceDetailsQueryKey } from "./use-invoice-details";
-export { useCreateInvoicePayment } from "./use-invoice-mutations";
 export {
   useNotifications,
   notificationsQueryKey,
@@ -58,3 +57,15 @@ export {
   useCancelIncome,
   useSettleIncome,
 } from "./use-income-mutations";
+export {
+  useCreateCreditCardExpense,
+  useUpdateCreditCardExpense,
+  useCancelCreditCardExpense,
+  creditCardExpensesQueryKey,
+} from "./use-credit-card-expense-mutations";
+export {
+  useCloseInvoice,
+  useCreateInvoicePayment,
+  useReopenInvoice,
+  useUpdateInvoiceCharges,
+} from "./use-invoice-mutations";

@@ -1,42 +1,45 @@
 "use client";
 
 import { Pencil, Trash2 } from "lucide-react";
-
 import type { CreditCardExpense } from "@meufluxo/types";
 
-import { RowActionButtons, type RowActionButtonItem } from "@/components/patterns";
+import { RowActionButtons } from "@/components/patterns";
 
 export function CreditCardExpenseRowActions({
   expense,
   onEdit,
   onCancel,
-  isCancelling,
+  canceling,
 }: {
   expense: CreditCardExpense;
   onEdit: (expense: CreditCardExpense) => void;
   onCancel: (expense: CreditCardExpense) => void;
-  isCancelling?: boolean;
+  canceling?: boolean;
 }) {
-  const canEdit = expense.status === "OPEN";
+  const blockedByStatus = expense.status !== "OPEN";
 
-  const actions: RowActionButtonItem[] = [
-    {
-      key: "edit",
-      label: "Editar",
-      icon: Pencil,
-      ariaLabel: "Editar gasto do cartão",
-      disabled: !canEdit,
-      onClick: () => onEdit(expense),
-    },
-    {
-      key: "cancel",
-      label: "Cancelar",
-      icon: Trash2,
-      ariaLabel: "Cancelar gasto do cartão",
-      disabled: !canEdit || isCancelling,
-      onClick: () => onCancel(expense),
-    },
-  ];
-
-  return <RowActionButtons actions={actions} density="default" className="justify-end" />;
+  return (
+    <RowActionButtons
+      actions={[
+        {
+          key: "edit",
+          label: blockedByStatus ? "Edição indisponível para este status" : "Editar",
+          icon: Pencil,
+          ariaLabel: "Editar despesa do cartão",
+          disabled: blockedByStatus,
+          onClick: () => onEdit(expense),
+        },
+        {
+          key: "cancel",
+          label: blockedByStatus ? "Cancelamento indisponível para este status" : "Cancelar",
+          icon: Trash2,
+          ariaLabel: "Cancelar despesa do cartão",
+          disabled: blockedByStatus || canceling,
+          onClick: () => onCancel(expense),
+        },
+      ]}
+      density="default"
+      className="justify-center gap-2"
+    />
+  );
 }

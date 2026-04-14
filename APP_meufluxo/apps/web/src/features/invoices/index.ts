@@ -2,8 +2,8 @@ export { getInvoicesTableColumns } from "./invoices.columns";
 export {
   fetchInvoicesPage,
   fetchInvoiceDetailsById,
-  normalizeInvoiceFromApi,
-  normalizeInvoiceDetailsFromApi,
+  closeInvoiceById,
   createInvoicePayment,
+  updateInvoiceCharges,
 } from "./invoices.service";
 
