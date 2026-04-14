@@ -23,6 +23,8 @@ export const ptBR = {
   "nav.scheduled": "Agendados",
   "nav.creditCards": "Cartões",
   "nav.invoices": "Faturas",
+  "nav.cardClosing": "Fechamento",
+  "nav.cardExpenses": "Lançamentos",
   "nav.notifications": "Notificações",
   "nav.settings": "Configurações",
   "nav.income": "Receitas",

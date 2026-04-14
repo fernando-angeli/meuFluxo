@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-export default function CardsInvoicesPage({
+export default function CardsExpensesPage({
   searchParams,
 }: {
   searchParams?: { [key: string]: string | string[] | undefined };
@@ -15,5 +15,5 @@ export default function CardsInvoicesPage({
   });
 
   const suffix = query.toString();
-  redirect(suffix ? `/invoices?${suffix}` : "/invoices");
+  redirect(suffix ? `/card-expenses?${suffix}` : "/card-expenses");
 }

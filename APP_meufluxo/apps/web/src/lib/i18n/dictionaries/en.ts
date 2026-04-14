@@ -22,6 +22,8 @@ export const en: Record<PtBRKeys, string> = {
   "nav.scheduled": "Agendados",
   "nav.creditCards": "Cartões",
   "nav.invoices": "Faturas",
+  "nav.cardClosing": "Closing",
+  "nav.cardExpenses": "Entries",
   "nav.notifications": "Notificações",
   "nav.settings": "Configurações",
   "nav.income": "Receitas",

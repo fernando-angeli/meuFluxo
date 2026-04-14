@@ -37,10 +37,7 @@ export const mainNav: NavItem[] = [
   {
     titleKey: "nav.creditCards",
     icon: CreditCard,
-    children: [
-      { titleKey: "nav.creditCards", href: "/cards" },
-      { titleKey: "nav.invoices", href: "/cards/invoices" },
-    ],
+    href: "/credit-cards",
   },
 ];
 
