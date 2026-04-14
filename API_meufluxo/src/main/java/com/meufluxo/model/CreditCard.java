@@ -24,6 +24,22 @@ public class CreditCard extends UserOwnedEntity {
     @Column(name = "credit_limit", precision = 15, scale = 2)
     private BigDecimal creditLimit;
 
+    // Campos legados mantidos para compatibilidade com bases antigas.
+    @Column(name = "last_four_digits", length = 4)
+    private String lastFourDigits;
+
+    @Column(name = "annual_fee_enabled", nullable = false)
+    private Boolean annualFeeEnabled = false;
+
+    @Column(name = "annual_fee_amount", precision = 15, scale = 2)
+    private BigDecimal annualFeeAmount;
+
+    @Column(name = "limit_amount", precision = 15, scale = 2)
+    private BigDecimal limitAmount;
+
+    @Column(name = "annual_fee_waiver_threshold", precision = 15, scale = 2)
+    private BigDecimal annualFeeWaiverThreshold;
+
     @Column(name = "closing_day", nullable = false)
     private Integer closingDay;
 

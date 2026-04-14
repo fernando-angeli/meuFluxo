@@ -10,13 +10,19 @@ import com.meufluxo.mapper.CreditCardMapper;
 import com.meufluxo.model.Account;
 import com.meufluxo.model.CreditCard;
 import com.meufluxo.repository.CreditCardRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.util.Optional;
+
 @Service
 public class CreditCardService extends BaseUserService {
+    private static final Logger log = LoggerFactory.getLogger(CreditCardService.class);
 
     private final CreditCardRepository creditCardRepository;
     private final CreditCardMapper creditCardMapper;
@@ -37,11 +43,13 @@ public class CreditCardService extends BaseUserService {
         this.workspaceSyncStateService = workspaceSyncStateService;
     }
 
+    @Transactional(readOnly = true)
     public CreditCardResponse getById(Long id) {
         CreditCard creditCard = findByIdOrThrow(id);
         return creditCardMapper.toResponse(creditCard);
     }
 
+    @Transactional(readOnly = true)
     public PageResponse<CreditCardResponse> getAll(Boolean active, Pageable pageable) {
         Page<CreditCard> creditCards = active == null
                 ? creditCardRepository.findAllByWorkspaceId(getCurrentWorkspaceId(), pageable)
@@ -59,6 +67,8 @@ public class CreditCardService extends BaseUserService {
         newCreditCard.setNotes(trimToNull(request.notes()));
         newCreditCard.setDefaultPaymentAccount(resolveAccount(request.defaultPaymentAccountId()));
         newCreditCard.setWorkspace(getCurrentWorkspace());
+        newCreditCard.setAnnualFeeEnabled(false);
+        newCreditCard.setLimitAmount(request.creditLimit() != null ? request.creditLimit() : BigDecimal.ZERO);
 
         CreditCard saved = creditCardRepository.save(newCreditCard);
         if (!request.active()) {
@@ -79,6 +89,8 @@ public class CreditCardService extends BaseUserService {
         existing.setClosingDay(request.closingDay());
         existing.setDueDay(request.dueDay());
         existing.setCreditLimit(request.creditLimit());
+        existing.setAnnualFeeEnabled(false);
+        existing.setLimitAmount(request.creditLimit() != null ? request.creditLimit() : BigDecimal.ZERO);
         existing.setDefaultPaymentAccount(resolveAccount(request.defaultPaymentAccountId()));
         existing.setNotes(trimToNull(request.notes()));
         existing.setActive(request.active());
@@ -97,9 +109,47 @@ public class CreditCardService extends BaseUserService {
         return creditCardMapper.toResponse(saved);
     }
 
+    @Transactional(readOnly = true)
     public CreditCard findByIdOrThrow(Long id) {
-        return creditCardRepository.findByIdAndWorkspaceId(id, getCurrentWorkspaceId())
-                .orElseThrow(() -> new NotFoundException("Cartão de crédito não encontrado com ID: " + id));
+        Long workspaceId = getCurrentWorkspaceId();
+        log.info(
+                "Buscando cartão de crédito por ID. creditCardId={}, workspaceId={}",
+                id,
+                workspaceId
+        );
+
+        return creditCardRepository.findByIdAndWorkspaceId(id, workspaceId)
+                .orElseThrow(() -> {
+                    Optional<Long> ownerWorkspaceId = creditCardRepository.findWorkspaceIdById(id);
+                    if (ownerWorkspaceId.isPresent()) {
+                        log.warn(
+                                "Cartão encontrado fora do workspace ativo. creditCardId={}, workspaceIdAtivo={}, workspaceIdDoCartao={}",
+                                id,
+                                workspaceId,
+                                ownerWorkspaceId.get()
+                        );
+                        return new NotFoundException(
+                                "Cartão de crédito não encontrado no workspace ativo com ID: "
+                                        + id
+                                        + ". workspaceIdAtivo="
+                                        + workspaceId
+                                        + ", workspaceIdDoCartao="
+                                        + ownerWorkspaceId.get()
+                        );
+                    }
+
+                    log.warn(
+                            "Cartão não encontrado. creditCardId={}, workspaceIdAtivo={}",
+                            id,
+                            workspaceId
+                    );
+                    return new NotFoundException(
+                            "Cartão de crédito não encontrado com ID: "
+                                    + id
+                                    + " no workspaceId="
+                                    + workspaceId
+                    );
+                });
     }
 
     private void validateNameUniqueness(String name, Long currentId) {
