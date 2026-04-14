@@ -3,7 +3,7 @@ import { isoDate, isoMonth } from "@meufluxo/utils";
 
 const now = new Date();
 
-export const mockInvoices: Invoice[] = [
+export const mockInvoices: CreditCardInvoiceListItem[] = [
   {
     id: "inv_1",
     creditCardId: "cc_1",
