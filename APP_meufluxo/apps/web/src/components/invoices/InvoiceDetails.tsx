@@ -157,7 +157,7 @@ export function InvoiceDetails({
         <DetailsRow label="Vencimento" value={formatDate(invoice.dueDate)} />
         <DetailsRow
           label="Situação"
-          value={<InvoiceStatusBadge status={invoice.status} label={invoice.statusLabel} />}
+          value={<InvoiceStatusBadge status={invoice.status} />}
         />
       </DetailsSection>
 

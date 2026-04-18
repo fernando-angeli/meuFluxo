@@ -43,3 +43,5 @@ out/
 # ---- Turborepo (cache local; nao versionar) ----
 .turbo/
 
+# ---- Cursor / agentes (local) ----
+APP_meufluxo/prompts/

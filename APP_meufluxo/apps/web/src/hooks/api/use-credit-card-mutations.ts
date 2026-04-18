@@ -2,12 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import type { CreditCardId } from "@meufluxo/types";
-import type {
-  CreditCardActiveRequest,
-  CreditCardCreateRequest,
-  CreditCardUpdateRequest,
-} from "@meufluxo/api-client";
+import type { BrandCard, CreditCardId } from "@meufluxo/types";
 
 import {
   createCreditCard,
@@ -16,6 +11,23 @@ import {
 } from "@/features/credit-cards/credit-cards.service";
 
 import { creditCardsQueryKey } from "./use-credit-cards";
+
+type CreditCardCreateRequest = {
+  name: string;
+  brand: BrandCard;
+  closingDay: number;
+  dueDay: number;
+  creditLimit?: number | null;
+  defaultPaymentAccountId?: number | null;
+  notes?: string | null;
+  active: boolean;
+};
+
+type CreditCardUpdateRequest = CreditCardCreateRequest;
+
+type CreditCardActiveRequest = {
+  active: boolean;
+};
 
 export function useCreateCreditCard() {
   const queryClient = useQueryClient();

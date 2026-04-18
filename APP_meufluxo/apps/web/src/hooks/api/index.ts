@@ -58,12 +58,6 @@ export {
   useSettleIncome,
 } from "./use-income-mutations";
 export {
-  useCreateCreditCardExpense,
-  useUpdateCreditCardExpense,
-  useCancelCreditCardExpense,
-  creditCardExpensesQueryKey,
-} from "./use-credit-card-expense-mutations";
-export {
   useCloseInvoice,
   useCreateInvoicePayment,
   useReopenInvoice,
