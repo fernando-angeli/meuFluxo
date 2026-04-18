@@ -2,6 +2,7 @@ package com.meufluxo.service;
 
 import com.meufluxo.common.dto.PageResponse;
 import com.meufluxo.common.exception.BusinessException;
+import com.meufluxo.common.exception.NotFoundException;
 import com.meufluxo.dto.BaseResponse;
 import com.meufluxo.dto.plannedEntry.*;
 import com.meufluxo.enums.*;
@@ -9,6 +10,7 @@ import com.meufluxo.mapper.PlannedEntryMapper;
 import com.meufluxo.model.Account;
 import com.meufluxo.model.Category;
 import com.meufluxo.model.PlannedEntry;
+import com.meufluxo.model.SubCategory;
 import com.meufluxo.model.workspaceAndUsers.Workspace;
 import com.meufluxo.repository.PlannedEntryRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -124,9 +126,9 @@ class PlannedEntryServiceTest {
                 null,
                 null,
                 List.of(
-                        new PlannedEntryBatchItemRequest(LocalDate.of(2026, 4, 10), null, "A23/01", new BigDecimal("120.00")),
-                        new PlannedEntryBatchItemRequest(LocalDate.of(2026, 4, 24), null, "A23/02", new BigDecimal("130.00")),
-                        new PlannedEntryBatchItemRequest(LocalDate.of(2026, 5, 15), null, "A23/03", new BigDecimal("140.00"))
+                        new PlannedEntryBatchItemRequest(1, LocalDate.of(2026, 4, 10), null, "A23/01", new BigDecimal("120.00")),
+                        new PlannedEntryBatchItemRequest(2, LocalDate.of(2026, 4, 24), null, "A23/02", new BigDecimal("130.00")),
+                        new PlannedEntryBatchItemRequest(3, LocalDate.of(2026, 5, 15), null, "A23/03", new BigDecimal("140.00"))
                 )
         );
         Category category = buildExpenseCategory(1L);
@@ -153,6 +155,165 @@ class PlannedEntryServiceTest {
         assertEquals("A23/02", response.entries().get(1).document());
         assertEquals("A23/03", response.entries().get(2).document());
         assertEquals(LocalDate.of(2026, 4, 1), response.entries().get(0).issueDate());
+        verify(plannedEntryRepository).saveAll(any());
+    }
+
+    @Test
+    void createIncomeBatchShouldGenerateIncomeEntriesWithSameGroup() {
+        PlannedEntryBatchCreateRequest request = new PlannedEntryBatchCreateRequest(
+                "Salario",
+                2L,
+                null,
+                PlannedAmountBehavior.ESTIMATED,
+                LocalDate.of(2026, 4, 17),
+                "2026",
+                null,
+                null,
+                List.of(
+                        new PlannedEntryBatchItemRequest(2, LocalDate.of(2026, 6, 5), null, "2026/05", new BigDecimal("2750.00")),
+                        new PlannedEntryBatchItemRequest(1, LocalDate.of(2026, 5, 5), null, "2026/04", new BigDecimal("2750.00"))
+                )
+        );
+        Category incomeCategory = buildIncomeCategory(2L);
+
+        when(categoryService.findByIdOrThrow(2L)).thenReturn(incomeCategory);
+        when(plannedEntryRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(plannedEntryMapper.toResponse(any(PlannedEntry.class))).thenAnswer(invocation -> toResponse(invocation.getArgument(0)));
+
+        PlannedEntryBatchCreateResponse response = service.createIncomeBatch(request);
+
+        assertEquals(2, response.entries().size());
+        assertEquals(FinancialDirection.INCOME, response.entries().get(0).direction());
+        assertEquals(response.groupId(), response.entries().get(0).groupId());
+        assertEquals(response.groupId(), response.entries().get(1).groupId());
+        assertEquals("2026/04", response.entries().get(0).document());
+        assertEquals("2026/05", response.entries().get(1).document());
+    }
+
+    @Test
+    void createBatchShouldFailWhenCategoryDoesNotExist() {
+        PlannedEntryBatchCreateRequest request = validBatchRequest();
+
+        when(categoryService.findByIdOrThrow(1L)).thenThrow(new NotFoundException("Categoria não encontrada com ID: 1"));
+
+        assertThrows(NotFoundException.class, () -> service.createExpenseBatch(request));
+    }
+
+    @Test
+    void createBatchShouldFailWhenSubCategoryDoesNotExist() {
+        PlannedEntryBatchCreateRequest request = new PlannedEntryBatchCreateRequest(
+                "Academia",
+                1L,
+                43L,
+                PlannedAmountBehavior.FIXED,
+                LocalDate.of(2026, 4, 1),
+                "A23",
+                null,
+                null,
+                List.of(new PlannedEntryBatchItemRequest(1, LocalDate.of(2026, 4, 10), null, "A23/01", new BigDecimal("120.00")))
+        );
+
+        when(categoryService.findByIdOrThrow(1L)).thenReturn(buildExpenseCategory(1L));
+        when(subCategoryService.findByIdOrThrow(43L)).thenThrow(new NotFoundException("SubCategoria não encontrada com ID: 43"));
+
+        assertThrows(NotFoundException.class, () -> service.createExpenseBatch(request));
+    }
+
+    @Test
+    void createBatchShouldFailWhenSubCategoryDoesNotBelongToCategory() {
+        PlannedEntryBatchCreateRequest request = new PlannedEntryBatchCreateRequest(
+                "Academia",
+                1L,
+                43L,
+                PlannedAmountBehavior.FIXED,
+                LocalDate.of(2026, 4, 1),
+                "A23",
+                null,
+                null,
+                List.of(new PlannedEntryBatchItemRequest(1, LocalDate.of(2026, 4, 10), null, "A23/01", new BigDecimal("120.00")))
+        );
+        Category category = buildExpenseCategory(1L);
+        SubCategory subCategory = new SubCategory();
+        subCategory.setId(43L);
+        subCategory.setCategory(buildExpenseCategory(99L));
+
+        when(categoryService.findByIdOrThrow(1L)).thenReturn(category);
+        when(subCategoryService.findByIdOrThrow(43L)).thenReturn(subCategory);
+
+        assertThrows(BusinessException.class, () -> service.createExpenseBatch(request));
+    }
+
+    @Test
+    void createBatchShouldFailWhenDefaultAccountDoesNotExist() {
+        PlannedEntryBatchCreateRequest request = new PlannedEntryBatchCreateRequest(
+                "Academia",
+                1L,
+                null,
+                PlannedAmountBehavior.FIXED,
+                LocalDate.of(2026, 4, 1),
+                "A23",
+                15L,
+                null,
+                List.of(new PlannedEntryBatchItemRequest(1, LocalDate.of(2026, 4, 10), null, "A23/01", new BigDecimal("120.00")))
+        );
+        when(categoryService.findByIdOrThrow(1L)).thenReturn(buildExpenseCategory(1L));
+        when(accountService.findByIdOrThrow(15L)).thenThrow(new NotFoundException("Conta não encontrada com ID: 15"));
+
+        assertThrows(NotFoundException.class, () -> service.createExpenseBatch(request));
+    }
+
+    @Test
+    void createBatchShouldFailWhenEntriesIsEmpty() {
+        PlannedEntryBatchCreateRequest request = new PlannedEntryBatchCreateRequest(
+                "Academia",
+                1L,
+                null,
+                PlannedAmountBehavior.FIXED,
+                LocalDate.of(2026, 4, 1),
+                "A23",
+                null,
+                null,
+                List.of()
+        );
+
+        assertThrows(BusinessException.class, () -> service.createExpenseBatch(request));
+    }
+
+    @Test
+    void createBatchShouldFailWhenExpectedAmountIsNonPositive() {
+        PlannedEntryBatchCreateRequest request = new PlannedEntryBatchCreateRequest(
+                "Academia",
+                1L,
+                null,
+                PlannedAmountBehavior.FIXED,
+                LocalDate.of(2026, 4, 1),
+                "A23",
+                null,
+                null,
+                List.of(new PlannedEntryBatchItemRequest(1, LocalDate.of(2026, 4, 10), null, "A23/01", BigDecimal.ZERO))
+        );
+
+        assertThrows(BusinessException.class, () -> service.createExpenseBatch(request));
+    }
+
+    @Test
+    void createBatchShouldFailWhenOrderIsDuplicated() {
+        PlannedEntryBatchCreateRequest request = new PlannedEntryBatchCreateRequest(
+                "Academia",
+                1L,
+                null,
+                PlannedAmountBehavior.FIXED,
+                LocalDate.of(2026, 4, 1),
+                "A23",
+                null,
+                null,
+                List.of(
+                        new PlannedEntryBatchItemRequest(1, LocalDate.of(2026, 4, 10), null, "A23/01", new BigDecimal("120.00")),
+                        new PlannedEntryBatchItemRequest(1, LocalDate.of(2026, 4, 24), null, "A23/02", new BigDecimal("130.00"))
+                )
+        );
+
+        assertThrows(BusinessException.class, () -> service.createExpenseBatch(request));
     }
 
     @Test
@@ -166,7 +327,7 @@ class PlannedEntryServiceTest {
                 null,
                 null,
                 null,
-                List.of(new PlannedEntryBatchItemRequest(LocalDate.of(2026, 4, 18), null, null, new BigDecimal("900.00")))
+                List.of(new PlannedEntryBatchItemRequest(1, LocalDate.of(2026, 4, 18), null, null, new BigDecimal("900.00")))
         );
         Category category = buildExpenseCategory(1L);
 
@@ -420,6 +581,28 @@ class PlannedEntryServiceTest {
         category.setMovementType(MovementType.EXPENSE);
         category.setName("Despesas");
         return category;
+    }
+
+    private static Category buildIncomeCategory(Long id) {
+        Category category = new Category();
+        category.setId(id);
+        category.setMovementType(MovementType.INCOME);
+        category.setName("Receitas");
+        return category;
+    }
+
+    private static PlannedEntryBatchCreateRequest validBatchRequest() {
+        return new PlannedEntryBatchCreateRequest(
+                "Academia",
+                1L,
+                null,
+                PlannedAmountBehavior.FIXED,
+                LocalDate.of(2026, 4, 1),
+                "A23",
+                null,
+                null,
+                List.of(new PlannedEntryBatchItemRequest(1, LocalDate.of(2026, 4, 10), null, "A23/01", new BigDecimal("120.00")))
+        );
     }
 
     private static PlannedEntry cloneForFuture(UUID groupId, LocalDate dueDate, PlannedEntryStatus status) {

@@ -55,7 +55,7 @@ class PlannedEntryBatchCreateRequestValidationTest {
                 null,
                 null,
                 null,
-                List.of(new PlannedEntryBatchItemRequest(LocalDate.of(2026, 4, 10), null, null, BigDecimal.ZERO))
+                List.of(new PlannedEntryBatchItemRequest(1, LocalDate.of(2026, 4, 10), null, null, BigDecimal.ZERO))
         );
 
         Set<ConstraintViolation<PlannedEntryBatchCreateRequest>> violations = validator.validate(request);
@@ -74,12 +74,50 @@ class PlannedEntryBatchCreateRequestValidationTest {
                 null,
                 null,
                 null,
-                List.of(new PlannedEntryBatchItemRequest(null, null, null, new BigDecimal("99.90")))
+                List.of(new PlannedEntryBatchItemRequest(1, null, null, null, new BigDecimal("99.90")))
         );
 
         Set<ConstraintViolation<PlannedEntryBatchCreateRequest>> violations = validator.validate(request);
 
         assertTrue(containsViolation(violations, "entries[0].dueDate", "Data de vencimento é obrigatória."));
+    }
+
+    @Test
+    void shouldRejectEntryWithoutOrder() {
+        PlannedEntryBatchCreateRequest request = new PlannedEntryBatchCreateRequest(
+                "Conta de luz",
+                1L,
+                null,
+                PlannedAmountBehavior.ESTIMATED,
+                null,
+                null,
+                null,
+                null,
+                List.of(new PlannedEntryBatchItemRequest(null, LocalDate.of(2026, 4, 10), null, null, new BigDecimal("99.90")))
+        );
+
+        Set<ConstraintViolation<PlannedEntryBatchCreateRequest>> violations = validator.validate(request);
+
+        assertTrue(containsViolation(violations, "entries[0].order", "Ordem é obrigatória."));
+    }
+
+    @Test
+    void shouldRejectWhenCategoryIdIsMissing() {
+        PlannedEntryBatchCreateRequest request = new PlannedEntryBatchCreateRequest(
+                "Conta de luz",
+                null,
+                null,
+                PlannedAmountBehavior.ESTIMATED,
+                null,
+                null,
+                null,
+                null,
+                List.of(new PlannedEntryBatchItemRequest(1, LocalDate.of(2026, 4, 10), null, null, new BigDecimal("99.90")))
+        );
+
+        Set<ConstraintViolation<PlannedEntryBatchCreateRequest>> violations = validator.validate(request);
+
+        assertTrue(containsViolation(violations, "categoryId", "Categoria é obrigatória."));
     }
 
     private static boolean containsViolation(

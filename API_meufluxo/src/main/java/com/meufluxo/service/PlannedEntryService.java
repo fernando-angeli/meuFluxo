@@ -17,13 +17,17 @@ import com.meufluxo.repository.PlannedEntryRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -56,10 +60,29 @@ public class PlannedEntryService extends BaseUserService {
 
     @Transactional
     public PlannedEntryResponse createExpense(PlannedEntryCreateRequest request) {
-        PlannedEntry entry = plannedEntryMapper.toEntity(request);
-        applyCommonRelations(entry, FinancialDirection.EXPENSE, request.categoryId(), request.subCategoryId(), request.defaultAccountId());
+        return createPlannedEntry(request, FinancialDirection.EXPENSE);
+    }
 
-        entry.setDirection(FinancialDirection.EXPENSE);
+    @Transactional
+    public PlannedEntryResponse createIncome(PlannedEntryCreateRequest request) {
+        return createPlannedEntry(request, FinancialDirection.INCOME);
+    }
+
+    @Transactional
+    public PlannedEntryBatchCreateResponse createExpenseBatch(PlannedEntryBatchCreateRequest request) {
+        return createBatch(request, FinancialDirection.EXPENSE);
+    }
+
+    @Transactional
+    public PlannedEntryBatchCreateResponse createIncomeBatch(PlannedEntryBatchCreateRequest request) {
+        return createBatch(request, FinancialDirection.INCOME);
+    }
+
+    private PlannedEntryResponse createPlannedEntry(PlannedEntryCreateRequest request, FinancialDirection direction) {
+        PlannedEntry entry = plannedEntryMapper.toEntity(request);
+        applyCommonRelations(entry, direction, request.categoryId(), request.subCategoryId(), request.defaultAccountId());
+
+        entry.setDirection(direction);
         entry.setStatus(PlannedEntryStatus.OPEN);
         entry.setOriginType(PlannedEntryOriginType.SINGLE);
         entry.setGroupId(null);
@@ -74,22 +97,27 @@ public class PlannedEntryService extends BaseUserService {
         return withComputedStatus(plannedEntryMapper.toResponse(entry));
     }
 
-    @Transactional
-    public PlannedEntryBatchCreateResponse createExpenseBatch(PlannedEntryBatchCreateRequest request) {
+    private PlannedEntryBatchCreateResponse createBatch(PlannedEntryBatchCreateRequest request, FinancialDirection direction) {
+        validateBatchEntries(request);
         UUID groupId = UUID.randomUUID();
 
-        Category category = validateAndGetCategoryForDirection(request.categoryId(), FinancialDirection.EXPENSE);
+        Category category = validateAndGetCategoryForDirection(request.categoryId(), direction);
         SubCategory subCategory = validateAndGetSubCategory(request.subCategoryId(), category);
         Account defaultAccount = validateAndGetAccount(request.defaultAccountId());
         String description = trimToNull(request.description());
         String notes = trimToNull(request.notes());
         String rootDocument = trimToNull(request.document());
 
+        List<PlannedEntryBatchItemRequest> orderedItems = request.entries()
+                .stream()
+                .sorted(Comparator.comparing(PlannedEntryBatchItemRequest::order))
+                .toList();
+
         List<PlannedEntry> entries = new ArrayList<>();
-        for (PlannedEntryBatchItemRequest item : request.entries()) {
+        for (PlannedEntryBatchItemRequest item : orderedItems) {
             PlannedEntry entry = new PlannedEntry();
             entry.setWorkspace(getCurrentWorkspace());
-            entry.setDirection(FinancialDirection.EXPENSE);
+            entry.setDirection(direction);
             entry.setDescription(description);
             entry.setCategory(category);
             entry.setSubCategory(subCategory);
@@ -106,7 +134,13 @@ public class PlannedEntryService extends BaseUserService {
             entries.add(entry);
         }
 
-        List<PlannedEntry> savedEntries = plannedEntryRepository.saveAll(entries);
+        List<PlannedEntry> savedEntries;
+        try {
+            savedEntries = plannedEntryRepository.saveAll(entries);
+        } catch (DataIntegrityViolationException ex) {
+            throw new BusinessException("Falha de integridade ao salvar lote de lançamentos. Revise categoria, subcategoria, conta e documentos informados.");
+        }
+
         List<PlannedEntryResponse> responses = savedEntries.stream()
                 .map(plannedEntryMapper::toResponse)
                 .map(this::withComputedStatus)
@@ -118,6 +152,12 @@ public class PlannedEntryService extends BaseUserService {
     @Transactional(readOnly = true)
     public PlannedEntryResponse findExpenseById(Long id) {
         PlannedEntry entry = findByIdOrThrow(id, FinancialDirection.EXPENSE);
+        return withComputedStatus(plannedEntryMapper.toResponse(entry));
+    }
+
+    @Transactional(readOnly = true)
+    public PlannedEntryResponse findIncomeById(Long id) {
+        PlannedEntry entry = findByIdOrThrow(id, FinancialDirection.INCOME);
         return withComputedStatus(plannedEntryMapper.toResponse(entry));
     }
 
@@ -136,17 +176,7 @@ public class PlannedEntryService extends BaseUserService {
             UUID groupId,
             Pageable pageable
     ) {
-        Optional.ofNullable(categoryId).ifPresent(categoryService::existsId);
-        Optional.ofNullable(subCategoryId).ifPresent(subCategoryService::existsId);
-
-        if (dueDateStart != null && dueDateEnd != null && dueDateStart.isAfter(dueDateEnd)) {
-            throw new BusinessException("Intervalo de data inválido: dueDateStart maior que dueDateEnd.");
-        }
-        if (issueDateStart != null && issueDateEnd != null && issueDateStart.isAfter(issueDateEnd)) {
-            throw new BusinessException("Intervalo de data inválido: issueDateStart maior que issueDateEnd.");
-        }
-
-        Specification<PlannedEntry> specification = buildSpecification(
+        return findByDirection(
                 FinancialDirection.EXPENSE,
                 status,
                 amountBehavior,
@@ -155,51 +185,64 @@ public class PlannedEntryService extends BaseUserService {
                 issueDateEnd,
                 dueDateStart,
                 dueDateEnd,
-                trimToNull(document),
+                document,
                 categoryId,
                 subCategoryId,
-                groupId
+                groupId,
+                pageable
         );
+    }
 
-        Page<PlannedEntry> page = plannedEntryRepository.findAll(specification, pageable);
-        Page<PlannedEntryResponse> responsePage = page.map(plannedEntryMapper::toResponse).map(this::withComputedStatus);
-        return PageResponse.toPageResponse(responsePage);
+    @Transactional(readOnly = true)
+    public PageResponse<PlannedEntryResponse> findIncomes(
+            PlannedEntryStatus status,
+            com.meufluxo.enums.PlannedAmountBehavior amountBehavior,
+            LocalDate issueDate,
+            LocalDate issueDateStart,
+            LocalDate issueDateEnd,
+            LocalDate dueDateStart,
+            LocalDate dueDateEnd,
+            String document,
+            Long categoryId,
+            Long subCategoryId,
+            UUID groupId,
+            Pageable pageable
+    ) {
+        return findByDirection(
+                FinancialDirection.INCOME,
+                status,
+                amountBehavior,
+                issueDate,
+                issueDateStart,
+                issueDateEnd,
+                dueDateStart,
+                dueDateEnd,
+                document,
+                categoryId,
+                subCategoryId,
+                groupId,
+                pageable
+        );
     }
 
     @Transactional
     public PlannedEntryResponse updateExpense(Long id, PlannedEntryUpdateRequest request) {
-        PlannedEntry entry = findByIdOrThrow(id, FinancialDirection.EXPENSE);
-        applyUpdate(
-                entry,
-                request.categoryId(),
-                request.subCategoryId(),
-                request.defaultAccountId(),
-                request.description(),
-                request.notes(),
-                request.issueDate(),
-                request.document()
-        );
+        return updateByDirection(id, request, FinancialDirection.EXPENSE);
+    }
 
-        if (request.expectedAmount() != null) {
-            entry.setExpectedAmount(request.expectedAmount());
-        }
-        if (request.amountBehavior() != null) {
-            entry.setAmountBehavior(request.amountBehavior());
-        }
-        if (request.dueDate() != null) {
-            entry.setDueDate(adjustDueDate(request.dueDate()));
-        }
-
-        PlannedEntry saved = plannedEntryRepository.save(entry);
-        return withComputedStatus(plannedEntryMapper.toResponse(saved));
+    @Transactional
+    public PlannedEntryResponse updateIncome(Long id, PlannedEntryUpdateRequest request) {
+        return updateByDirection(id, request, FinancialDirection.INCOME);
     }
 
     @Transactional
     public PlannedEntryResponse cancelExpense(Long id) {
-        PlannedEntry entry = findByIdOrThrow(id, FinancialDirection.EXPENSE);
-        entry.setStatus(PlannedEntryStatus.CANCELED);
-        PlannedEntry saved = plannedEntryRepository.save(entry);
-        return withComputedStatus(plannedEntryMapper.toResponse(saved));
+        return cancelByDirection(id, FinancialDirection.EXPENSE);
+    }
+
+    @Transactional
+    public PlannedEntryResponse cancelIncome(Long id) {
+        return cancelByDirection(id, FinancialDirection.INCOME);
     }
 
     @Transactional
@@ -207,14 +250,30 @@ public class PlannedEntryService extends BaseUserService {
             Long referenceId,
             PlannedEntryFutureOpenUpdateRequest request
     ) {
-        PlannedEntry referenceEntry = findByIdOrThrow(referenceId, FinancialDirection.EXPENSE);
+        return updateFutureOpenByDirection(referenceId, request, FinancialDirection.EXPENSE);
+    }
+
+    @Transactional
+    public PlannedEntryFutureOpenUpdateResponse updateIncomeFutureOpen(
+            Long referenceId,
+            PlannedEntryFutureOpenUpdateRequest request
+    ) {
+        return updateFutureOpenByDirection(referenceId, request, FinancialDirection.INCOME);
+    }
+
+    private PlannedEntryFutureOpenUpdateResponse updateFutureOpenByDirection(
+            Long referenceId,
+            PlannedEntryFutureOpenUpdateRequest request,
+            FinancialDirection direction
+    ) {
+        PlannedEntry referenceEntry = findByIdOrThrow(referenceId, direction);
         if (referenceEntry.getGroupId() == null) {
             throw new BusinessException("Lançamento não pertence a um grupo de lote manual.");
         }
 
         Category category = request.categoryId() == null
                 ? referenceEntry.getCategory()
-                : validateAndGetCategoryForDirection(request.categoryId(), FinancialDirection.EXPENSE);
+                : validateAndGetCategoryForDirection(request.categoryId(), direction);
 
         SubCategory subCategory = request.subCategoryId() == null
                 ? referenceEntry.getSubCategory()
@@ -227,7 +286,7 @@ public class PlannedEntryService extends BaseUserService {
         List<PlannedEntry> futureOpenEntries =
                 plannedEntryRepository.findByWorkspaceIdAndDirectionAndGroupIdAndStatusAndDueDateGreaterThanEqualOrderByDueDateAsc(
                         getCurrentWorkspaceId(),
-                        FinancialDirection.EXPENSE,
+                        direction,
                         referenceEntry.getGroupId(),
                         PlannedEntryStatus.OPEN,
                         referenceEntry.getDueDate()
@@ -263,6 +322,85 @@ public class PlannedEntryService extends BaseUserService {
 
         plannedEntryRepository.saveAll(futureOpenEntries);
         return new PlannedEntryFutureOpenUpdateResponse(referenceEntry.getGroupId(), futureOpenEntries.size());
+    }
+
+    private PageResponse<PlannedEntryResponse> findByDirection(
+            FinancialDirection direction,
+            PlannedEntryStatus status,
+            com.meufluxo.enums.PlannedAmountBehavior amountBehavior,
+            LocalDate issueDate,
+            LocalDate issueDateStart,
+            LocalDate issueDateEnd,
+            LocalDate dueDateStart,
+            LocalDate dueDateEnd,
+            String document,
+            Long categoryId,
+            Long subCategoryId,
+            UUID groupId,
+            Pageable pageable
+    ) {
+        Optional.ofNullable(categoryId).ifPresent(categoryService::existsId);
+        Optional.ofNullable(subCategoryId).ifPresent(subCategoryService::existsId);
+
+        if (dueDateStart != null && dueDateEnd != null && dueDateStart.isAfter(dueDateEnd)) {
+            throw new BusinessException("Intervalo de data inválido: dueDateStart maior que dueDateEnd.");
+        }
+        if (issueDateStart != null && issueDateEnd != null && issueDateStart.isAfter(issueDateEnd)) {
+            throw new BusinessException("Intervalo de data inválido: issueDateStart maior que issueDateEnd.");
+        }
+
+        Specification<PlannedEntry> specification = buildSpecification(
+                direction,
+                status,
+                amountBehavior,
+                issueDate,
+                issueDateStart,
+                issueDateEnd,
+                dueDateStart,
+                dueDateEnd,
+                trimToNull(document),
+                categoryId,
+                subCategoryId,
+                groupId
+        );
+
+        Page<PlannedEntry> page = plannedEntryRepository.findAll(specification, pageable);
+        Page<PlannedEntryResponse> responsePage = page.map(plannedEntryMapper::toResponse).map(this::withComputedStatus);
+        return PageResponse.toPageResponse(responsePage);
+    }
+
+    private PlannedEntryResponse updateByDirection(Long id, PlannedEntryUpdateRequest request, FinancialDirection direction) {
+        PlannedEntry entry = findByIdOrThrow(id, direction);
+        applyUpdate(
+                entry,
+                request.categoryId(),
+                request.subCategoryId(),
+                request.defaultAccountId(),
+                request.description(),
+                request.notes(),
+                request.issueDate(),
+                request.document()
+        );
+
+        if (request.expectedAmount() != null) {
+            entry.setExpectedAmount(request.expectedAmount());
+        }
+        if (request.amountBehavior() != null) {
+            entry.setAmountBehavior(request.amountBehavior());
+        }
+        if (request.dueDate() != null) {
+            entry.setDueDate(adjustDueDate(request.dueDate()));
+        }
+
+        PlannedEntry saved = plannedEntryRepository.save(entry);
+        return withComputedStatus(plannedEntryMapper.toResponse(saved));
+    }
+
+    private PlannedEntryResponse cancelByDirection(Long id, FinancialDirection direction) {
+        PlannedEntry entry = findByIdOrThrow(id, direction);
+        entry.setStatus(PlannedEntryStatus.CANCELED);
+        PlannedEntry saved = plannedEntryRepository.save(entry);
+        return withComputedStatus(plannedEntryMapper.toResponse(saved));
     }
 
     private Specification<PlannedEntry> buildSpecification(
@@ -379,6 +517,28 @@ public class PlannedEntryService extends BaseUserService {
         entry.setDefaultAccount(defaultAccount);
     }
 
+    private void validateBatchEntries(PlannedEntryBatchCreateRequest request) {
+        if (request.entries() == null || request.entries().isEmpty()) {
+            throw new BusinessException("Lista de lançamentos é obrigatória e não pode estar vazia.");
+        }
+
+        Set<Integer> usedOrders = new HashSet<>();
+        for (PlannedEntryBatchItemRequest item : request.entries()) {
+            if (item.order() == null || item.order() <= 0) {
+                throw new BusinessException("Cada lançamento do lote deve possuir ordem maior que zero.");
+            }
+            if (!usedOrders.add(item.order())) {
+                throw new BusinessException("Existem ordens duplicadas no lote. Cada lançamento deve ter ordem única.");
+            }
+            if (item.dueDate() == null) {
+                throw new BusinessException("Cada lançamento do lote deve possuir data de vencimento.");
+            }
+            if (item.expectedAmount() == null || item.expectedAmount().signum() <= 0) {
+                throw new BusinessException("Cada lançamento do lote deve possuir valor esperado maior que zero.");
+            }
+        }
+    }
+
     private void applyUpdate(
             PlannedEntry entry,
             Long categoryId,
@@ -474,6 +634,7 @@ public class PlannedEntryService extends BaseUserService {
         return trimmed.isEmpty() ? null : trimmed;
     }
 
+    @SafeVarargs
     private static <T> T firstNonNull(T... values) {
         for (T value : values) {
             if (value != null) {
