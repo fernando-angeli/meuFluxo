@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil, Trash2 } from "lucide-react";
+import { LayoutDashboard, Pencil, Trash2 } from "lucide-react";
 
 import type { Account } from "@meufluxo/types";
 
@@ -10,14 +10,23 @@ export function AccountRowActions({
   account,
   onEdit,
   onDelete,
+  onOpenManager,
   isDeleting,
 }: {
   account: Account;
   onEdit: (account: Account) => void;
   onDelete: (account: Account) => void;
+  onOpenManager: (account: Account) => void;
   isDeleting?: boolean;
 }) {
   const actions: RowActionButtonItem[] = [
+    {
+      key: "open-manager",
+      label: "Abrir visão gerencial",
+      icon: LayoutDashboard,
+      ariaLabel: "Abrir visão gerencial da conta",
+      onClick: () => onOpenManager(account),
+    },
     {
       key: "edit",
       label: "Editar",
