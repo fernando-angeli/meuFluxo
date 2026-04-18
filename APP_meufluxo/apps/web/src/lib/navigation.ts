@@ -5,6 +5,7 @@ import {
   CreditCard,
   Gauge,
   Landmark,
+  Tags,
 } from "lucide-react";
 import type { TranslationKey } from "@/lib/i18n";
 
@@ -24,14 +25,8 @@ export type NavItem = {
 
 export const mainNav: NavItem[] = [
   { titleKey: "nav.dashboard", href: "/dashboard", icon: Gauge },
-  {
-    titleKey: "nav.accounts",
-    icon: Landmark,
-    children: [
-      { titleKey: "nav.accounts", href: "/accounts" },
-      { titleKey: "nav.accounts.statement", href: "/accounts/statement" },
-    ],
-  },
+  { titleKey: "nav.accounts", href: "/accounts", icon: Landmark },
+  { titleKey: "nav.categories", href: "/categories", icon: Tags },
   { titleKey: "nav.income", href: "/receivables", icon: ArrowUpCircle },
   { titleKey: "nav.expenses", href: "/payables", icon: ArrowDownCircle },
   {
