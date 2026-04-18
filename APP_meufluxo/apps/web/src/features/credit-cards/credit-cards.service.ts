@@ -1,10 +1,80 @@
 "use client";
 
-import type { CreditCard, PageQueryParams, PageResponse } from "@meufluxo/types";
+import type {
+  BrandCard,
+  CreditCard,
+  PageQueryParams,
+  PageResponse,
+} from "@meufluxo/types";
 
 import { env } from "@/lib/env";
 import { api } from "@/services/api";
 import { mockCreditCards } from "@/services/mocks/credit-cards";
+
+type CreditCardCreateRequest = {
+  name: string;
+  brand: BrandCard;
+  closingDay: number;
+  dueDay: number;
+  creditLimit?: number | null;
+  defaultPaymentAccountId?: number | null;
+  notes?: string | null;
+  active: boolean;
+};
+
+type CreditCardUpdateRequest = CreditCardCreateRequest;
+
+type CreditCardActiveRequest = {
+  active: boolean;
+};
+
+function toStringOrEmpty(value: unknown): string {
+  return value == null ? "" : String(value);
+}
+
+function toNumber(value: unknown): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function toNullableNumber(value: unknown): number | null {
+  if (value == null || value === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+export function normalizeCreditCardFromApi(raw: unknown): CreditCard {
+  const r = raw as Record<string, unknown>;
+  const brand = String(r.brand ?? r.brandCard ?? "MASTERCARD").toUpperCase();
+  const resolvedBrand = brand === "VISA" ? "VISA" : "MASTERCARD";
+  return {
+    id: toStringOrEmpty(r.id),
+    name: toStringOrEmpty(r.name),
+    cardDisplayName: r.cardDisplayName != null ? String(r.cardDisplayName) : null,
+    brand: resolvedBrand,
+    brandCard: resolvedBrand,
+    creditLimit: toNullableNumber(r.creditLimit),
+    closingDay: toNumber(r.closingDay),
+    dueDay: toNumber(r.dueDay),
+    defaultPaymentAccountId:
+      r.defaultPaymentAccountId != null ? String(r.defaultPaymentAccountId) : null,
+    defaultPaymentAccountName:
+      r.defaultPaymentAccountName != null ? String(r.defaultPaymentAccountName) : null,
+    notes: r.notes != null ? String(r.notes) : null,
+    meta: {
+      createdAt: String((r.meta as { createdAt?: string } | undefined)?.createdAt ?? new Date().toISOString()),
+      updatedAt: String((r.meta as { updatedAt?: string } | undefined)?.updatedAt ?? new Date().toISOString()),
+      active:
+        (r.meta as { active?: boolean } | undefined)?.active != null
+          ? Boolean((r.meta as { active?: boolean }).active)
+          : true,
+    },
+    lastFourDigits: r.lastFourDigits != null ? String(r.lastFourDigits) : null,
+    annualFeeEnabled: r.annualFeeEnabled != null ? Boolean(r.annualFeeEnabled) : null,
+    annualFeeAmount: toNullableNumber(r.annualFeeAmount),
+    annualFeeWaiverThreshold: toNullableNumber(r.annualFeeWaiverThreshold),
+  };
+}
 
 function toSortParts(sort?: string): { key: string; direction: "asc" | "desc" } {
   if (!sort) return { key: "name", direction: "asc" };
@@ -47,7 +117,9 @@ export async function fetchCreditCardsPage(params: PageQueryParams): Promise<Pag
   const size = Math.max(1, Number(params.size) || 10);
   const { key, direction } = toSortParts(params.sort);
 
-  const allCards = env.useMocks ? mockCreditCards : await api.creditCards.list();
+  const allCards = env.useMocks
+    ? mockCreditCards
+    : ((await api.creditCards.list())?.content ?? []).map((item) => normalizeCreditCardFromApi(item));
   const sorted = [...allCards].sort((a, b) => compareCards(a, b, key, direction));
 
   const totalElements = sorted.length;
@@ -64,4 +136,25 @@ export async function fetchCreditCardsPage(params: PageQueryParams): Promise<Pag
     first: page <= 0,
     last: page >= totalPages - 1,
   };
+}
+
+export async function createCreditCard(request: CreditCardCreateRequest): Promise<CreditCard> {
+  const created = await api.creditCards.create(request);
+  return normalizeCreditCardFromApi(created);
+}
+
+export async function updateCreditCard(
+  id: string,
+  request: CreditCardUpdateRequest,
+): Promise<CreditCard> {
+  const updated = await api.creditCards.update(id, request);
+  return normalizeCreditCardFromApi(updated);
+}
+
+export async function updateCreditCardActive(
+  id: string,
+  request: CreditCardActiveRequest,
+): Promise<CreditCard> {
+  const updated = await api.creditCards.updateActive(id, request);
+  return normalizeCreditCardFromApi(updated);
 }
