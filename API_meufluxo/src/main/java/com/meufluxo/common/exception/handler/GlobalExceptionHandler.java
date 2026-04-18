@@ -5,11 +5,15 @@ import com.meufluxo.common.exception.NotFoundException;
 import com.meufluxo.common.exception.model.FieldError;
 import com.meufluxo.common.exception.model.StandardError;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolationException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -21,6 +25,7 @@ import java.util.stream.Collectors;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     private ResponseEntity<StandardError> buildError(
             HttpStatus status,
@@ -122,10 +127,44 @@ public class GlobalExceptionHandler {
             DataIntegrityViolationException e,
             HttpServletRequest request
     ) {
+        String rootMessage = e.getMostSpecificCause() != null ? e.getMostSpecificCause().getMessage() : e.getMessage();
+        log.warn("Data integrity violation at {}: {}", request.getRequestURI(), rootMessage);
         return buildError(
-                HttpStatus.CONFLICT,
-                "Conflict",
-                "Operation cannot be completed due to data integrity constraints.",
+                HttpStatus.UNPROCESSABLE_ENTITY,
+                "Data integrity violation",
+                "Operação inválida para os dados informados.",
+                List.of(),
+                request
+        );
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<StandardError> handleConstraintViolation(
+            ConstraintViolationException e,
+            HttpServletRequest request
+    ) {
+        List<FieldError> errors = e.getConstraintViolations().stream()
+                .map(v -> new FieldError(v.getPropertyPath().toString(), v.getMessage()))
+                .collect(Collectors.toList());
+
+        return buildError(
+                HttpStatus.BAD_REQUEST,
+                "Validation error",
+                "One or more fields are invalid.",
+                errors,
+                request
+        );
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<StandardError> handleNoResourceFound(
+            NoResourceFoundException e,
+            HttpServletRequest request
+    ) {
+        return buildError(
+                HttpStatus.NOT_FOUND,
+                "Resource not found",
+                "Rota não encontrada: " + request.getRequestURI(),
                 List.of(),
                 request
         );
@@ -139,6 +178,7 @@ public class GlobalExceptionHandler {
             Exception e,
             HttpServletRequest request
     ) {
+        log.error("Unexpected error at {}", request.getRequestURI(), e);
         return buildError(
                 HttpStatus.INTERNAL_SERVER_ERROR,
                 "Internal server error",

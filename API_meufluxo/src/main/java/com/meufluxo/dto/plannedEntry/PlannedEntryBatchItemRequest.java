@@ -9,6 +9,10 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public record PlannedEntryBatchItemRequest(
+        @NotNull(message = "Ordem é obrigatória.")
+        @Positive(message = "Ordem deve ser maior que zero.")
+        Integer order,
+
         @NotNull(message = "Data de vencimento é obrigatória.")
         LocalDate dueDate,
 

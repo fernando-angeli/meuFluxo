@@ -1,7 +1,13 @@
 package com.meufluxo.controller;
 
 import com.meufluxo.common.dto.PageResponse;
-import com.meufluxo.dto.plannedEntry.*;
+import com.meufluxo.dto.plannedEntry.PlannedEntryBatchCreateRequest;
+import com.meufluxo.dto.plannedEntry.PlannedEntryBatchCreateResponse;
+import com.meufluxo.dto.plannedEntry.PlannedEntryCreateRequest;
+import com.meufluxo.dto.plannedEntry.PlannedEntryFutureOpenUpdateRequest;
+import com.meufluxo.dto.plannedEntry.PlannedEntryFutureOpenUpdateResponse;
+import com.meufluxo.dto.plannedEntry.PlannedEntryResponse;
+import com.meufluxo.dto.plannedEntry.PlannedEntryUpdateRequest;
 import com.meufluxo.enums.PlannedAmountBehavior;
 import com.meufluxo.enums.PlannedEntryStatus;
 import com.meufluxo.service.PlannedEntryService;
@@ -18,7 +24,15 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
@@ -26,56 +40,56 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 @RestController
-@RequestMapping({"/expense", "/expenses"})
-@Tag(name = "Despesas Planejadas", description = "Operações de lançamentos planejados de despesas")
-public class ExpenseController {
+@RequestMapping({"/income", "/incomes"})
+@Tag(name = "Receitas Planejadas", description = "Operações de lançamentos planejados de receitas")
+public class IncomeController {
 
     private final PlannedEntryService plannedEntryService;
 
-    public ExpenseController(PlannedEntryService plannedEntryService) {
+    public IncomeController(PlannedEntryService plannedEntryService) {
         this.plannedEntryService = plannedEntryService;
     }
 
     @PostMapping
-    @Operation(summary = "Criar despesa única planejada")
+    @Operation(summary = "Criar receita única planejada")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Despesa criada",
+            @ApiResponse(responseCode = "201", description = "Receita criada",
                     content = @Content(schema = @Schema(implementation = PlannedEntryResponse.class))),
             @ApiResponse(responseCode = "400", description = "Dados inválidos", content = @Content)
     })
-    public ResponseEntity<PlannedEntryResponse> createExpense(@Valid @RequestBody PlannedEntryCreateRequest request) {
-        PlannedEntryResponse response = plannedEntryService.createExpense(request);
+    public ResponseEntity<PlannedEntryResponse> createIncome(@Valid @RequestBody PlannedEntryCreateRequest request) {
+        PlannedEntryResponse response = plannedEntryService.createIncome(request);
         URI uri = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}")
                 .buildAndExpand(response.id()).toUri();
         return ResponseEntity.created(uri).body(response);
     }
 
     @PostMapping("/batch")
-    @Operation(summary = "Criar lote manual de despesas")
+    @Operation(summary = "Criar lote manual de receitas")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Lote criado",
                     content = @Content(schema = @Schema(implementation = PlannedEntryBatchCreateResponse.class))),
             @ApiResponse(responseCode = "400", description = "Dados inválidos", content = @Content)
     })
-    public ResponseEntity<PlannedEntryBatchCreateResponse> createExpenseBatch(
+    public ResponseEntity<PlannedEntryBatchCreateResponse> createIncomeBatch(
             @Valid @RequestBody PlannedEntryBatchCreateRequest request
     ) {
-        PlannedEntryBatchCreateResponse response = plannedEntryService.createExpenseBatch(request);
+        PlannedEntryBatchCreateResponse response = plannedEntryService.createIncomeBatch(request);
         return ResponseEntity.status(201).body(response);
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Buscar despesa planejada por ID")
-    public ResponseEntity<PlannedEntryResponse> getExpenseById(
+    @Operation(summary = "Buscar receita planejada por ID")
+    public ResponseEntity<PlannedEntryResponse> getIncomeById(
             @Parameter(description = "ID do lançamento", example = "1", required = true)
             @PathVariable Long id
     ) {
-        return ResponseEntity.ok(plannedEntryService.findExpenseById(id));
+        return ResponseEntity.ok(plannedEntryService.findIncomeById(id));
     }
 
     @GetMapping
-    @Operation(summary = "Listar despesas planejadas com filtros")
-    public PageResponse<PlannedEntryResponse> getExpenses(
+    @Operation(summary = "Listar receitas planejadas com filtros")
+    public PageResponse<PlannedEntryResponse> getIncomes(
             @RequestParam(required = false) PlannedEntryStatus status,
             @RequestParam(required = false) PlannedAmountBehavior amountBehavior,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate issueDate,
@@ -95,7 +109,7 @@ public class ExpenseController {
             )
             Pageable pageable
     ) {
-        return plannedEntryService.findExpenses(
+        return plannedEntryService.findIncomes(
                 status,
                 amountBehavior,
                 issueDate,
@@ -112,18 +126,18 @@ public class ExpenseController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Atualizar despesa planejada individual")
-    public ResponseEntity<PlannedEntryResponse> updateExpense(
+    @Operation(summary = "Atualizar receita planejada individual")
+    public ResponseEntity<PlannedEntryResponse> updateIncome(
             @PathVariable Long id,
             @Valid @RequestBody PlannedEntryUpdateRequest request
     ) {
-        return ResponseEntity.ok(plannedEntryService.updateExpense(id, request));
+        return ResponseEntity.ok(plannedEntryService.updateIncome(id, request));
     }
 
     @PatchMapping("/{id}/cancel")
-    @Operation(summary = "Cancelar despesa planejada")
-    public ResponseEntity<PlannedEntryResponse> cancelExpense(@PathVariable Long id) {
-        return ResponseEntity.ok(plannedEntryService.cancelExpense(id));
+    @Operation(summary = "Cancelar receita planejada")
+    public ResponseEntity<PlannedEntryResponse> cancelIncome(@PathVariable Long id) {
+        return ResponseEntity.ok(plannedEntryService.cancelIncome(id));
     }
 
     @PutMapping("/{id}/future-open")
@@ -132,6 +146,6 @@ public class ExpenseController {
             @PathVariable Long id,
             @Valid @RequestBody PlannedEntryFutureOpenUpdateRequest request
     ) {
-        return ResponseEntity.ok(plannedEntryService.updateExpenseFutureOpen(id, request));
+        return ResponseEntity.ok(plannedEntryService.updateIncomeFutureOpen(id, request));
     }
 }
