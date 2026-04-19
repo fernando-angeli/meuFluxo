@@ -8,6 +8,7 @@ export {
   type AccountUpdateRequest,
   type AccountsListParams,
 } from "./accounts";
+export { createBanksApi, type BanksApi } from "./banks";
 export {
   createCategoriesApi,
   type CategoriesApi,

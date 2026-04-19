@@ -1,8 +1,10 @@
 package com.meufluxo.service;
 
 import com.meufluxo.common.dto.PageResponse;
+import com.meufluxo.common.exception.BusinessException;
 import com.meufluxo.common.exception.NotFoundException;
 import com.meufluxo.config.CashMovementEventPublisher;
+import com.meufluxo.dto.account.AccountMovementSummaryResponse;
 import com.meufluxo.dto.cashMovement.CashMovementRequest;
 import com.meufluxo.dto.cashMovement.CashMovementResponse;
 import com.meufluxo.dto.cashMovement.CashMovementUpdateRequest;
@@ -82,44 +84,76 @@ public class CashMovementService extends BaseUserService{
             MovementType movementType,
             Pageable pageable
     ) {
-        Optional.ofNullable(accountId).ifPresent(accountService::existsId);
-        Optional.ofNullable(categoryId).ifPresent(categoryService::existsId);
-        Optional.ofNullable(subCategoryId).ifPresent(subCategoryService::existsId);
-        validateDateRange(startDate, endDate);
-
-        Long workspaceId = getCurrentWorkspaceId();
-        Specification<CashMovement> specification = (root, query, cb) -> {
-            List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
-            predicates.add(cb.equal(root.get("workspace").get("id"), workspaceId));
-
-            if (accountId != null) {
-                predicates.add(cb.equal(root.get("account").get("id"), accountId));
-            }
-            if (categoryId != null) {
-                predicates.add(cb.equal(root.get("subCategory").get("category").get("id"), categoryId));
-            }
-            if (subCategoryId != null) {
-                predicates.add(cb.equal(root.get("subCategory").get("id"), subCategoryId));
-            }
-            if (startDate != null) {
-                predicates.add(cb.greaterThanOrEqualTo(root.get("occurredAt"), startDate));
-            }
-            if (endDate != null) {
-                predicates.add(cb.lessThanOrEqualTo(root.get("occurredAt"), endDate));
-            }
-            if (paymentMethod != null) {
-                predicates.add(cb.equal(root.get("paymentMethod"), paymentMethod));
-            }
-            if (movementType != null) {
-                predicates.add(cb.equal(root.get("movementType"), movementType));
-            }
-
-            return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
-        };
+        validateFilters(accountId, categoryId, subCategoryId, startDate, endDate);
+        Specification<CashMovement> specification = buildSpecification(
+                accountId,
+                categoryId,
+                subCategoryId,
+                startDate,
+                endDate,
+                paymentMethod,
+                movementType
+        );
 
         Page<CashMovement> movements = repository.findAll(specification, pageable);
         Page<CashMovementResponse> responsePage = movements.map(cashMovementMapper::toResponse);
         return PageResponse.toPageResponse(responsePage);
+    }
+
+    public PageResponse<CashMovementResponse> findByAccountFilters(
+            Long accountId,
+            Long categoryId,
+            Long subCategoryId,
+            LocalDate startDate,
+            LocalDate endDate,
+            Pageable pageable
+    ) {
+        if (accountId == null) {
+            throw new BusinessException("AccountId é obrigatório para consulta de detalhes da conta.");
+        }
+        return findByFilters(
+                accountId,
+                categoryId,
+                subCategoryId,
+                startDate,
+                endDate,
+                null,
+                null,
+                pageable
+        );
+    }
+
+    public AccountMovementSummaryResponse summarizeByAccountFilters(
+            Long accountId,
+            Long categoryId,
+            Long subCategoryId,
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
+        if (accountId == null) {
+            throw new BusinessException("AccountId é obrigatório para resumo de detalhes da conta.");
+        }
+
+        validateFilters(accountId, categoryId, subCategoryId, startDate, endDate);
+        Specification<CashMovement> specification = buildSpecification(
+                accountId,
+                categoryId,
+                subCategoryId,
+                startDate,
+                endDate,
+                null,
+                null
+        );
+
+        List<CashMovement> movements = repository.findAll(specification);
+        BigDecimal totalIncome = sumByType(movements, MovementType.INCOME);
+        BigDecimal totalExpense = sumByType(movements, MovementType.EXPENSE);
+
+        return new AccountMovementSummaryResponse(
+                totalIncome,
+                totalExpense,
+                totalIncome.subtract(totalExpense)
+        );
     }
 
     @Transactional
@@ -215,10 +249,80 @@ public class CashMovementService extends BaseUserService{
                 .orElseThrow(() -> new NotFoundException("Movimento não encontrada com ID: " + id));
     }
 
+    private Specification<CashMovement> buildSpecification(
+            Long accountId,
+            Long categoryId,
+            Long subCategoryId,
+            LocalDate startDate,
+            LocalDate endDate,
+            PaymentMethod paymentMethod,
+            MovementType movementType
+    ) {
+        Long workspaceId = getCurrentWorkspaceId();
+        return (root, query, cb) -> {
+            List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
+            predicates.add(cb.equal(root.get("workspace").get("id"), workspaceId));
+
+            if (accountId != null) {
+                predicates.add(cb.equal(root.get("account").get("id"), accountId));
+            }
+            if (categoryId != null) {
+                predicates.add(cb.equal(root.get("subCategory").get("category").get("id"), categoryId));
+            }
+            if (subCategoryId != null) {
+                predicates.add(cb.equal(root.get("subCategory").get("id"), subCategoryId));
+            }
+            if (startDate != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("occurredAt"), startDate));
+            }
+            if (endDate != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("occurredAt"), endDate));
+            }
+            if (paymentMethod != null) {
+                predicates.add(cb.equal(root.get("paymentMethod"), paymentMethod));
+            }
+            if (movementType != null) {
+                predicates.add(cb.equal(root.get("movementType"), movementType));
+            }
+
+            return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
+        };
+    }
+
+    private void validateFilters(
+            Long accountId,
+            Long categoryId,
+            Long subCategoryId,
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
+        Optional.ofNullable(accountId).ifPresent(accountService::existsId);
+        Optional.ofNullable(categoryId).ifPresent(categoryService::existsId);
+        SubCategory subCategory = null;
+        if (subCategoryId != null) {
+            subCategory = subCategoryService.findByIdOrThrow(subCategoryId);
+        }
+
+        if (categoryId != null && subCategory != null
+                && !categoryId.equals(subCategory.getCategory().getId())) {
+            throw new BusinessException("A subcategoria informada não pertence à categoria selecionada.");
+        }
+
+        validateDateRange(startDate, endDate);
+    }
+
     private void validateDateRange(LocalDate startDate, LocalDate endDate) {
         if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
-            throw new IllegalArgumentException("startDate must be before or equal to endDate.");
+            throw new BusinessException("Intervalo de data inválido: startDate maior que endDate.");
         }
+    }
+
+    private BigDecimal sumByType(List<CashMovement> movements, MovementType movementType) {
+        return movements.stream()
+                .filter(movement -> movement.getMovementType() == movementType)
+                .map(CashMovement::getAmount)
+                .filter(amount -> amount != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private void publishEvent(String topic, CashMovement movement, String eventType) {

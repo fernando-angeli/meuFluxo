@@ -7,6 +7,7 @@ import com.meufluxo.dto.plannedEntry.PlannedEntryCreateRequest;
 import com.meufluxo.dto.plannedEntry.PlannedEntryFutureOpenUpdateRequest;
 import com.meufluxo.dto.plannedEntry.PlannedEntryFutureOpenUpdateResponse;
 import com.meufluxo.dto.plannedEntry.PlannedEntryResponse;
+import com.meufluxo.dto.plannedEntry.PlannedEntrySettleRequest;
 import com.meufluxo.dto.plannedEntry.PlannedEntryUpdateRequest;
 import com.meufluxo.enums.PlannedAmountBehavior;
 import com.meufluxo.enums.PlannedEntryStatus;
@@ -138,6 +139,15 @@ public class IncomeController {
     @Operation(summary = "Cancelar receita planejada")
     public ResponseEntity<PlannedEntryResponse> cancelIncome(@PathVariable Long id) {
         return ResponseEntity.ok(plannedEntryService.cancelIncome(id));
+    }
+
+    @PatchMapping("/{id}/settle")
+    @Operation(summary = "Confirmar recebimento da receita planejada (gera movimento em conta)")
+    public ResponseEntity<PlannedEntryResponse> settleIncome(
+            @PathVariable Long id,
+            @Valid @RequestBody PlannedEntrySettleRequest request
+    ) {
+        return ResponseEntity.ok(plannedEntryService.settleIncome(id, request));
     }
 
     @PutMapping("/{id}/future-open")

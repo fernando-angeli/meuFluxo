@@ -126,6 +126,15 @@ public class ExpenseController {
         return ResponseEntity.ok(plannedEntryService.cancelExpense(id));
     }
 
+    @PatchMapping("/{id}/settle")
+    @Operation(summary = "Liquidar despesa planejada (gera movimento em conta)")
+    public ResponseEntity<PlannedEntryResponse> settleExpense(
+            @PathVariable Long id,
+            @Valid @RequestBody PlannedEntrySettleRequest request
+    ) {
+        return ResponseEntity.ok(plannedEntryService.settleExpense(id, request));
+    }
+
     @PutMapping("/{id}/future-open")
     @Operation(summary = "Atualizar próximos lançamentos em aberto do grupo")
     public ResponseEntity<PlannedEntryFutureOpenUpdateResponse> updateFutureOpen(

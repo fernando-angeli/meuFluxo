@@ -3,16 +3,21 @@ package com.meufluxo.service;
 import com.meufluxo.common.dto.PageResponse;
 import com.meufluxo.common.exception.BusinessException;
 import com.meufluxo.common.exception.NotFoundException;
+import com.meufluxo.dto.cashMovement.CashMovementRequest;
+import com.meufluxo.dto.cashMovement.CashMovementResponse;
 import com.meufluxo.dto.plannedEntry.*;
 import com.meufluxo.enums.FinancialDirection;
 import com.meufluxo.enums.MovementType;
+import com.meufluxo.enums.PaymentMethod;
 import com.meufluxo.enums.PlannedEntryOriginType;
 import com.meufluxo.enums.PlannedEntryStatus;
 import com.meufluxo.mapper.PlannedEntryMapper;
 import com.meufluxo.model.Account;
+import com.meufluxo.model.CashMovement;
 import com.meufluxo.model.Category;
 import com.meufluxo.model.PlannedEntry;
 import com.meufluxo.model.SubCategory;
+import com.meufluxo.repository.CashMovementRepository;
 import com.meufluxo.repository.PlannedEntryRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -21,6 +26,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -39,6 +45,8 @@ public class PlannedEntryService extends BaseUserService {
     private final SubCategoryService subCategoryService;
     private final AccountService accountService;
     private final BusinessDayService businessDayService;
+    private final CashMovementService cashMovementService;
+    private final CashMovementRepository cashMovementRepository;
 
     public PlannedEntryService(
             CurrentUserService currentUserService,
@@ -47,7 +55,9 @@ public class PlannedEntryService extends BaseUserService {
             CategoryService categoryService,
             SubCategoryService subCategoryService,
             AccountService accountService,
-            BusinessDayService businessDayService
+            BusinessDayService businessDayService,
+            CashMovementService cashMovementService,
+            CashMovementRepository cashMovementRepository
     ) {
         super(currentUserService);
         this.plannedEntryRepository = plannedEntryRepository;
@@ -56,6 +66,8 @@ public class PlannedEntryService extends BaseUserService {
         this.subCategoryService = subCategoryService;
         this.accountService = accountService;
         this.businessDayService = businessDayService;
+        this.cashMovementService = cashMovementService;
+        this.cashMovementRepository = cashMovementRepository;
     }
 
     @Transactional
@@ -246,6 +258,16 @@ public class PlannedEntryService extends BaseUserService {
     }
 
     @Transactional
+    public PlannedEntryResponse settleExpense(Long id, PlannedEntrySettleRequest request) {
+        return settleByDirection(id, request, FinancialDirection.EXPENSE);
+    }
+
+    @Transactional
+    public PlannedEntryResponse settleIncome(Long id, PlannedEntrySettleRequest request) {
+        return settleByDirection(id, request, FinancialDirection.INCOME);
+    }
+
+    @Transactional
     public PlannedEntryFutureOpenUpdateResponse updateExpenseFutureOpen(
             Long referenceId,
             PlannedEntryFutureOpenUpdateRequest request
@@ -399,6 +421,56 @@ public class PlannedEntryService extends BaseUserService {
     private PlannedEntryResponse cancelByDirection(Long id, FinancialDirection direction) {
         PlannedEntry entry = findByIdOrThrow(id, direction);
         entry.setStatus(PlannedEntryStatus.CANCELED);
+        PlannedEntry saved = plannedEntryRepository.save(entry);
+        return withComputedStatus(plannedEntryMapper.toResponse(saved));
+    }
+
+    private PlannedEntryResponse settleByDirection(Long id, PlannedEntrySettleRequest request, FinancialDirection direction) {
+        PlannedEntry entry = findByIdOrThrow(id, direction);
+        if (entry.getStatus() != PlannedEntryStatus.OPEN) {
+            throw new BusinessException("Apenas lançamentos em aberto podem ser liquidados.");
+        }
+        if (entry.getSubCategory() == null) {
+            throw new BusinessException("Associe uma subcategoria ao planejamento antes de liquidar.");
+        }
+        if (request.actualAmount() == null || request.actualAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException("Valor liquidado deve ser maior que zero.");
+        }
+
+        Account settledAccount = validateAndGetAccount(request.settledAccountId());
+        MovementType movementType = direction == FinancialDirection.EXPENSE
+                ? MovementType.EXPENSE
+                : MovementType.INCOME;
+
+        String description = trimToNull(entry.getDescription());
+        if (description == null || description.length() < 3) {
+            description = direction == FinancialDirection.EXPENSE
+                    ? "Baixa de despesa planejada"
+                    : "Recebimento de receita planejada";
+        }
+
+        CashMovementRequest cmRequest = new CashMovementRequest(
+                request.actualAmount(),
+                movementType,
+                PaymentMethod.TRANSFER,
+                request.settledAt(),
+                entry.getSubCategory().getId(),
+                settledAccount.getId(),
+                description,
+                trimToNull(request.notes())
+        );
+
+        CashMovementResponse createdMovement = cashMovementService.create(cmRequest);
+        CashMovement movement = cashMovementRepository
+                .findByIdAndWorkspaceId(createdMovement.id(), getCurrentWorkspaceId())
+                .orElseThrow(() -> new NotFoundException("Movimento gerado não encontrado: " + createdMovement.id()));
+
+        entry.setActualAmount(request.actualAmount());
+        entry.setSettledAccount(settledAccount);
+        entry.setSettledAt(request.settledAt().atStartOfDay());
+        entry.setStatus(PlannedEntryStatus.COMPLETED);
+        entry.setMovement(movement);
+
         PlannedEntry saved = plannedEntryRepository.save(entry);
         return withComputedStatus(plannedEntryMapper.toResponse(saved));
     }

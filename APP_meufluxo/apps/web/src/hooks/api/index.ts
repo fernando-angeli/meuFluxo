@@ -32,6 +32,7 @@ export {
   useDeleteAccount,
 } from "./use-account-mutations";
 export { useAccountDetails, accountDetailsQueryKey } from "./use-account-details";
+export { useBanks, banksQueryKey } from "./use-banks";
 export {
   useCreateCategory,
   useUpdateCategory,

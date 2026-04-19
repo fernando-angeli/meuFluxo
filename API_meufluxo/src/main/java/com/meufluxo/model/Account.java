@@ -34,6 +34,21 @@ public class Account extends UserOwnedEntity {
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal initialBalance;
 
+    @Column
+    private Integer bankCode;
+
+    @Column
+    private String bankName;
+
+    @Column
+    private String agency;
+
+    @Column
+    private String accountNumber;
+
+    @Column(precision = 15, scale = 2)
+    private BigDecimal overdraftLimit;
+
     @Setter(AccessLevel.NONE)
     @Column(precision = 15, scale = 2)
     private BigDecimal currentBalance;

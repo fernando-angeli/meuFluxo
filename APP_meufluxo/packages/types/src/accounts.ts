@@ -17,6 +17,23 @@ export type Account = {
   currentBalance: number;
   balanceUpdatedAt: string | null;
   meta: EntityMeta;
+  /** Conta corrente (CHECKING): dados bancários e limite, quando a API expuser. */
+  bankCode?: string | null;
+  bankName?: string | null;
+  agency?: string | null;
+  accountNumber?: string | null;
+  /** Status textual da conta quando a API expuser (ex.: ACTIVE). */
+  status?: string | null;
+  overdraftLimit?: number | null;
+  overdraftUsed?: number | null;
+  /** Saldo disponível / limite livre (legado ou API). */
+  availableBalance?: number | null;
+  /** Disponível no cheque especial quando a API calcular separado de `availableBalance`. */
+  overdraftAvailable?: number | null;
+  /** Percentual de uso do limite (0–100), quando a API expuser. */
+  overdraftUsagePercent?: number | null;
+  isUsingOverdraft?: boolean | null;
+  isLimitExceeded?: boolean | null;
 };
 
 export type AccountDetailsMeta = EntityMeta & {

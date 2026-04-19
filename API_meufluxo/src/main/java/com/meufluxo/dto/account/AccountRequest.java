@@ -17,7 +17,13 @@ public record AccountRequest(
         AccountType accountType,
 
         @NotNull(message = "O saldo inicial é obrigatório")
-        BigDecimal initialBalance
+        BigDecimal initialBalance,
+
+        Integer bankCode,
+        String bankName,
+        String agency,
+        String accountNumber,
+        BigDecimal overdraftLimit
 
 ) {
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 
 import { PageHeader } from "@/components/layout/page-header";
@@ -8,11 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
-import { DetailsDrawer } from "@/components/details";
 import { useAuthOptional } from "@/hooks/useAuth";
 import {
   accountsQueryKey,
-  useAccountDetails,
   useDeleteAccount,
 } from "@/hooks/api";
 import { useTranslation } from "@/lib/i18n";
@@ -20,13 +19,14 @@ import { useToast } from "@/components/toast";
 import type { Account, AccountId } from "@meufluxo/types";
 import { AccountModal } from "@/features/accounts/components/account-modal";
 import { AccountRowActions } from "@/features/accounts/components/account-row-actions";
-import { AccountDetails, AccountsTable } from "@/components/accounts";
+import { AccountsTable } from "@/components/accounts";
 import { getAccountsTableColumns } from "@/features/accounts/accounts.columns";
 import { fetchAccountsPage } from "@/features/accounts/accounts.service";
 import { useServerDataTable } from "@/hooks/useServerDataTable";
 import { getQueryErrorMessage } from "@/lib/query-error";
 
 export default function AccountsPage() {
+  const router = useRouter();
   const { t } = useTranslation();
   const auth = useAuthOptional();
   const { success, error } = useToast();
@@ -35,15 +35,12 @@ export default function AccountsPage() {
 
   const [modalOpen, setModalOpen] = React.useState(false);
   const [editingAccount, setEditingAccount] = React.useState<Account | null>(null);
-  const [detailsOpen, setDetailsOpen] = React.useState(false);
   const [selectedAccountId, setSelectedAccountId] = React.useState<AccountId | null>(null);
-  const [selectedAccountPreview, setSelectedAccountPreview] = React.useState<Account | null>(null);
 
   const [deleteOpen, setDeleteOpen] = React.useState(false);
   const [deletingAccount, setDeletingAccount] = React.useState<Account | null>(null);
 
   const deleteMutation = useDeleteAccount();
-  const accountDetailsQuery = useAccountDetails(selectedAccountId, detailsOpen);
 
   const [search, setSearch] = React.useState("");
   const normalizedSearch = search.trim().toLowerCase();
@@ -58,7 +55,6 @@ export default function AccountsPage() {
   });
 
   const pageResponse = accountsTable.pageResponseQuery.data ?? null;
-  const accounts = pageResponse?.content ?? [];
 
   React.useEffect(() => {
     accountsTable.onReset();
@@ -66,9 +62,10 @@ export default function AccountsPage() {
   }, [normalizedSearch]);
 
   const filteredAccounts = React.useMemo(() => {
+    const accounts = pageResponse?.content ?? [];
     if (!normalizedSearch) return accounts;
     return accounts.filter((a) => a.name.toLowerCase().includes(normalizedSearch));
-  }, [accounts, normalizedSearch]);
+  }, [pageResponse, normalizedSearch]);
 
   const errorMessage = accountsTable.pageResponseQuery.isError
     ? getQueryErrorMessage(
@@ -82,32 +79,20 @@ export default function AccountsPage() {
     setModalOpen(true);
   }, []);
 
-  const openDetails = React.useCallback((account: Account) => {
-    setSelectedAccountId(account.id);
-    setSelectedAccountPreview(account);
-    setDetailsOpen(true);
-  }, []);
-
-  const closeDetails = React.useCallback(() => {
-    setDetailsOpen(false);
-  }, []);
+  const openManager = React.useCallback((account: Account) => {
+    router.push(`/accounts/${encodeURIComponent(account.id)}`);
+  }, [router]);
 
   const openEditModal = React.useCallback((account: Account) => {
-    setDetailsOpen(false);
     setEditingAccount(account);
     setModalOpen(true);
   }, []);
-
-  const detailsErrorMessage = accountDetailsQuery.isError
-    ? getQueryErrorMessage(accountDetailsQuery.error, "Não foi possível carregar os detalhes da conta.")
-    : null;
-
-  const selectedAccountForEdit: Account | null = accountDetailsQuery.data ?? selectedAccountPreview;
 
   const renderActions = React.useCallback(
     (account: Account) => (
       <AccountRowActions
         account={account}
+        onOpenManager={openManager}
         onEdit={(acc) => {
           openEditModal(acc);
         }}
@@ -118,7 +103,7 @@ export default function AccountsPage() {
         isDeleting={deleteMutation.isPending && deletingAccount?.id === account.id}
       />
     ),
-    [deleteMutation.isPending, deletingAccount?.id, openEditModal],
+    [deleteMutation.isPending, deletingAccount?.id, openEditModal, openManager],
   );
 
   const columns = React.useMemo(
@@ -168,42 +153,11 @@ export default function AccountsPage() {
               onSortChange={accountsTable.onSortChange}
               onPageChange={accountsTable.onPageChange}
               onPageSizeChange={accountsTable.onPageSizeChange}
-              onRowClick={openDetails}
+              onRowClick={openManager}
             />
           </CardContent>
         </Card>
       </div>
-
-      <DetailsDrawer
-        isOpen={detailsOpen}
-        onClose={closeDetails}
-        title={accountDetailsQuery.data?.name ?? selectedAccountPreview?.name ?? "Detalhes da conta"}
-        description="Visualize os dados da conta sem entrar em modo de edicao."
-        footer={
-          <div className="flex items-center justify-end gap-2">
-            <Button type="button" variant="outline" onClick={closeDetails}>
-              Fechar
-            </Button>
-            <Button
-              type="button"
-              disabled={!selectedAccountForEdit}
-              onClick={() => {
-                if (!selectedAccountForEdit) return;
-                openEditModal(selectedAccountForEdit);
-              }}
-            >
-              Editar conta
-            </Button>
-          </div>
-        }
-      >
-        <AccountDetails
-          account={accountDetailsQuery.data ?? null}
-          currency={currency}
-          loading={accountDetailsQuery.isLoading || accountDetailsQuery.isFetching}
-          error={detailsErrorMessage}
-        />
-      </DetailsDrawer>
 
       <AccountModal
         open={modalOpen}
@@ -228,8 +182,6 @@ export default function AccountsPage() {
             success("Conta excluída com sucesso");
             if (selectedAccountId === deletingAccount.id) {
               setSelectedAccountId(null);
-              setSelectedAccountPreview(null);
-              setDetailsOpen(false);
             }
           } catch {
             error("Não foi possível excluir a conta");
