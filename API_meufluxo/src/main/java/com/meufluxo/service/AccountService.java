@@ -18,6 +18,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -71,6 +72,14 @@ public class AccountService extends BaseUserService{
             throw new BusinessException("Já existe uma conta com este nome.");
         }
         Account newAccount = accountMapper.toEntity(request);
+        applyBankingData(
+                newAccount,
+                request.bankCode(),
+                request.bankName(),
+                request.agency(),
+                request.accountNumber(),
+                request.overdraftLimit()
+        );
         newAccount.initializeBalance();
         newAccount.setWorkspace(getCurrentWorkspace());
         newAccount = accountRepository.save(newAccount);
@@ -94,6 +103,21 @@ public class AccountService extends BaseUserService{
         }
         if (request.active() != null) {
             existingAccount.setActive(request.active());
+        }
+        if (request.bankCode() != null) {
+            existingAccount.setBankCode(request.bankCode());
+        }
+        if (request.bankName() != null) {
+            existingAccount.setBankName(normalizeText(request.bankName()));
+        }
+        if (request.agency() != null) {
+            existingAccount.setAgency(normalizeText(request.agency()));
+        }
+        if (request.accountNumber() != null) {
+            existingAccount.setAccountNumber(normalizeText(request.accountNumber()));
+        }
+        if (request.overdraftLimit() != null) {
+            existingAccount.setOverdraftLimit(request.overdraftLimit());
         }
         existingAccount = accountRepository.save(existingAccount);
         workspaceSyncStateService.incrementAccountsVersion(getCurrentWorkspaceId());
@@ -138,6 +162,29 @@ public class AccountService extends BaseUserService{
             namesByUserId.put(user.getId(), user.getName());
         }
         return namesByUserId;
+    }
+
+    private void applyBankingData(
+            Account account,
+            Integer bankCode,
+            String bankName,
+            String agency,
+            String accountNumber,
+            BigDecimal overdraftLimit
+    ) {
+        account.setBankCode(bankCode);
+        account.setBankName(normalizeText(bankName));
+        account.setAgency(normalizeText(agency));
+        account.setAccountNumber(normalizeText(accountNumber));
+        account.setOverdraftLimit(overdraftLimit);
+    }
+
+    private String normalizeText(String value) {
+        if (value == null) {
+            return null;
+        }
+        String normalized = value.trim();
+        return normalized.isEmpty() ? null : normalized;
     }
 
 }

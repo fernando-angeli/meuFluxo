@@ -2,10 +2,13 @@ package com.meufluxo.controller;
 
 import com.meufluxo.common.dto.PageResponse;
 import com.meufluxo.dto.account.AccountDetailsResponse;
+import com.meufluxo.dto.account.AccountMovementSummaryResponse;
 import com.meufluxo.dto.account.AccountRequest;
 import com.meufluxo.dto.account.AccountResponse;
 import com.meufluxo.dto.account.AccountUpdateRequest;
+import com.meufluxo.dto.cashMovement.CashMovementResponse;
 import com.meufluxo.service.AccountService;
+import com.meufluxo.service.CashMovementService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -17,11 +20,13 @@ import jakarta.validation.Valid;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
+import java.time.LocalDate;
 
 @RestController
 @RequestMapping(value = "/accounts")
@@ -29,9 +34,11 @@ import java.net.URI;
 public class AccountController {
 
     private final AccountService service;
+    private final CashMovementService cashMovementService;
 
-    public AccountController(AccountService service) {
+    public AccountController(AccountService service, CashMovementService cashMovementService) {
         this.service = service;
+        this.cashMovementService = cashMovementService;
     }
 
     @GetMapping("{id}")
@@ -80,6 +87,57 @@ public class AccountController {
             ) Pageable pageable
     ) {
         return service.getAll(pageable);
+    }
+
+    @GetMapping("/{id}/summary")
+    @Operation(
+            summary = "Resumo financeiro da conta",
+            description = "Retorna total de entradas, saídas e saldo líquido do período filtrado para a conta."
+    )
+    public ResponseEntity<AccountMovementSummaryResponse> getAccountSummary(
+            @PathVariable Long id,
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) Long subCategoryId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
+    ) {
+        return ResponseEntity.ok(
+                cashMovementService.summarizeByAccountFilters(
+                        id,
+                        categoryId,
+                        subCategoryId,
+                        startDate,
+                        endDate
+                )
+        );
+    }
+
+    @GetMapping("/{id}/movements")
+    @Operation(
+            summary = "Listar registros da conta",
+            description = "Lista registros da conta com paginação e filtros opcionais por categoria, subcategoria e período."
+    )
+    public PageResponse<CashMovementResponse> getAccountMovements(
+            @PathVariable Long id,
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) Long subCategoryId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @PageableDefault(
+                    page = 0,
+                    size = 20,
+                    sort = "occurredAt",
+                    direction = Sort.Direction.DESC
+            ) Pageable pageable
+    ) {
+        return cashMovementService.findByAccountFilters(
+                id,
+                categoryId,
+                subCategoryId,
+                startDate,
+                endDate,
+                pageable
+        );
     }
 
     @PostMapping
