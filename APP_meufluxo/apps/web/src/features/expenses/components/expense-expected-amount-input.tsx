@@ -1,9 +1,8 @@
 "use client";
 
-import * as React from "react";
-import { Controller, type Control, type FieldPath, type FieldValues } from "react-hook-form";
+import type { Control, FieldPath, FieldValues } from "react-hook-form";
 
-import { MinorUnitMoneyInput } from "@/components/ui/minor-unit-money-input";
+import { ControlledMinorUnitMoneyInput } from "@/components/form/controlled-minor-unit-money-input";
 
 type ExpenseExpectedAmountInputProps<T extends FieldValues> = {
   control: Control<T>;
@@ -21,46 +20,6 @@ type ExpenseExpectedAmountInputProps<T extends FieldValues> = {
   "aria-invalid"?: boolean;
 };
 
-export function ExpenseExpectedAmountInput<T extends FieldValues>({
-  control,
-  name,
-  id,
-  className,
-  disabled,
-  autoComplete = "off",
-  spellCheck = false,
-  autoCorrect = "off",
-  autoCapitalize = "none",
-  "data-lpignore": dataLpIgnore,
-  "data-1p-ignore": data1pIgnore,
-  "data-form-type": dataFormType = "other",
-  "aria-invalid": ariaInvalid,
-}: ExpenseExpectedAmountInputProps<T>) {
-  return (
-    <Controller
-      control={control}
-      name={name}
-      disabled={disabled}
-      render={({ field }) => (
-        <MinorUnitMoneyInput
-          id={id}
-          ref={field.ref}
-          name={field.name}
-          value={typeof field.value === "string" ? field.value : String(field.value ?? "")}
-          onChange={field.onChange}
-          onBlur={field.onBlur}
-          disabled={field.disabled}
-          autoComplete={autoComplete}
-          spellCheck={spellCheck}
-          autoCorrect={autoCorrect}
-          autoCapitalize={autoCapitalize}
-          data-lpignore={dataLpIgnore}
-          data-1p-ignore={data1pIgnore}
-          data-form-type={dataFormType}
-          aria-invalid={ariaInvalid}
-          className={className}
-        />
-      )}
-    />
-  );
+export function ExpenseExpectedAmountInput<T extends FieldValues>(props: ExpenseExpectedAmountInputProps<T>) {
+  return <ControlledMinorUnitMoneyInput {...props} />;
 }
