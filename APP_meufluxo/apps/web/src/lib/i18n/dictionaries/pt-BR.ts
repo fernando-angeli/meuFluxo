@@ -97,6 +97,16 @@ export const ptBR = {
   "filters.movementType.all": "Todos",
   "filters.movementType.income": "Receita",
   "filters.movementType.expense": "Despesa",
+  "filters.selectOneOrMore": "Selecione uma ou mais opções",
+  "filters.search": "Buscar…",
+  "filters.clear": "Limpar",
+  "filters.multiSelectedCount": "{count} selecionado(s)",
+  "filters.clearFilters": "Limpar filtros",
+  "filters.amountType.income": "Tipo de receita",
+  "filters.amountType.expense": "Tipo de despesa",
+  "filters.amountBehavior.all": "Todos",
+  "filters.amountBehavior.fixed": "Fixo",
+  "filters.amountBehavior.estimated": "Estimado",
 
   // Tabelas (cabeçalhos e colunas)
   "table.date": "Data",

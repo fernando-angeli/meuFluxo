@@ -2,7 +2,7 @@
 
 import { useAccounts } from "@/hooks/api";
 import { useTranslation } from "@/lib/i18n";
-import { MultiSelectDropdown } from "./multi-select-dropdown";
+import { FilterMultiSelect } from "./filter-multi-select";
 
 type AccountsMultiSelectProps = {
   value: string[];
@@ -21,22 +21,23 @@ export function AccountsMultiSelect({
   const { data, isLoading } = useAccounts();
   const accounts = Array.isArray(data) ? data : [];
 
-  const options = accounts.map((a) => ({
-    value: a.id,
-    label: a.name,
-  }));
+  const options = accounts.map((a) => ({ value: a.id, label: a.name }));
 
   return (
-    <MultiSelectDropdown
+    <FilterMultiSelect
       options={options}
       value={value}
       onChange={onChange}
-      placeholder={t("filters.accounts")}
       allLabel={t("filters.allAccounts")}
-      applyLabel={t("filters.apply")}
       emptyMessage={isLoading ? t("filters.loading") : t("filters.noAccount")}
       className={className}
       triggerClassName={triggerClassName}
+      renderTriggerSummary={(ids) => {
+        if (ids.length === 1) {
+          return accounts.find((a) => a.id === ids[0])?.name ?? ids[0];
+        }
+        return t("filters.multiSelectedCount").replace("{count}", String(ids.length));
+      }}
     />
   );
 }

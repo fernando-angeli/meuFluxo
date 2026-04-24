@@ -20,5 +20,4 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
     List<Category> findAllByWorkspaceIdOrderByIdAsc(Long workspaceId);
 
     Long findIdByName(String name);
-
 }

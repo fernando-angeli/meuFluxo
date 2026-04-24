@@ -407,6 +407,7 @@ class PlannedEntryServiceTest {
                 null,
                 null,
                 null,
+                null,
                 PageRequest.of(0, 20)
         );
 
@@ -428,8 +429,60 @@ class PlannedEntryServiceTest {
                 null,
                 null,
                 null,
+                null,
                 PageRequest.of(0, 20)
         ));
+    }
+
+    @Test
+    void normalizeStatusesShouldUseOpenAndOverdueAsDefault() {
+        List<PlannedEntryStatus> normalized = service.normalizeStatuses(null);
+
+        assertEquals(List.of(PlannedEntryStatus.OPEN, PlannedEntryStatus.OVERDUE), normalized);
+    }
+
+    @Test
+    void listExpensesShouldRejectPageSizeAboveLimit() {
+        assertThrows(BusinessException.class, () -> service.findExpenses(
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                PageRequest.of(0, 101)
+        ));
+    }
+
+    @Test
+    void listExpensesShouldAllowPageSizeAtLimit() {
+        Page<PlannedEntry> page = new PageImpl<>(List.of(), PageRequest.of(0, 100), 0);
+        when(plannedEntryRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(PageRequest.class)))
+                .thenReturn(page);
+
+        PageResponse<PlannedEntryResponse> response = service.findExpenses(
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                PageRequest.of(0, 100)
+        );
+
+        assertEquals(0, response.totalElements());
     }
 
     @Test
@@ -447,6 +500,7 @@ class PlannedEntryServiceTest {
                 null,
                 null,
                 " DOC-100 ",
+                null,
                 null,
                 null,
                 null,

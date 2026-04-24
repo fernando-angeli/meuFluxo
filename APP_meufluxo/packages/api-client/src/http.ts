@@ -1,3 +1,6 @@
+import type { HttpQueryValue } from "./query-params";
+import { applyQueryRecord } from "./query-params";
+
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 export type HttpError = {
@@ -58,7 +61,7 @@ export class HttpClient {
     path: string,
     init: {
       method: HttpMethod;
-      query?: Record<string, string | number | boolean | null | undefined>;
+      query?: Record<string, HttpQueryValue>;
       body?: unknown;
       headers?: Record<string, string>;
       signal?: AbortSignal;
@@ -68,10 +71,7 @@ export class HttpClient {
     const normalizedPath = normalizePath(path);
     const url = new URL(this.baseUrl + normalizedPath);
     if (init.query) {
-      for (const [k, v] of Object.entries(init.query)) {
-        if (v === null || v === undefined) continue;
-        url.searchParams.set(k, String(v));
-      }
+      applyQueryRecord(url, init.query);
     }
 
     const headers: Record<string, string> = {
@@ -128,7 +128,7 @@ export class HttpClient {
     path: string,
     init: {
       method: HttpMethod;
-      query?: Record<string, string | number | boolean | null | undefined>;
+      query?: Record<string, HttpQueryValue>;
       body?: unknown;
       headers?: Record<string, string>;
       signal?: AbortSignal;

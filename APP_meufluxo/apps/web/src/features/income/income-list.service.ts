@@ -44,28 +44,37 @@ function normalizePage(page: PageResponse<unknown>): PageResponse<ExpenseRecord>
   };
 }
 
+/** Apenas IDs numéricos puros seguem para a API (Long); demais ficam só no filtro da UI. */
+function idsToNumericApiParams(ids: string[] | undefined): number[] | undefined {
+  if (!ids?.length) return undefined;
+  const nums = ids.filter((id) => /^\d+$/.test(id.trim())).map((id) => Number(id));
+  return nums.length ? nums : undefined;
+}
+
 export async function fetchIncomePage(
   params: PageQueryParams & {
-    status?: PlannedEntryStatus;
-    categoryId?: string;
-    subCategoryId?: string;
+    statuses?: PlannedEntryStatus[];
+    categoryIds?: string[];
+    subCategoryIds?: string[];
     dueDateStart?: string;
     dueDateEnd?: string;
     issueDateStart?: string;
     issueDateEnd?: string;
   },
 ): Promise<PageResponse<ExpenseRecord>> {
+  const categoryIdsNum = idsToNumericApiParams(params.categoryIds);
+  const subCategoryIdsNum = idsToNumericApiParams(params.subCategoryIds);
   const page = await api.income.list({
     page: params.page,
     size: params.size,
     ...(params.sort ? { sort: params.sort } : {}),
-    ...(params.status ? { status: params.status } : {}),
+    ...(params.statuses?.length ? { statuses: params.statuses } : {}),
     ...(params.issueDateStart ? { issueDateStart: params.issueDateStart } : {}),
     ...(params.issueDateEnd ? { issueDateEnd: params.issueDateEnd } : {}),
     ...(params.dueDateStart ? { dueDateStart: params.dueDateStart } : {}),
     ...(params.dueDateEnd ? { dueDateEnd: params.dueDateEnd } : {}),
-    ...(params.categoryId ? { categoryId: Number(params.categoryId) } : {}),
-    ...(params.subCategoryId ? { subCategoryId: Number(params.subCategoryId) } : {}),
+    ...(categoryIdsNum?.length ? { categoryIds: categoryIdsNum } : {}),
+    ...(subCategoryIdsNum?.length ? { subCategoryIds: subCategoryIdsNum } : {}),
   });
   return normalizePage(page as PageResponse<unknown>);
 }

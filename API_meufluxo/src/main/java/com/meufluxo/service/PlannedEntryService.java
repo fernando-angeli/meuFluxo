@@ -26,11 +26,16 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -38,6 +43,7 @@ import java.util.UUID;
 
 @Service
 public class PlannedEntryService extends BaseUserService {
+    private static final int MAX_PAGE_SIZE = 100;
 
     private final PlannedEntryRepository plannedEntryRepository;
     private final PlannedEntryMapper plannedEntryMapper;
@@ -175,7 +181,7 @@ public class PlannedEntryService extends BaseUserService {
 
     @Transactional(readOnly = true)
     public PageResponse<PlannedEntryResponse> findExpenses(
-            PlannedEntryStatus status,
+            List<PlannedEntryStatus> statuses,
             com.meufluxo.enums.PlannedAmountBehavior amountBehavior,
             LocalDate issueDate,
             LocalDate issueDateStart,
@@ -183,14 +189,15 @@ public class PlannedEntryService extends BaseUserService {
             LocalDate dueDateStart,
             LocalDate dueDateEnd,
             String document,
-            Long categoryId,
-            Long subCategoryId,
+            List<Long> categoryIds,
+            List<Long> subCategoryIds,
+            List<Long> accountIds,
             UUID groupId,
             Pageable pageable
     ) {
         return findByDirection(
                 FinancialDirection.EXPENSE,
-                status,
+                statuses,
                 amountBehavior,
                 issueDate,
                 issueDateStart,
@@ -198,8 +205,9 @@ public class PlannedEntryService extends BaseUserService {
                 dueDateStart,
                 dueDateEnd,
                 document,
-                categoryId,
-                subCategoryId,
+                categoryIds,
+                subCategoryIds,
+                accountIds,
                 groupId,
                 pageable
         );
@@ -207,7 +215,7 @@ public class PlannedEntryService extends BaseUserService {
 
     @Transactional(readOnly = true)
     public PageResponse<PlannedEntryResponse> findIncomes(
-            PlannedEntryStatus status,
+            List<PlannedEntryStatus> statuses,
             com.meufluxo.enums.PlannedAmountBehavior amountBehavior,
             LocalDate issueDate,
             LocalDate issueDateStart,
@@ -215,14 +223,15 @@ public class PlannedEntryService extends BaseUserService {
             LocalDate dueDateStart,
             LocalDate dueDateEnd,
             String document,
-            Long categoryId,
-            Long subCategoryId,
+            List<Long> categoryIds,
+            List<Long> subCategoryIds,
+            List<Long> accountIds,
             UUID groupId,
             Pageable pageable
     ) {
         return findByDirection(
                 FinancialDirection.INCOME,
-                status,
+                statuses,
                 amountBehavior,
                 issueDate,
                 issueDateStart,
@@ -230,8 +239,9 @@ public class PlannedEntryService extends BaseUserService {
                 dueDateStart,
                 dueDateEnd,
                 document,
-                categoryId,
-                subCategoryId,
+                categoryIds,
+                subCategoryIds,
+                accountIds,
                 groupId,
                 pageable
         );
@@ -348,7 +358,7 @@ public class PlannedEntryService extends BaseUserService {
 
     private PageResponse<PlannedEntryResponse> findByDirection(
             FinancialDirection direction,
-            PlannedEntryStatus status,
+            List<PlannedEntryStatus> statuses,
             com.meufluxo.enums.PlannedAmountBehavior amountBehavior,
             LocalDate issueDate,
             LocalDate issueDateStart,
@@ -356,13 +366,24 @@ public class PlannedEntryService extends BaseUserService {
             LocalDate dueDateStart,
             LocalDate dueDateEnd,
             String document,
-            Long categoryId,
-            Long subCategoryId,
+            List<Long> categoryIds,
+            List<Long> subCategoryIds,
+            List<Long> accountIds,
             UUID groupId,
             Pageable pageable
     ) {
-        Optional.ofNullable(categoryId).ifPresent(categoryService::existsId);
-        Optional.ofNullable(subCategoryId).ifPresent(subCategoryService::existsId);
+        validatePageSize(pageable);
+        List<PlannedEntryStatus> normalizedStatuses = normalizeStatuses(statuses);
+
+        if (categoryIds != null && !categoryIds.isEmpty()) {
+            categoryIds.forEach(categoryService::existsId);
+        }
+        if (subCategoryIds != null && !subCategoryIds.isEmpty()) {
+            subCategoryIds.forEach(subCategoryService::existsId);
+        }
+        if (accountIds != null && !accountIds.isEmpty()) {
+            accountIds.forEach(accountService::existsId);
+        }
 
         if (dueDateStart != null && dueDateEnd != null && dueDateStart.isAfter(dueDateEnd)) {
             throw new BusinessException("Intervalo de data inválido: dueDateStart maior que dueDateEnd.");
@@ -373,7 +394,7 @@ public class PlannedEntryService extends BaseUserService {
 
         Specification<PlannedEntry> specification = buildSpecification(
                 direction,
-                status,
+                normalizedStatuses,
                 amountBehavior,
                 issueDate,
                 issueDateStart,
@@ -381,14 +402,28 @@ public class PlannedEntryService extends BaseUserService {
                 dueDateStart,
                 dueDateEnd,
                 trimToNull(document),
-                categoryId,
-                subCategoryId,
+                categoryIds,
+                subCategoryIds,
+                accountIds,
                 groupId
         );
 
         Page<PlannedEntry> page = plannedEntryRepository.findAll(specification, pageable);
         Page<PlannedEntryResponse> responsePage = page.map(plannedEntryMapper::toResponse).map(this::withComputedStatus);
         return PageResponse.toPageResponse(responsePage);
+    }
+
+    List<PlannedEntryStatus> normalizeStatuses(List<PlannedEntryStatus> statuses) {
+        if (statuses == null || statuses.isEmpty()) {
+            return List.of(PlannedEntryStatus.OPEN, PlannedEntryStatus.OVERDUE);
+        }
+        return new ArrayList<>(new LinkedHashSet<>(statuses));
+    }
+
+    private void validatePageSize(Pageable pageable) {
+        if (pageable != null && pageable.getPageSize() > MAX_PAGE_SIZE) {
+            throw new BusinessException("Tamanho de página inválido: máximo permitido é " + MAX_PAGE_SIZE + ".");
+        }
     }
 
     private PlannedEntryResponse updateByDirection(Long id, PlannedEntryUpdateRequest request, FinancialDirection direction) {
@@ -425,6 +460,24 @@ public class PlannedEntryService extends BaseUserService {
         return withComputedStatus(plannedEntryMapper.toResponse(saved));
     }
 
+    private Predicate predicateForPlannedEntryStatus(
+            Root<PlannedEntry> root,
+            CriteriaBuilder cb,
+            PlannedEntryStatus status
+    ) {
+        if (status == PlannedEntryStatus.OVERDUE) {
+            return cb.and(
+                    cb.equal(root.get("status"), PlannedEntryStatus.OPEN),
+                    cb.lessThan(root.get("dueDate"), LocalDate.now())
+            );
+        }
+        if (status == PlannedEntryStatus.OPEN) {
+            return cb.and(
+                    cb.equal(root.get("status"), PlannedEntryStatus.OPEN),
+                    cb.greaterThanOrEqualTo(root.get("dueDate"), LocalDate.now())
+            );
+        }
+        return cb.equal(root.get("status"), status);
     private PlannedEntryResponse settleByDirection(Long id, PlannedEntrySettleRequest request, FinancialDirection direction) {
         PlannedEntry entry = findByIdOrThrow(id, direction);
         if (entry.getStatus() != PlannedEntryStatus.OPEN) {
@@ -477,7 +530,7 @@ public class PlannedEntryService extends BaseUserService {
 
     private Specification<PlannedEntry> buildSpecification(
             FinancialDirection direction,
-            PlannedEntryStatus status,
+            List<PlannedEntryStatus> statuses,
             com.meufluxo.enums.PlannedAmountBehavior amountBehavior,
             LocalDate issueDate,
             LocalDate issueDateStart,
@@ -485,8 +538,9 @@ public class PlannedEntryService extends BaseUserService {
             LocalDate dueDateStart,
             LocalDate dueDateEnd,
             String document,
-            Long categoryId,
-            Long subCategoryId,
+            List<Long> categoryIds,
+            List<Long> subCategoryIds,
+            List<Long> accountIds,
             UUID groupId
     ) {
         return (root, query, cb) -> {
@@ -494,16 +548,12 @@ public class PlannedEntryService extends BaseUserService {
             predicates.add(cb.equal(root.get("workspace").get("id"), getCurrentWorkspaceId()));
             predicates.add(cb.equal(root.get("direction"), direction));
 
-            if (status != null) {
-                if (status == PlannedEntryStatus.OVERDUE) {
-                    predicates.add(cb.equal(root.get("status"), PlannedEntryStatus.OPEN));
-                    predicates.add(cb.lessThan(root.get("dueDate"), LocalDate.now()));
-                } else if (status == PlannedEntryStatus.OPEN) {
-                    predicates.add(cb.equal(root.get("status"), PlannedEntryStatus.OPEN));
-                    predicates.add(cb.greaterThanOrEqualTo(root.get("dueDate"), LocalDate.now()));
-                } else {
-                    predicates.add(cb.equal(root.get("status"), status));
+            if (statuses != null && !statuses.isEmpty()) {
+                List<Predicate> statusOr = new ArrayList<>();
+                for (PlannedEntryStatus s : new HashSet<>(statuses)) {
+                    statusOr.add(predicateForPlannedEntryStatus(root, cb, s));
                 }
+                predicates.add(cb.or(statusOr.toArray(new Predicate[0])));
             }
             if (amountBehavior != null) {
                 predicates.add(cb.equal(root.get("amountBehavior"), amountBehavior));
@@ -526,11 +576,14 @@ public class PlannedEntryService extends BaseUserService {
             if (document != null) {
                 predicates.add(cb.like(cb.lower(root.get("document")), "%" + document.toLowerCase() + "%"));
             }
-            if (categoryId != null) {
-                predicates.add(cb.equal(root.get("category").get("id"), categoryId));
+            if (categoryIds != null && !categoryIds.isEmpty()) {
+                predicates.add(root.get("category").get("id").in(categoryIds));
             }
-            if (subCategoryId != null) {
-                predicates.add(cb.equal(root.get("subCategory").get("id"), subCategoryId));
+            if (subCategoryIds != null && !subCategoryIds.isEmpty()) {
+                predicates.add(root.get("subCategory").get("id").in(subCategoryIds));
+            }
+            if (accountIds != null && !accountIds.isEmpty()) {
+                predicates.add(root.get("defaultAccount").get("id").in(accountIds));
             }
             if (groupId != null) {
                 predicates.add(cb.equal(root.get("groupId"), groupId));

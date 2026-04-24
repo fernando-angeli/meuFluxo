@@ -2,58 +2,57 @@
 
 import * as React from "react";
 
+import type { PlannedEntryStatus } from "@meufluxo/types";
+import { CategoriesMultiSelect, DateRangePicker, SubcategoriesMultiSelect, type DateRangeValue } from "@/components/filters";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { DateRangePicker, FilterSelect, type DateRangeValue } from "@/components/filters";
-
-export type FinancialFilterStatus =
-  | "OPEN"
-  | "OVERDUE"
-  | "COMPLETED"
-  | "CANCELED"
-  | "ALL";
+import { useTranslation } from "@/lib/i18n";
+import { getDefaultPlannedEntriesDateRange } from "@/features/financial-records/lib/date-range";
+import { PlannedStatusMultiSelect } from "./planned-status-multi-select";
 
 export type FinancialRecordsFilterState = {
-  status: FinancialFilterStatus;
-  categoryId: string;
-  subCategoryId: string;
+  /** Vazio na UI não ocorre com o padrão; “Todas” no multiselect = todos os status. */
+  statuses: PlannedEntryStatus[];
+  categoryIds: string[];
+  subCategoryIds: string[];
   dateRange: DateRangeValue;
 };
+
+export function getDefaultFinancialRecordsFilterState(): FinancialRecordsFilterState {
+  return {
+    statuses: ["OPEN", "OVERDUE"],
+    categoryIds: [],
+    subCategoryIds: [],
+    dateRange: getDefaultPlannedEntriesDateRange(),
+  };
+}
 
 export function FinancialRecordsFilterHeader({
   title,
   filters,
   onChange,
-  categoryOptions,
-  subCategoryOptions,
+  variant,
   statusLabelOverrides,
-  idPrefix = "expenses-filter",
+  idPrefix = "financial-filter",
 }: {
   title: string;
   filters: FinancialRecordsFilterState;
   onChange: (next: FinancialRecordsFilterState) => void;
-  categoryOptions: Array<{ id: string; name: string }>;
-  subCategoryOptions: Array<{ id: string; name: string }>;
-  statusLabelOverrides?: Partial<Record<FinancialFilterStatus, string>>;
+  variant: "income" | "expense";
+  statusLabelOverrides?: Partial<Record<PlannedEntryStatus, string>>;
   idPrefix?: string;
 }) {
-  const statusOptions = React.useMemo(
-    () => [
-      { value: "OPEN", label: statusLabelOverrides?.OPEN ?? "Em aberto" },
-      { value: "OVERDUE", label: statusLabelOverrides?.OVERDUE ?? "Em atraso" },
-      { value: "COMPLETED", label: statusLabelOverrides?.COMPLETED ?? "Liquidado" },
-      { value: "CANCELED", label: statusLabelOverrides?.CANCELED ?? "Cancelado" },
-      { value: "ALL", label: statusLabelOverrides?.ALL ?? "Todos" },
-    ] as const,
+  const { t } = useTranslation();
+  const movementType = variant === "income" ? "INCOME" : "EXPENSE";
+
+  const statusLabels = React.useMemo(
+    (): Partial<Record<PlannedEntryStatus, string>> => ({
+      OPEN: statusLabelOverrides?.OPEN ?? "Em aberto",
+      OVERDUE: statusLabelOverrides?.OVERDUE ?? "Vencido",
+      COMPLETED: statusLabelOverrides?.COMPLETED ?? "Liquidado",
+      CANCELED: statusLabelOverrides?.CANCELED ?? "Cancelado",
+    }),
     [statusLabelOverrides],
-  );
-  const categoryOptionsWithAll = React.useMemo(
-    () => [{ value: "", label: "Todas" }, ...categoryOptions.map((c) => ({ value: c.id, label: c.name }))],
-    [categoryOptions],
-  );
-  const subCategoryOptionsWithAll = React.useMemo(
-    () => [{ value: "", label: "Todas" }, ...subCategoryOptions.map((s) => ({ value: s.id, label: s.name }))],
-    [subCategoryOptions],
   );
 
   return (
@@ -61,61 +60,49 @@ export function FinancialRecordsFilterHeader({
       <CardHeader className="pb-2">
         <CardTitle className="text-base">{title}</CardTitle>
       </CardHeader>
-      <CardContent className="grid gap-3 md:grid-cols-4">
-        <div className="space-y-1.5">
-          <Label htmlFor={`${idPrefix}-status`}>Status</Label>
-          <FilterSelect
-            id={`${idPrefix}-status`}
-            value={filters.status}
-            onChange={(value) => onChange({ ...filters, status: value as FinancialFilterStatus })}
-            options={statusOptions.map((item) => ({ value: item.value, label: item.label }))}
-            placeholder="Status"
-            triggerClassName="h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors hover:bg-muted/50 hover:border-input focus:ring-2 focus:ring-ring focus:ring-offset-2 data-[state=open]:border-primary/50 data-[state=open]:ring-2 data-[state=open]:ring-primary/20"
-          />
-        </div>
+      <CardContent className="flex flex-col gap-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="space-y-1.5 min-w-0">
+            <Label htmlFor={`${idPrefix}-status`}>{t("table.status")}</Label>
+            <PlannedStatusMultiSelect
+              value={filters.statuses}
+              onChange={(statuses) => onChange({ ...filters, statuses })}
+              labelByStatus={statusLabels}
+              triggerClassName="h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors hover:bg-muted/50 hover:border-input focus:ring-2 focus:ring-ring focus:ring-offset-2 data-[state=open]:border-primary/50 data-[state=open]:ring-2 data-[state=open]:ring-primary/20"
+            />
+          </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor={`${idPrefix}-category`}>Categoria</Label>
-          <FilterSelect
-            id={`${idPrefix}-category`}
-            value={filters.categoryId}
-            onChange={(value) =>
-              onChange({
-                ...filters,
-                categoryId: value,
-                subCategoryId: "",
-              })
-            }
-            options={categoryOptionsWithAll}
-            placeholder="Todas"
-            triggerClassName="h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors hover:bg-muted/50 hover:border-input focus:ring-2 focus:ring-ring focus:ring-offset-2 data-[state=open]:border-primary/50 data-[state=open]:ring-2 data-[state=open]:ring-primary/20"
-          />
-        </div>
+          <div className="space-y-1.5 min-w-0">
+            <Label htmlFor={`${idPrefix}-categories`}>{t("filters.categories")}</Label>
+            <CategoriesMultiSelect
+              value={filters.categoryIds}
+              onChange={(categoryIds) => onChange({ ...filters, categoryIds, subCategoryIds: [] })}
+              movementType={movementType}
+              triggerClassName="h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors hover:bg-muted/50 hover:border-input focus:ring-2 focus:ring-ring focus:ring-offset-2 data-[state=open]:border-primary/50 data-[state=open]:ring-2 data-[state=open]:ring-primary/20"
+            />
+          </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor={`${idPrefix}-subcategory`}>Subcategoria</Label>
-          <FilterSelect
-            id={`${idPrefix}-subcategory`}
-            value={filters.subCategoryId}
-            onChange={(value) => onChange({ ...filters, subCategoryId: value })}
-            options={subCategoryOptionsWithAll}
-            placeholder="Todas"
-            disabled={!filters.categoryId}
-            triggerClassName="h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors hover:bg-muted/50 hover:border-input focus:ring-2 focus:ring-ring focus:ring-offset-2 data-[state=open]:border-primary/50 data-[state=open]:ring-2 data-[state=open]:ring-primary/20 disabled:opacity-50"
-          />
-        </div>
+          <div className="space-y-1.5 min-w-0">
+            <Label htmlFor={`${idPrefix}-subcategories`}>{t("filters.subcategories")}</Label>
+            <SubcategoriesMultiSelect
+              value={filters.subCategoryIds}
+              onChange={(subCategoryIds) => onChange({ ...filters, subCategoryIds })}
+              parentCategoryIds={filters.categoryIds}
+              triggerClassName="h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors hover:bg-muted/50 hover:border-input focus:ring-2 focus:ring-ring focus:ring-offset-2 data-[state=open]:border-primary/50 data-[state=open]:ring-2 data-[state=open]:ring-primary/20"
+            />
+          </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor={`${idPrefix}-period`}>Período</Label>
-          <DateRangePicker
-            value={filters.dateRange}
-            onChange={(dateRange) => dateRange && onChange({ ...filters, dateRange })}
-            placeholder="Período"
-            className="h-10 w-full"
-          />
+          <div className="space-y-1.5 min-w-0">
+            <Label htmlFor={`${idPrefix}-period`}>{t("filters.period")}</Label>
+            <DateRangePicker
+              value={filters.dateRange}
+              onChange={(dateRange) => dateRange && onChange({ ...filters, dateRange })}
+              placeholder={t("filters.selectPeriod")}
+              className="h-10 w-full"
+            />
+          </div>
         </div>
       </CardContent>
     </Card>
   );
 }
-

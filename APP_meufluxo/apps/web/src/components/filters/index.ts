@@ -5,7 +5,7 @@ export {
   type MovementTypeFilter,
 } from "./movement-type-select";
 export { MultiSelectPopover, type MultiSelectOption } from "./multi-select-popover";
-export { MultiSelectDropdown } from "./multi-select-dropdown";
+export { FilterMultiSelect, type FilterMultiSelectOption } from "./filter-multi-select";
 export { AccountsMultiSelect } from "./accounts-multi-select";
 export { CategoriesMultiSelect } from "./categories-multi-select";
 export { SubcategoriesMultiSelect } from "./subcategories-multi-select";
