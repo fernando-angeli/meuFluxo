@@ -15,8 +15,8 @@ public interface CreditCardExpenseMapper {
     @Mapping(target = "invoiceReference", expression = "java(formatInvoiceReference(expense))")
     @Mapping(target = "categoryId", source = "category.id")
     @Mapping(target = "categoryName", source = "category.name")
-    @Mapping(target = "subcategoryId", source = "subcategory.id")
-    @Mapping(target = "subcategoryName", source = "subcategory.name")
+    @Mapping(target = "subcategoryId", expression = "java(expense.getSubcategory() != null ? expense.getSubcategory().getId() : null)")
+    @Mapping(target = "subcategoryName", expression = "java(expense.getSubcategory() != null ? expense.getSubcategory().getName() : null)")
     @Mapping(target = "statusLabel", expression = "java(toStatusLabel(expense))")
     CreditCardExpenseResponse toResponse(CreditCardExpense expense);
 

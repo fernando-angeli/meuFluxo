@@ -22,7 +22,6 @@ public record CreditCardExpenseRequest(
         @NotNull(message = "A categoria é obrigatória")
         Long categoryId,
 
-        @NotNull(message = "A subcategoria é obrigatória")
         Long subcategoryId,
 
         @NotNull(message = "O valor total da compra é obrigatório")

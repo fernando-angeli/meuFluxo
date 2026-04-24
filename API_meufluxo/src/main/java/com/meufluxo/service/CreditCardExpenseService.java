@@ -131,8 +131,12 @@ public class CreditCardExpenseService extends BaseUserService {
         );
         CreditCard creditCard = creditCardService.findByIdOrThrow(request.creditCardId());
         Category category = categoryService.findByIdOrThrow(request.categoryId());
-        SubCategory subCategory = subCategoryService.findByIdOrThrow(request.subcategoryId());
-        validateSubCategoryBelongsToCategory(category, subCategory);
+        SubCategory subCategory = request.subcategoryId() != null
+                ? subCategoryService.findByIdOrThrow(request.subcategoryId())
+                : null;
+        if (subCategory != null) {
+            validateSubCategoryBelongsToCategory(category, subCategory);
+        }
 
         int installmentCount = normalizeInstallmentCount(request.installmentCount());
         UUID installmentGroupId = installmentCount > 1 ? UUID.randomUUID() : null;
@@ -153,7 +157,7 @@ public class CreditCardExpenseService extends BaseUserService {
             expense.setDescription(request.description().trim());
             expense.setPurchaseDate(installmentPurchaseDate);
             expense.setCategory(category);
-            expense.setSubcategory(subCategory);
+            expense.setSubcategory(subCategory); // pode ser null
             expense.setAmount(installmentAmounts.get(installmentNumber - 1));
             expense.setInstallmentNumber(installmentNumber);
             expense.setInstallmentCount(installmentCount);
@@ -184,8 +188,12 @@ public class CreditCardExpenseService extends BaseUserService {
         creditCardInvoiceService.assertInvoiceOpen(expense.getInvoice());
 
         Category category = categoryService.findByIdOrThrow(request.categoryId());
-        SubCategory subCategory = subCategoryService.findByIdOrThrow(request.subcategoryId());
-        validateSubCategoryBelongsToCategory(category, subCategory);
+        SubCategory subCategory = request.subcategoryId() != null
+                ? subCategoryService.findByIdOrThrow(request.subcategoryId())
+                : null;
+        if (subCategory != null) {
+            validateSubCategoryBelongsToCategory(category, subCategory);
+        }
 
         CreditCardInvoice oldInvoice = expense.getInvoice();
         CreditCardInvoice newInvoice = creditCardInvoiceService.findOrCreateForPurchaseDate(expense.getCreditCard(), request.purchaseDate());
@@ -228,6 +236,9 @@ public class CreditCardExpenseService extends BaseUserService {
     }
 
     private void validateSubCategoryBelongsToCategory(Category category, SubCategory subCategory) {
+        if (subCategory == null) {
+            return;
+        }
         if (!subCategory.getCategory().getId().equals(category.getId())) {
             throw new BusinessException("A subcategoria informada não pertence à categoria selecionada.");
         }
