@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Eye, History, Plus, RotateCcw } from "lucide-react";
+import { ArrowLeft, Eye, History, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
 import type {
   CreditCard,
   CreditCardExpense,
@@ -14,7 +14,6 @@ import { formatCurrency } from "@meufluxo/utils";
 
 import { api } from "@/services/api";
 import { env } from "@/lib/env";
-import { mockCreditCards } from "@/services/mocks/credit-cards";
 import { toNumericIdString } from "@/lib/numeric-id";
 import { useServerDataTable } from "@/hooks/useServerDataTable";
 import { useAuthOptional } from "@/hooks/useAuth";
@@ -23,6 +22,7 @@ import {
   useCancelCreditCardExpense,
   useCategories,
   useCloseInvoice,
+  useDeleteCreditCard,
   useInvoiceDetails,
   useInvoices,
   useReopenInvoice,
@@ -51,16 +51,17 @@ import { RowActionButtons } from "@/components/patterns";
 import { DataTable } from "@/components/data-table/DataTable";
 import { DetailsDrawer } from "@/components/details";
 import { AnalyticPieChart, KpiCard, getDefaultDashboardDateRange } from "@/features/dashboard";
+import { getMockCreditCardsSnapshot } from "@/features/credit-cards/credit-cards.service";
+import { CreditCardFormModal } from "@/features/credit-cards/components/credit-card-form-modal";
 import type { DataTableColumn } from "@/components/data-table/types";
 
 function normalizeCardFromMocks(cardId: string): CreditCard | null {
-  const byRaw = mockCreditCards.find((card) => card.id === cardId);
+  const effective = getMockCreditCardsSnapshot();
+  const byRaw = effective.find((card) => card.id === cardId);
   if (byRaw) return byRaw;
   const normalizedTarget = toNumericIdString(cardId);
   if (!normalizedTarget) return null;
-  return (
-    mockCreditCards.find((card) => toNumericIdString(card.id) === normalizedTarget) ?? null
-  );
+  return effective.find((card) => toNumericIdString(card.id) === normalizedTarget) ?? null;
 }
 
 function buildExpenseCategoryKpis(expenses: CreditCardExpense[]): DashboardCategoryKpi[] {
@@ -117,6 +118,7 @@ export default function CreditCardManagerPage() {
   const closeInvoiceMutation = useCloseInvoice();
   const reopenInvoiceMutation = useReopenInvoice();
   const cancelExpenseMutation = useCancelCreditCardExpense();
+  const deleteCardMutation = useDeleteCreditCard();
   const { data: accounts = [] } = useAccounts();
   const { data: categories = [] } = useCategories({ realOnly: true });
   const { data: subCategories = [] } = useSubCategories({ realOnly: true });
@@ -207,6 +209,8 @@ export default function CreditCardManagerPage() {
   const [editingExpense, setEditingExpense] = React.useState<CreditCardExpense | null>(null);
   const [cancelExpenseOpen, setCancelExpenseOpen] = React.useState(false);
   const [cancelingExpense, setCancelingExpense] = React.useState<CreditCardExpense | null>(null);
+  const [cardEditModalOpen, setCardEditModalOpen] = React.useState(false);
+  const [cardDeleteConfirmOpen, setCardDeleteConfirmOpen] = React.useState(false);
 
   const expensesTable = useServerDataTable<CreditCardExpense>({
     queryKey: ["card-manager", "expenses", cardId],
@@ -406,10 +410,34 @@ export default function CreditCardManagerPage() {
           title={card?.name ? `Cartão • ${card.name}` : "Visão gerencial do cartão"}
           description="Contexto operacional do cartão selecionado: limite, faturas, detalhes e lançamentos."
           right={
-            <Button type="button" variant="outline" className="gap-2" onClick={() => router.push("/credit-cards")}>
-              <ArrowLeft className="h-4 w-4" />
-              Voltar para cartões
-            </Button>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {card ? (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="gap-2"
+                    onClick={() => setCardEditModalOpen(true)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                    Editar cartão
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="gap-2 text-destructive hover:text-destructive"
+                    onClick={() => setCardDeleteConfirmOpen(true)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Excluir cartão
+                  </Button>
+                </>
+              ) : null}
+              <Button type="button" variant="outline" className="gap-2" onClick={() => router.push("/credit-cards")}>
+                <ArrowLeft className="h-4 w-4" />
+                Voltar para cartões
+              </Button>
+            </div>
           }
         />
 
@@ -814,6 +842,44 @@ export default function CreditCardManagerPage() {
           } catch (err) {
             const apiError = extractApiError(err);
             error(apiError?.detail ?? "Não foi possível cancelar este lançamento.");
+          }
+        }}
+      />
+
+      <CreditCardFormModal
+        open={cardEditModalOpen && !!card}
+        onOpenChange={(open) => {
+          setCardEditModalOpen(open);
+          if (!open) void cardQuery.refetch();
+        }}
+        creditCard={cardEditModalOpen && card ? card : null}
+      />
+
+      <ConfirmDialog
+        open={cardDeleteConfirmOpen && !!card}
+        onOpenChange={(open) => {
+          if (!open) setCardDeleteConfirmOpen(false);
+        }}
+        title="Excluir cartão"
+        description={
+          card
+            ? `Excluir permanentemente o cartão "${card.name}"? A exclusão só é permitida se não houver lançamentos — o servidor valida isso.`
+            : ""
+        }
+        cancelText="Cancelar"
+        confirmText="Excluir"
+        confirmVariant="destructive"
+        isConfirming={deleteCardMutation.isPending}
+        onConfirm={async () => {
+          if (!card) return;
+          try {
+            await deleteCardMutation.mutateAsync(card.id);
+            success("Cartão excluído com sucesso.");
+            setCardDeleteConfirmOpen(false);
+            router.push("/credit-cards");
+          } catch (err) {
+            const apiError = extractApiError(err);
+            error(apiError?.detail ?? "Não foi possível excluir o cartão.");
           }
         }}
       />
