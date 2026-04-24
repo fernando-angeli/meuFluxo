@@ -4,8 +4,8 @@ import type { Category } from "@meufluxo/types";
 
 import { useCategories } from "@/hooks/api";
 import { useTranslation } from "@/lib/i18n";
-import { MultiSelectDropdown } from "./multi-select-dropdown";
 import type { MovementTypeFilter } from "./movement-type-select";
+import { FilterMultiSelect } from "./filter-multi-select";
 
 type CategoriesMultiSelectProps = {
   value: string[];
@@ -39,16 +39,20 @@ export function CategoriesMultiSelect({
   }));
 
   return (
-    <MultiSelectDropdown
+    <FilterMultiSelect
       options={options}
       value={value}
       onChange={onChange}
-      placeholder={t("filters.categories")}
       allLabel={t("filters.allCategories")}
-      applyLabel={t("filters.apply")}
       emptyMessage={isLoading ? t("filters.loading") : t("filters.noCategory")}
       className={className}
       triggerClassName={triggerClassName}
+      renderTriggerSummary={(ids) => {
+        if (ids.length === 1) {
+          return filteredCategories.find((c) => c.id === ids[0])?.name ?? ids[0];
+        }
+        return t("filters.multiSelectedCount").replace("{count}", String(ids.length));
+      }}
     />
   );
 }

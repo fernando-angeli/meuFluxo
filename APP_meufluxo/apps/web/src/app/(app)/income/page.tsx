@@ -22,15 +22,13 @@ import { fetchIncomePage } from "@/features/income/income-list.service";
 import { getIncomeTableColumns } from "@/features/income/income.columns";
 import {
   FinancialRecordsFilterHeader,
-  type FinancialRecordsFilterState,
+  getDefaultFinancialRecordsFilterState,
 } from "@/features/financial-records/components/financial-records-filter-header";
 import { IncomeRowActions } from "@/features/income/components/income-row-actions";
 import { IncomeFormModal } from "@/features/income/components/income-form-modal";
 import { IncomeSettleModal } from "@/features/income/components/income-settle-modal";
 import { DetailsDrawer } from "@/components/details";
 import { DetailsRow, DetailsSection } from "@/components/details";
-import { getMonthRange } from "@/features/dashboard/lib/date-range";
-
 const incomeQueryKey = ["income"] as const;
 
 export default function IncomePage() {
@@ -41,28 +39,13 @@ export default function IncomePage() {
   const { data: subCategories = [] } = useSubCategories({ realOnly: true });
   const { data: accounts = [] } = useAccounts();
 
-  const initialMonthRange = React.useMemo(() => {
-    const now = new Date();
-    return getMonthRange(now.getFullYear(), now.getMonth());
-  }, []);
-
-  const [filters, setFilters] = React.useState<FinancialRecordsFilterState>({
-    status: "OPEN",
-    categoryId: "",
-    subCategoryId: "",
-    dateRange: initialMonthRange,
-  });
+  const [filters, setFilters] = React.useState(() => getDefaultFinancialRecordsFilterState());
   const [selected, setSelected] = React.useState<ExpenseRecord | null>(null);
   const [detailsOpen, setDetailsOpen] = React.useState(false);
   const [formOpen, setFormOpen] = React.useState(false);
   const [editingIncome, setEditingIncome] = React.useState<ExpenseRecord | null>(null);
   const [settleOpen, setSettleOpen] = React.useState(false);
   const [settlingIncome, setSettlingIncome] = React.useState<ExpenseRecord | null>(null);
-
-  const availableSubCategories = React.useMemo(() => {
-    if (!filters.categoryId) return [];
-    return subCategories.filter((s) => s.category.id === filters.categoryId);
-  }, [filters.categoryId, subCategories]);
 
   const table = useServerDataTable<ExpenseRecord>({
     queryKey: incomeQueryKey,
@@ -72,9 +55,9 @@ export default function IncomePage() {
     initialDirection: "asc",
     enabled: !auth?.isBootstrapping && !!auth?.isAuthenticated,
     extraQueryParams: {
-      ...(filters.status !== "ALL" ? { status: filters.status } : {}),
-      ...(filters.categoryId ? { categoryId: filters.categoryId } : {}),
-      ...(filters.subCategoryId ? { subCategoryId: filters.subCategoryId } : {}),
+      ...(filters.statuses.length ? { statuses: filters.statuses } : {}),
+      ...(filters.categoryIds.length ? { categoryIds: filters.categoryIds } : {}),
+      ...(filters.subCategoryIds.length ? { subCategoryIds: filters.subCategoryIds } : {}),
       ...(filters.dateRange.startDate ? { issueDateStart: filters.dateRange.startDate } : {}),
       ...(filters.dateRange.endDate ? { issueDateEnd: filters.dateRange.endDate } : {}),
       ...(filters.dateRange.startDate ? { dueDateStart: filters.dateRange.startDate } : {}),
@@ -153,17 +136,15 @@ export default function IncomePage() {
 
         <FinancialRecordsFilterHeader
           title="Filtros"
+          variant="income"
           filters={filters}
           onChange={setFilters}
           idPrefix="income-filter"
           statusLabelOverrides={{
             COMPLETED: "Recebido",
             OVERDUE: "Vencido",
+            OPEN: "Em aberto",
           }}
-          categoryOptions={categories
-            .filter((c) => c.movementType === "INCOME")
-            .map((c) => ({ id: c.id, name: c.name }))}
-          subCategoryOptions={availableSubCategories.map((s) => ({ id: s.id, name: s.name }))}
         />
 
         <Card className="border-none bg-transparent shadow-none">

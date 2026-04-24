@@ -15,14 +15,15 @@ import { useToast } from "@/components/toast";
 import { getQueryErrorMessage } from "@/lib/query-error";
 import { fetchExpensesPage } from "@/features/expenses/expenses-list.service";
 import { getExpensesTableColumns } from "@/features/expenses/expenses.columns";
-import { FinancialRecordsFilterHeader, type FinancialRecordsFilterState } from "@/features/financial-records/components/financial-records-filter-header";
+import {
+  FinancialRecordsFilterHeader,
+  getDefaultFinancialRecordsFilterState,
+} from "@/features/financial-records/components/financial-records-filter-header";
 import { ExpenseRowActions } from "@/features/expenses/components/expense-row-actions";
 import { ExpenseFormModal } from "@/features/expenses/components/expense-form-modal";
 import { ExpenseSettleModal } from "@/features/expenses/components/expense-settle-modal";
 import { DetailsDrawer } from "@/components/details";
 import { DetailsRow, DetailsSection } from "@/components/details";
-import { getMonthRange } from "@/features/dashboard/lib/date-range";
-
 const expensesQueryKey = ["expenses"] as const;
 
 export default function ExpensesPage() {
@@ -33,28 +34,13 @@ export default function ExpensesPage() {
   const { data: subCategories = [] } = useSubCategories({ realOnly: true });
   const { data: accounts = [] } = useAccounts();
 
-  const initialMonthRange = React.useMemo(() => {
-    const now = new Date();
-    return getMonthRange(now.getFullYear(), now.getMonth());
-  }, []);
-
-  const [filters, setFilters] = React.useState<FinancialRecordsFilterState>({
-    status: "OPEN",
-    categoryId: "",
-    subCategoryId: "",
-    dateRange: initialMonthRange,
-  });
+  const [filters, setFilters] = React.useState(() => getDefaultFinancialRecordsFilterState());
   const [selected, setSelected] = React.useState<ExpenseRecord | null>(null);
   const [detailsOpen, setDetailsOpen] = React.useState(false);
   const [formOpen, setFormOpen] = React.useState(false);
   const [editingExpense, setEditingExpense] = React.useState<ExpenseRecord | null>(null);
   const [settleOpen, setSettleOpen] = React.useState(false);
   const [settlingExpense, setSettlingExpense] = React.useState<ExpenseRecord | null>(null);
-
-  const availableSubCategories = React.useMemo(() => {
-    if (!filters.categoryId) return [];
-    return subCategories.filter((s) => s.category.id === filters.categoryId);
-  }, [filters.categoryId, subCategories]);
 
   const table = useServerDataTable<ExpenseRecord>({
     queryKey: expensesQueryKey,
@@ -64,9 +50,9 @@ export default function ExpensesPage() {
     initialDirection: "asc",
     enabled: !auth?.isBootstrapping && !!auth?.isAuthenticated,
     extraQueryParams: {
-      ...(filters.status !== "ALL" ? { status: filters.status } : {}),
-      ...(filters.categoryId ? { categoryId: filters.categoryId } : {}),
-      ...(filters.subCategoryId ? { subCategoryId: filters.subCategoryId } : {}),
+      ...(filters.statuses.length ? { statuses: filters.statuses } : {}),
+      ...(filters.categoryIds.length ? { categoryIds: filters.categoryIds } : {}),
+      ...(filters.subCategoryIds.length ? { subCategoryIds: filters.subCategoryIds } : {}),
       ...(filters.dateRange.startDate ? { issueDateStart: filters.dateRange.startDate } : {}),
       ...(filters.dateRange.endDate ? { issueDateEnd: filters.dateRange.endDate } : {}),
       ...(filters.dateRange.startDate ? { dueDateStart: filters.dateRange.startDate } : {}),
@@ -143,15 +129,7 @@ export default function ExpensesPage() {
           }
         />
 
-        <FinancialRecordsFilterHeader
-          title="Filtros"
-          filters={filters}
-          onChange={setFilters}
-          categoryOptions={categories
-            .filter((c) => c.movementType === "EXPENSE")
-            .map((c) => ({ id: c.id, name: c.name }))}
-          subCategoryOptions={availableSubCategories.map((s) => ({ id: s.id, name: s.name }))}
-        />
+        <FinancialRecordsFilterHeader title="Filtros" variant="expense" filters={filters} onChange={setFilters} />
 
         <Card className="border-none bg-transparent shadow-none">
           <CardContent>

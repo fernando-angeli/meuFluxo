@@ -4,7 +4,7 @@ import type { SubCategory } from "@meufluxo/types";
 
 import { useSubCategories } from "@/hooks/api";
 import { useTranslation } from "@/lib/i18n";
-import { MultiSelectDropdown } from "./multi-select-dropdown";
+import { FilterMultiSelect } from "./filter-multi-select";
 
 type SubcategoriesMultiSelectProps = {
   value: string[];
@@ -12,11 +12,13 @@ type SubcategoriesMultiSelectProps = {
   parentCategoryIds: string[];
   className?: string;
   triggerClassName?: string;
+  disabled?: boolean;
 };
 
 function filterSubCategories(subCategories: SubCategory[], parentIds: string[]): SubCategory[] {
   if (parentIds.length === 0) return subCategories;
-  return subCategories.filter((subCategory) => parentIds.includes(subCategory.category.id));
+  const idSet = new Set(parentIds);
+  return subCategories.filter((subCategory) => idSet.has(subCategory.category.id));
 }
 
 export function SubcategoriesMultiSelect({
@@ -25,6 +27,7 @@ export function SubcategoriesMultiSelect({
   parentCategoryIds,
   className,
   triggerClassName,
+  disabled = false,
 }: SubcategoriesMultiSelectProps) {
   const { data: subCategories = [], isLoading } = useSubCategories();
   const filteredSubCategories = filterSubCategories(subCategories, parentCategoryIds);
@@ -36,16 +39,21 @@ export function SubcategoriesMultiSelect({
   }));
 
   return (
-    <MultiSelectDropdown
+    <FilterMultiSelect
       options={options}
       value={value}
       onChange={onChange}
-      placeholder={t("filters.subcategories")}
       allLabel={t("filters.allSubcategories")}
-      applyLabel={t("filters.apply")}
       emptyMessage={isLoading ? t("filters.loading") : t("filters.noSubcategory")}
       className={className}
       triggerClassName={triggerClassName}
+      disabled={disabled}
+      renderTriggerSummary={(ids) => {
+        if (ids.length === 1) {
+          return filteredSubCategories.find((s) => s.id === ids[0])?.name ?? ids[0];
+        }
+        return t("filters.multiSelectedCount").replace("{count}", String(ids.length));
+      }}
     />
   );
 }

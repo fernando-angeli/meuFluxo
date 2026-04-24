@@ -46,7 +46,7 @@ export default function CashMovementsPage() {
     initialSortKey: "occurredAt",
     initialDirection: "desc",
     extraQueryParams: {
-      ...(filters.accountIds[0] ? { accountId: filters.accountIds[0] } : {}),
+      ...(filters.accountIds[0] != null ? { accountId: String(filters.accountIds[0]) } : {}),
       ...(filters.categoryId ? { categoryId: filters.categoryId } : {}),
       ...(filters.subCategoryId ? { subCategoryId: filters.subCategoryId } : {}),
       ...(filters.movementType !== "ALL" ? { movementType: filters.movementType } : {}),
