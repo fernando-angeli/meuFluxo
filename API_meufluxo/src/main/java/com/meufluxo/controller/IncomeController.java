@@ -1,5 +1,6 @@
 package com.meufluxo.controller;
 
+import com.meufluxo.common.filter.RequestParamListParser;
 import com.meufluxo.common.dto.PageResponse;
 import com.meufluxo.dto.plannedEntry.PlannedEntryBatchCreateRequest;
 import com.meufluxo.dto.plannedEntry.PlannedEntryBatchCreateResponse;
@@ -37,7 +38,9 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
+import org.springframework.util.MultiValueMap;
 
 @RestController
 @RequestMapping({"/income", "/incomes"})
@@ -90,7 +93,7 @@ public class IncomeController {
     @GetMapping
     @Operation(summary = "Listar receitas planejadas com filtros")
     public PageResponse<PlannedEntryResponse> getIncomes(
-            @RequestParam(required = false) PlannedEntryStatus status,
+            @RequestParam(name = "status", required = false) List<PlannedEntryStatus> statuses,
             @RequestParam(required = false) PlannedAmountBehavior amountBehavior,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate issueDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate issueDateStart,
@@ -98,9 +101,8 @@ public class IncomeController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dueDateStart,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dueDateEnd,
             @RequestParam(required = false) String document,
-            @RequestParam(required = false) Long categoryId,
-            @RequestParam(required = false) Long subCategoryId,
             @RequestParam(required = false) UUID groupId,
+            @RequestParam MultiValueMap<String, String> queryParams,
             @PageableDefault(
                     page = 0,
                     size = 20,
@@ -109,8 +111,26 @@ public class IncomeController {
             )
             Pageable pageable
     ) {
+        List<Long> categoryIds = RequestParamListParser.parseLongList(
+                queryParams,
+                "categoryIds",
+                "categoryId"
+        );
+        List<Long> subCategoryIds = RequestParamListParser.parseLongList(
+                queryParams,
+                "subCategoryIds",
+                "subcategoryIds",
+                "subCategoryId",
+                "subcategoryId"
+        );
+        List<Long> accountIds = RequestParamListParser.parseLongList(
+                queryParams,
+                "accountIds",
+                "accountId"
+        );
+
         return plannedEntryService.findIncomes(
-                status,
+                statuses,
                 amountBehavior,
                 issueDate,
                 issueDateStart,
@@ -118,8 +138,9 @@ public class IncomeController {
                 dueDateStart,
                 dueDateEnd,
                 document,
-                categoryId,
-                subCategoryId,
+                categoryIds,
+                subCategoryIds,
+                accountIds,
                 groupId,
                 pageable
         );
