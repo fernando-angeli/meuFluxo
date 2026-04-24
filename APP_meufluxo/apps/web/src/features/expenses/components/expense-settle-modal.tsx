@@ -99,15 +99,31 @@ export function ExpenseSettleModal({
     },
   });
 
+  const expenseId = expense?.id ?? null;
+  const settledAccountIdField = form.watch("settledAccountId");
+
+  const settledAccountIdNormalized =
+    settledAccountIdField != null && String(settledAccountIdField).trim() !== ""
+      ? String(settledAccountIdField).trim()
+      : "";
+
+  const selectedAccountDisplayName = settledAccountIdNormalized
+    ? accounts.find((a) => String(a.id).trim() === settledAccountIdNormalized)?.name ?? null
+    : null;
+
   React.useEffect(() => {
-    if (!open) return;
+    if (!open || !expense) return;
     form.reset({
-      actualAmount: expense ? amountToEditString(expense.expectedAmount, intlLocale) : "",
-      settledAt: expense?.dueDate || toIsoDate(new Date()),
-      settledAccountId: expense?.defaultAccountId ?? "",
-      notes: expense?.notes ?? "",
+      actualAmount: amountToEditString(expense.expectedAmount, intlLocale),
+      settledAt: expense.dueDate || toIsoDate(new Date()),
+      settledAccountId:
+        expense.defaultAccountId != null ? String(expense.defaultAccountId).trim() : "",
+      notes: expense.notes ?? "",
     });
-  }, [expense, form, intlLocale, open]);
+    // Só ressincronizar ao abrir ou ao trocar o lançamento (`id`). Depender de `expense` por referência
+    // refaz o reset a cada re-render do pai e apaga a conta que o usuário acabou de escolher.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `form.reset` estável; valores iniciais vêm de `expense` no momento do reset
+  }, [open, expenseId, intlLocale]);
 
   const isSubmitting = settleMutation.isPending;
   const selectedAccountName =
@@ -260,12 +276,18 @@ export function ExpenseSettleModal({
                       : "Conta utilizada para débito")}
                 </Label>
                 <Select
-                  value={form.watch("settledAccountId") || "__none"}
+                  key={`settle-account-${expenseId ?? "none"}`}
+                  value={settledAccountIdNormalized || "__none"}
                   onValueChange={(value) => {
-                    form.setValue("settledAccountId", value === "__none" ? "" : value, {
-                      shouldDirty: true,
-                      shouldTouch: true,
-                    });
+                    form.setValue(
+                      "settledAccountId",
+                      value === "__none" ? "" : String(value).trim(),
+                      {
+                        shouldDirty: true,
+                        shouldTouch: true,
+                        shouldValidate: true,
+                      },
+                    );
                     form.clearErrors("settledAccountId");
                   }}
                 >
@@ -277,14 +299,22 @@ export function ExpenseSettleModal({
                         : "border-input hover:border-input"
                     }`}
                   >
-                    <SelectValue placeholder="Selecione uma conta" />
+                    <SelectValue placeholder="Selecione uma conta">
+                      {settledAccountIdNormalized
+                        ? (selectedAccountDisplayName ?? `Conta #${settledAccountIdNormalized}`)
+                        : undefined}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent className="rounded-xl border bg-popover shadow-lg" position="popper" sideOffset={6}>
                     <SelectItem value="__none" className="rounded-lg py-2 cursor-pointer focus:bg-accent">
                       Selecione uma conta
                     </SelectItem>
                     {accounts.map((account) => (
-                      <SelectItem key={account.id} value={account.id} className="rounded-lg py-2 cursor-pointer focus:bg-accent">
+                      <SelectItem
+                        key={account.id}
+                        value={String(account.id).trim()}
+                        className="rounded-lg py-2 cursor-pointer focus:bg-accent"
+                      >
                         {account.name}
                       </SelectItem>
                     ))}

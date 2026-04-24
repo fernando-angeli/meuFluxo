@@ -12,6 +12,7 @@ import com.meufluxo.model.Category;
 import com.meufluxo.model.PlannedEntry;
 import com.meufluxo.model.SubCategory;
 import com.meufluxo.model.workspaceAndUsers.Workspace;
+import com.meufluxo.repository.CashMovementRepository;
 import com.meufluxo.repository.PlannedEntryRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -51,6 +52,10 @@ class PlannedEntryServiceTest {
     private AccountService accountService;
     @Mock
     private BusinessDayService businessDayService;
+    @Mock
+    private CashMovementService cashMovementService;
+    @Mock
+    private CashMovementRepository cashMovementRepository;
 
     private PlannedEntryService service;
 
@@ -63,7 +68,9 @@ class PlannedEntryServiceTest {
                 categoryService,
                 subCategoryService,
                 accountService,
-                businessDayService
+                businessDayService,
+                cashMovementService,
+                cashMovementRepository
         );
 
         Workspace workspace = new Workspace();

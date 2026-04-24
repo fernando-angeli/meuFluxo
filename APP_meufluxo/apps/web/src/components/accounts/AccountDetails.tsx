@@ -9,6 +9,8 @@ import { formatCurrency } from "@meufluxo/utils";
 import { DetailsRow, DetailsSection } from "@/components/details";
 import { SectionEmptyState, SectionErrorState, SectionLoadingState } from "@/components/patterns";
 import { AccountStatusBadge } from "@/features/accounts/components/account-status-badge";
+import { CheckingAccountPanel } from "@/features/accounts/components/checking-account-panel";
+import { normalizeBankString } from "@/features/accounts/lib/normalize-bank-fields";
 
 function formatDateTime(value?: string | null) {
   if (!value) return "Não informado";
@@ -46,12 +48,28 @@ export function AccountDetails({
     return <SectionEmptyState message="Selecione uma conta para visualizar os detalhes." />;
   }
 
+  const bankCode = normalizeBankString(account.bankCode);
+  const bankName = normalizeBankString(account.bankName);
+  const agency = normalizeBankString(account.agency);
+  const accountNumber = normalizeBankString(account.accountNumber);
+  const showBankRows =
+    account.accountType === "CHECKING" && !!(bankCode || bankName || agency || accountNumber);
+  const bankDisplay =
+    bankCode && bankName ? `[${bankCode}] ${bankName}` : bankCode ? `[${bankCode}]` : bankName || null;
+
   return (
     <div className="space-y-4">
       <DetailsSection title="Resumo" description="Informacoes principais da conta">
         <DetailsRow label="Nome" value={account.name} />
         <DetailsRow label="Tipo" value={getAccountTypeLabel(account.accountType)} />
         <DetailsRow label="Status" value={<AccountStatusBadge active={!!account.meta.active} />} />
+        {showBankRows ? (
+          <>
+            {bankDisplay ? <DetailsRow label="Banco" value={bankDisplay} /> : null}
+            {agency ? <DetailsRow label="Agência" value={agency} /> : null}
+            {accountNumber ? <DetailsRow label="Conta" value={accountNumber} /> : null}
+          </>
+        ) : null}
         <DetailsRow
           label="Saldo inicial"
           value={
@@ -67,6 +85,8 @@ export function AccountDetails({
         />
         <DetailsRow label="Saldo atualizado em" value={formatDateTime(account.balanceUpdatedAt)} />
       </DetailsSection>
+
+      <CheckingAccountPanel account={account} currency={currency} />
 
       <DetailsSection title="Metadados" description="Rastreabilidade e auditoria">
         <DetailsRow label="Criado por" value={fallbackText(account.meta.createdByUserName, "Não informado")} />

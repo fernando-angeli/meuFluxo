@@ -6,11 +6,21 @@ export type AccountCreateRequest = {
   name: string;
   accountType: AccountType;
   initialBalance: number;
+  bankCode?: string | null;
+  bankName?: string | null;
+  agency?: string | null;
+  accountNumber?: string | null;
+  overdraftLimit?: number | null;
 };
 
 export type AccountUpdateRequest = {
   name: string;
   active?: boolean | null;
+  bankCode?: string | null;
+  bankName?: string | null;
+  agency?: string | null;
+  accountNumber?: string | null;
+  overdraftLimit?: number | null;
 };
 
 export type AccountsListParams = Partial<Omit<PageQueryParams, "page" | "size">> & {

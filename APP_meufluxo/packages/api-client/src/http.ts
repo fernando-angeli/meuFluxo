@@ -99,7 +99,7 @@ export class HttpClient {
       throw {
         status: 0,
         message: isNetworkError
-          ? "Não foi possível conectar ao servidor. Verifique se o backend está rodando e a URL (NEXT_PUBLIC_API_URL)."
+          ? "Falha na conexão com o servidor."
           : e instanceof Error ? e.message : "Erro de conexão",
         details: e,
       } as HttpError;

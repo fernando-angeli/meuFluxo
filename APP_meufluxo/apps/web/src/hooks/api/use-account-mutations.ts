@@ -9,6 +9,7 @@ import type {
   AccountUpdateRequest,
 } from "@meufluxo/api-client";
 import { accountsQueryKey } from "./use-accounts";
+import { accountDetailsQueryKey } from "./use-account-details";
 
 export function useCreateAccount() {
   const queryClient = useQueryClient();
@@ -16,8 +17,9 @@ export function useCreateAccount() {
   return useMutation({
     mutationFn: (request: AccountCreateRequest) =>
       api.accounts.create(request),
-    onSuccess: async () => {
+    onSuccess: async (created) => {
       await queryClient.invalidateQueries({ queryKey: accountsQueryKey });
+      await queryClient.invalidateQueries({ queryKey: [...accountDetailsQueryKey, created.id] });
     },
   });
 }
@@ -28,8 +30,9 @@ export function useUpdateAccount() {
   return useMutation({
     mutationFn: (params: { id: AccountId; request: AccountUpdateRequest }) =>
       api.accounts.update(params.id, params.request),
-    onSuccess: async () => {
+    onSuccess: async (_data, variables) => {
       await queryClient.invalidateQueries({ queryKey: accountsQueryKey });
+      await queryClient.invalidateQueries({ queryKey: [...accountDetailsQueryKey, variables.id] });
     },
   });
 }
