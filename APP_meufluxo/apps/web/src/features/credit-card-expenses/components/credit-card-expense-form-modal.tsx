@@ -86,11 +86,9 @@ export function CreditCardExpenseFormModal({
   );
 
   const forcedCreditCardNumericId = toNumericId(forcedCreditCardId);
-  const forcedCardOption = React.useMemo(
-    () => cardOptions.find((card) => card.id === forcedCreditCardNumericId) ?? null,
-    [cardOptions, forcedCreditCardNumericId],
-  );
   const isCardFixed = forcedCreditCardNumericId != null;
+  /** Cartão já definido pelo contexto (ex.: visão gerencial) — não exibir campo. */
+  const hideCardField = isCardFixed;
   const singleCreditCardId = cardOptions.length === 1 ? cardOptions[0].id : null;
 
   const form = useForm<CreditCardExpenseFormValues>({
@@ -143,7 +141,7 @@ export function CreditCardExpenseFormModal({
         subcategoryId: expenseSubcategoryId,
         totalAmount: String(expense.totalAmount),
         entryType: expense.entryType,
-        installmentCount: Math.max(2, expense.installmentCount || 2),
+        installmentCount: Math.max(1, expense.installmentCount || 1),
         notes: expense.notes ?? "",
       });
       return;
@@ -214,15 +212,28 @@ export function CreditCardExpenseFormModal({
       return;
     }
 
-    const payload = {
+    const installmentCountForApi =
+      values.entryType === "INSTALLMENT"
+        ? Math.max(2, Number(values.installmentCount) || 2)
+        : 1;
+
+    const createPayload = {
       creditCardId,
       description: values.description.trim(),
       purchaseDate: values.purchaseDate,
       categoryId: Number(values.categoryId),
       subcategoryId: values.subcategoryId ? Number(values.subcategoryId) : null,
       totalAmount: Number(parseMoneyInput(values.totalAmount)),
-      entryType: values.entryType,
-      installmentCount: Number(values.installmentCount),
+      installmentCount: installmentCountForApi,
+      notes: values.notes?.trim() ? values.notes.trim() : null,
+    } as const;
+
+    const updatePayload = {
+      description: values.description.trim(),
+      purchaseDate: values.purchaseDate,
+      categoryId: Number(values.categoryId),
+      subcategoryId: values.subcategoryId ? Number(values.subcategoryId) : null,
+      amount: Number(parseMoneyInput(values.totalAmount)),
       notes: values.notes?.trim() ? values.notes.trim() : null,
     } as const;
 
@@ -230,11 +241,11 @@ export function CreditCardExpenseFormModal({
       if (isEdit && expense) {
         await updateMutation.mutateAsync({
           id: expense.id,
-          request: payload,
+          request: updatePayload,
         });
         success("Despesa no cartão atualizada com sucesso.");
       } else {
-        await createMutation.mutateAsync(payload);
+        await createMutation.mutateAsync(createPayload);
         success("Despesa no cartão criada com sucesso.");
       }
       onOpenChange(false);
@@ -259,16 +270,18 @@ export function CreditCardExpenseFormModal({
       open={open}
       onOpenChange={onOpenChange}
       title={isEdit ? "Editar despesa no cartão" : "Nova despesa no cartão"}
-      description="Registre compras no cartão com suporte a lançamento único ou parcelado."
+      description={
+        hideCardField
+          ? "Registre a compra neste cartão com suporte a lançamento único ou parcelado."
+          : "Registre compras no cartão com suporte a lançamento único ou parcelado."
+      }
       generalError={generalError}
       contentClassName="max-w-2xl"
     >
       <form className="space-y-4" onSubmit={onSubmit}>
-        <div className="space-y-2">
-          <Label htmlFor="credit-card-expense-card">Cartão</Label>
-          {isCardFixed && forcedCardOption ? (
-            <Input id="credit-card-expense-card" value={forcedCardOption.label} readOnly className="h-10" />
-          ) : (
+        {!hideCardField ? (
+          <div className="space-y-2">
+            <Label htmlFor="credit-card-expense-card">Cartão</Label>
             <FilterSelect
               id="credit-card-expense-card"
               value={form.watch("creditCardId") ? String(form.watch("creditCardId")) : ""}
@@ -280,9 +293,9 @@ export function CreditCardExpenseFormModal({
               placeholder="Selecione o cartão"
               triggerClassName={cn("h-10", getInputErrorClass(fieldErrors.creditCardId))}
             />
-          )}
-          <FormFieldError message={fieldErrors.creditCardId ?? form.formState.errors.creditCardId?.message} />
-        </div>
+            <FormFieldError message={fieldErrors.creditCardId ?? form.formState.errors.creditCardId?.message} />
+          </div>
+        ) : null}
 
         <div className="space-y-2">
           <Label htmlFor="credit-card-expense-description">Descrição</Label>
@@ -295,49 +308,6 @@ export function CreditCardExpenseFormModal({
             })}
           />
           <FormFieldError message={fieldErrors.description ?? form.formState.errors.description?.message} />
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="credit-card-expense-purchase-date">Data da compra</Label>
-            <ExpenseFormDateField
-              control={form.control}
-              name="purchaseDate"
-              id="credit-card-expense-purchase-date"
-              inputName="credit_card_expense_purchase_date"
-              className="h-10 text-center"
-              placeholder="dd/mm/aaaa"
-              fillTodayOnBlurIfEmpty
-              aria-invalid={
-                !!(fieldErrors.purchaseDate ?? form.formState.errors.purchaseDate?.message)
-              }
-              calendarButtonAriaLabel="Abrir calendário da compra"
-            />
-            <FormFieldError message={fieldErrors.purchaseDate ?? form.formState.errors.purchaseDate?.message} />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="credit-card-expense-total-amount">Valor total da compra</Label>
-            <Controller
-              control={form.control}
-              name="totalAmount"
-              render={({ field }) => (
-                <MinorUnitMoneyInput
-                  id="credit-card-expense-total-amount"
-                  className={cn(
-                    "h-10",
-                    getInputErrorClass(fieldErrors.totalAmount ?? form.formState.errors.totalAmount?.message),
-                  )}
-                  value={field.value ?? ""}
-                  onChange={(next) => {
-                    field.onChange(next);
-                    clearFieldError("totalAmount");
-                  }}
-                />
-              )}
-            />
-            <FormFieldError message={fieldErrors.totalAmount ?? form.formState.errors.totalAmount?.message} />
-          </div>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -384,7 +354,48 @@ export function CreditCardExpenseFormModal({
           </div>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="space-y-2">
+            <Label htmlFor="credit-card-expense-purchase-date">Data da compra</Label>
+            <ExpenseFormDateField
+              control={form.control}
+              name="purchaseDate"
+              id="credit-card-expense-purchase-date"
+              inputName="credit_card_expense_purchase_date"
+              className="h-10 text-center"
+              placeholder="dd/mm/aaaa"
+              fillTodayOnBlurIfEmpty
+              aria-invalid={
+                !!(fieldErrors.purchaseDate ?? form.formState.errors.purchaseDate?.message)
+              }
+              calendarButtonAriaLabel="Abrir calendário da compra"
+            />
+            <FormFieldError message={fieldErrors.purchaseDate ?? form.formState.errors.purchaseDate?.message} />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="credit-card-expense-total-amount">Valor total da compra</Label>
+            <Controller
+              control={form.control}
+              name="totalAmount"
+              render={({ field }) => (
+                <MinorUnitMoneyInput
+                  id="credit-card-expense-total-amount"
+                  className={cn(
+                    "h-10",
+                    getInputErrorClass(fieldErrors.totalAmount ?? form.formState.errors.totalAmount?.message),
+                  )}
+                  value={field.value ?? ""}
+                  onChange={(next) => {
+                    field.onChange(next);
+                    clearFieldError("totalAmount");
+                  }}
+                />
+              )}
+            />
+            <FormFieldError message={fieldErrors.totalAmount ?? form.formState.errors.totalAmount?.message} />
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="credit-card-expense-entry-type">Tipo</Label>
             <FilterSelect<"SINGLE" | "INSTALLMENT">
@@ -403,39 +414,44 @@ export function CreditCardExpenseFormModal({
             />
             <FormFieldError message={fieldErrors.entryType ?? form.formState.errors.entryType?.message} />
           </div>
+        </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="credit-card-expense-installment-count">Quantidade de parcelas</Label>
-            <Input
-              id="credit-card-expense-installment-count"
-              type="number"
-              min={2}
-              max={99}
-              disabled={entryType !== "INSTALLMENT"}
-              className={cn(
-                "h-10",
-                getInputErrorClass(
-                  fieldErrors.installmentCount ?? form.formState.errors.installmentCount?.message,
-                ),
-              )}
-              {...form.register("installmentCount", {
-                valueAsNumber: true,
-                onChange: () => clearFieldError("installmentCount"),
-              })}
-            />
-            <FormFieldError
-              message={fieldErrors.installmentCount ?? form.formState.errors.installmentCount?.message}
-            />
-            {entryType === "INSTALLMENT" ? (
-              <p className="text-xs text-muted-foreground">
+        {
+          entryType === "INSTALLMENT" && (
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="space-y-2 col-span-1">
+                <Label htmlFor="credit-card-expense-installment-count">Quantidade de parcelas</Label>
+                <Input
+                  id="credit-card-expense-installment-count"
+                  type="number"
+                  min={2}
+                  max={99}
+                  disabled={entryType !== "INSTALLMENT"}
+                  className={cn(
+                    "h-10",
+                    getInputErrorClass(
+                      fieldErrors.installmentCount ?? form.formState.errors.installmentCount?.message,
+                    ),
+                  )}
+                  {...form.register("installmentCount", {
+                    valueAsNumber: true,
+                    onChange: () => clearFieldError("installmentCount"),
+                  })}
+                />
+                <FormFieldError
+                  message={fieldErrors.installmentCount ?? form.formState.errors.installmentCount?.message}
+                />
+              </div>
+                
+              <p className="text-xs text-muted-foreground col-span-2 vertical-text-center">
                 Serão geradas {installmentCount || 0} parcelas
                 {installmentEstimate > 0
                   ? ` de ${formatCurrency(installmentEstimate, "BRL")} (valor estimado).`
                   : "."}
               </p>
-            ) : null}
-          </div>
-        </div>
+            </div>
+          )
+        }
 
         <div className="space-y-2">
           <Label htmlFor="credit-card-expense-notes">Observações</Label>

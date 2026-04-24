@@ -59,8 +59,6 @@ export default function CardExpensesPage() {
 
   React.useEffect(() => {
     const normalized = toNumericIdString(rawCreditCardIdParam);
-    console.log("[card-expenses] creditCardId raw query:", rawCreditCardIdParam);
-    console.log("[card-expenses] creditCardId normalized:", normalized);
 
     if (!rawCreditCardIdParam || !normalized || rawCreditCardIdParam === normalized) return;
 

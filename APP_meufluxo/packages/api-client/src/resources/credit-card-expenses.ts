@@ -8,6 +8,14 @@ import type {
 
 import type { HttpClient } from "../http";
 
+/** Resposta do POST /credit-card-expenses (Java: CreditCardExpenseCreateResponse). */
+export type CreditCardExpenseCreateApiResponse = {
+  installmentGroupId: string | null;
+  installmentCount: number;
+  totalAmount: number;
+  expenses: CreditCardExpense[];
+};
+
 export type CreditCardExpensesListParams = Partial<Omit<PageQueryParams, "page" | "size">> & {
   page?: number;
   size?: number;
@@ -22,7 +30,7 @@ export type CreditCardExpensesListParams = Partial<Omit<PageQueryParams, "page" 
 
 export type CreditCardExpensesApi = {
   list: (params?: CreditCardExpensesListParams) => Promise<PageResponse<CreditCardExpense>>;
-  create: (request: CreditCardExpenseCreateRequest) => Promise<CreditCardExpense>;
+  create: (request: CreditCardExpenseCreateRequest) => Promise<CreditCardExpenseCreateApiResponse>;
   update: (id: string, request: CreditCardExpenseUpdateRequest) => Promise<CreditCardExpense>;
   cancel: (id: string) => Promise<CreditCardExpense>;
 };
@@ -47,7 +55,7 @@ export function createCreditCardExpensesApi(http: HttpClient): CreditCardExpense
         },
       }),
     create: (request) =>
-      http.request<CreditCardExpense>(BASE_PATH, {
+      http.request<CreditCardExpenseCreateApiResponse>(BASE_PATH, {
         method: "POST",
         body: request,
       }),
