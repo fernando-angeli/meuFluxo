@@ -10,6 +10,7 @@ import type {
   ExpenseUpdateRequest,
   PageQueryParams,
   PageResponse,
+  PlannedAmountBehavior,
   PlannedEntryStatus,
 } from "@meufluxo/types";
 
@@ -33,13 +34,16 @@ export type ExpensesListParams = Partial<Omit<PageQueryParams, "page" | "size">>
   page?: number;
   size?: number;
   sort?: string;
-  status?: PlannedEntryStatus;
+  /** Repetido na query como `status=OPEN&status=OVERDUE` (Spring List). */
+  statuses?: readonly PlannedEntryStatus[];
+  amountBehavior?: PlannedAmountBehavior;
   issueDateStart?: string;
   issueDateEnd?: string;
   dueDateStart?: string;
   dueDateEnd?: string;
-  categoryId?: number;
-  subCategoryId?: number;
+  categoryIds?: readonly number[];
+  subCategoryIds?: readonly number[];
+  accountIds?: readonly number[];
 };
 
 export function createPlannedEntriesApi(
@@ -54,13 +58,15 @@ export function createPlannedEntriesApi(
           ...(params?.page !== undefined ? { page: params.page } : {}),
           ...(params?.size !== undefined ? { size: params.size } : {}),
           ...(params?.sort ? { sort: params.sort } : {}),
-          ...(params?.status ? { status: params.status } : {}),
+          ...(params?.statuses?.length ? { status: [...params.statuses] } : {}),
+          ...(params?.amountBehavior ? { amountBehavior: params.amountBehavior } : {}),
           ...(params?.issueDateStart ? { issueDateStart: params.issueDateStart } : {}),
           ...(params?.issueDateEnd ? { issueDateEnd: params.issueDateEnd } : {}),
           ...(params?.dueDateStart ? { dueDateStart: params.dueDateStart } : {}),
           ...(params?.dueDateEnd ? { dueDateEnd: params.dueDateEnd } : {}),
-          ...(params?.categoryId != null ? { categoryId: params.categoryId } : {}),
-          ...(params?.subCategoryId != null ? { subCategoryId: params.subCategoryId } : {}),
+          ...(params?.categoryIds?.length ? { categoryIds: [...params.categoryIds] } : {}),
+          ...(params?.subCategoryIds?.length ? { subCategoryIds: [...params.subCategoryIds] } : {}),
+          ...(params?.accountIds?.length ? { accountIds: [...params.accountIds] } : {}),
         },
       }),
     createSingle: (request) =>

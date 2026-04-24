@@ -36,4 +36,4 @@ const api = createMeuFluxoApi(http);
 // api.accounts.list(), api.kpis.dashboard(params), etc.
 ```
 
-No frontend MeuFluxo, os **hooks** em `apps/web/src/hooks/api/` usam esse `api` e, quando `NEXT_PUBLIC_USE_MOCKS=true`, retornam mocks em vez de chamar a API.
+No frontend MeuFluxo, os **hooks** em `apps/web/src/hooks/api/` usam esse `api`. Com `NEXT_PUBLIC_USE_MOCKS=true`, retornam mocks; sem isso (padrão), chamam a API real.
