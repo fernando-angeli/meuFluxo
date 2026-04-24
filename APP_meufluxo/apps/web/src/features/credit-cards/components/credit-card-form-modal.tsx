@@ -89,7 +89,11 @@ export function CreditCardFormModal({
         dueDay: creditCard.dueDay ?? 1,
         creditLimit:
           creditCard.creditLimit != null ? String(creditCard.creditLimit) : "",
-        defaultPaymentAccountId: creditCard.defaultPaymentAccountId ?? "",
+        defaultPaymentAccountId:
+          creditCard.defaultPaymentAccountId != null &&
+          String(creditCard.defaultPaymentAccountId).trim() !== ""
+            ? String(creditCard.defaultPaymentAccountId).trim()
+            : "",
         notes: creditCard.notes ?? "",
         active: !!creditCard.meta.active,
       });
@@ -158,6 +162,15 @@ export function CreditCardFormModal({
 
   const active = form.watch("active");
   const brand = form.watch("brand");
+  const defaultPaymentAccountIdRaw = form.watch("defaultPaymentAccountId");
+
+  const defaultPaymentAccountSelectValue = React.useMemo(() => {
+    if (defaultPaymentAccountIdRaw == null || defaultPaymentAccountIdRaw === "") {
+      return "__none__";
+    }
+    const normalized = String(defaultPaymentAccountIdRaw).trim();
+    return normalized === "" ? "__none__" : normalized;
+  }, [defaultPaymentAccountIdRaw]);
 
   return (
     <FormDialogShell
@@ -282,29 +295,35 @@ export function CreditCardFormModal({
           <div className="space-y-2 md:col-span-2">
             <Label>Conta padrão de pagamento</Label>
             <Select
-              value={form.watch("defaultPaymentAccountId") || "__none__"}
+              value={defaultPaymentAccountSelectValue}
               disabled={isSubmitting}
               onValueChange={(value) => {
                 form.setValue(
                   "defaultPaymentAccountId",
-                  value === "__none__" ? "" : value,
-                  { shouldDirty: true },
+                  value === "__none__" ? "" : String(value).trim(),
+                  { shouldDirty: true, shouldValidate: true },
                 );
                 clearFieldError("defaultPaymentAccountId");
               }}
             >
               <SelectTrigger
-                className={cn(getInputErrorClass(fieldErrors.defaultPaymentAccountId))}
+                className={cn(
+                  "w-full min-w-0",
+                  getInputErrorClass(fieldErrors.defaultPaymentAccountId),
+                )}
               >
                 <SelectValue placeholder="Selecione uma conta" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__none__">Sem conta padrão</SelectItem>
-                {accounts.map((account) => (
-                  <SelectItem key={account.id} value={account.id}>
-                    {account.name}
-                  </SelectItem>
-                ))}
+                {accounts.map((account) => {
+                  const accountId = String(account.id).trim();
+                  return (
+                    <SelectItem key={accountId} value={accountId}>
+                      {account.name}
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
             <FormFieldError message={fieldErrors.defaultPaymentAccountId} />

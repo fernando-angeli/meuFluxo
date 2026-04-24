@@ -8,6 +8,7 @@ export type CreditCardsApi = {
   create: (body: CreditCardCreateRequest) => Promise<CreditCard>;
   update: (id: CreditCardId, body: CreditCardUpdateRequest) => Promise<CreditCard>;
   updateActive: (id: CreditCardId, body: CreditCardActiveRequest) => Promise<CreditCard>;
+  deleteById: (id: CreditCardId) => Promise<void>;
 };
 
 export type CreditCardsListParams = Partial<Omit<PageQueryParams, "page" | "size">> & {
@@ -57,5 +58,7 @@ export function createCreditCardsApi(http: HttpClient): CreditCardsApi {
         method: "PATCH",
         body,
       }),
+    deleteById: (id) =>
+      http.request<void>(`/credit-cards/${encodeURIComponent(id)}`, { method: "DELETE" }),
   };
 }

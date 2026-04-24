@@ -6,10 +6,12 @@ import type { BrandCard, CreditCardId } from "@meufluxo/types";
 
 import {
   createCreditCard,
+  deleteCreditCard,
   updateCreditCard,
   updateCreditCardActive,
 } from "@/features/credit-cards/credit-cards.service";
 
+import { creditCardExpensesQueryKey } from "./use-credit-card-expense-mutations";
 import { creditCardsQueryKey } from "./use-credit-cards";
 
 type CreditCardCreateRequest = {
@@ -60,6 +62,21 @@ export function useUpdateCreditCardActive() {
       updateCreditCardActive(params.id, params.request),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: creditCardsQueryKey });
+    },
+  });
+}
+
+export function useDeleteCreditCard() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: CreditCardId) => deleteCreditCard(id),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: creditCardsQueryKey });
+      await queryClient.invalidateQueries({ queryKey: ["credit-card-details"] });
+      await queryClient.invalidateQueries({ queryKey: ["card-manager"] });
+      await queryClient.invalidateQueries({ queryKey: creditCardExpensesQueryKey });
+      await queryClient.invalidateQueries({ queryKey: ["invoices"] });
     },
   });
 }

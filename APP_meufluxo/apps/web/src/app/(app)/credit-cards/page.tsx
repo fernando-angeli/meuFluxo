@@ -2,23 +2,27 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { LayoutDashboard, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import type { CreditCard } from "@meufluxo/types";
 
 import { DataTable } from "@/components/data-table/DataTable";
 import { PageHeader } from "@/components/layout/page-header";
-import { RowActionButtons } from "@/components/patterns";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { creditCardsQueryKey } from "@/hooks/api";
+import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
+import { useToast } from "@/components/toast";
+import { creditCardsQueryKey, useDeleteCreditCard } from "@/hooks/api";
 import { useAuthOptional } from "@/hooks/useAuth";
 import { useServerDataTable } from "@/hooks/useServerDataTable";
 import { useTranslation } from "@/lib/i18n";
 import { getQueryErrorMessage } from "@/lib/query-error";
+import { extractApiError } from "@/lib/api-error";
 import { toNumericIdString } from "@/lib/numeric-id";
 import type { DataTableColumn } from "@/components/data-table/types";
 import { fetchCreditCardsPage } from "@/features/credit-cards/credit-cards.service";
+import { CreditCardFormModal } from "@/features/credit-cards/components/credit-card-form-modal";
+import { CreditCardRowActions } from "@/features/credit-cards/components/credit-card-row-actions";
 
 function formatDay(day: number | null | undefined): string {
   const numericDay = Number(day);
@@ -30,6 +34,13 @@ export default function CreditCardsPage() {
   const router = useRouter();
   const auth = useAuthOptional();
   const { t } = useTranslation();
+  const { success, error } = useToast();
+
+  const [cardFormOpen, setCardFormOpen] = React.useState(false);
+  const [cardForForm, setCardForForm] = React.useState<CreditCard | null>(null);
+  const [cardPendingDelete, setCardPendingDelete] = React.useState<CreditCard | null>(null);
+
+  const deleteMutation = useDeleteCreditCard();
 
   const cardsTable = useServerDataTable<CreditCard>({
     queryKey: creditCardsQueryKey,
@@ -45,6 +56,15 @@ export default function CreditCardsPage() {
   const errorMessage = cardsTable.pageResponseQuery.isError
     ? getQueryErrorMessage(cardsTable.pageResponseQuery.error, "Não foi possível carregar os cartões.")
     : null;
+
+  const openManager = React.useCallback(
+    (card: CreditCard) => {
+      const numericCardId = toNumericIdString(card.id);
+      if (!numericCardId) return;
+      router.push(`/credit-cards/${encodeURIComponent(numericCardId)}`);
+    },
+    [router],
+  );
 
   const columns = React.useMemo<Array<DataTableColumn<CreditCard>>>(
     () => [
@@ -100,29 +120,22 @@ export default function CreditCardsPage() {
         key: "actions",
         title: "Ações",
         align: "right",
-        width: 148,
+        width: 176,
         render: (card) => (
-          <RowActionButtons
-            actions={[
-              {
-                key: "open-manager",
-                label: "Abrir visão gerencial do cartão",
-                icon: LayoutDashboard,
-                ariaLabel: "Abrir visão gerencial do cartão",
-                iconClassName: "text-sky-600 dark:text-sky-400",
-                buttonClassName: "hover:bg-sky-500/10",
-                onClick: () => {
-                  const numericCardId = toNumericIdString(card.id);
-                  if (!numericCardId) return;
-                  router.push(`/credit-cards/${encodeURIComponent(numericCardId)}`);
-                },
-              },
-            ]}
+          <CreditCardRowActions
+            creditCard={card}
+            onOpenManager={openManager}
+            onEdit={(item) => {
+              setCardForForm(item);
+              setCardFormOpen(true);
+            }}
+            onDelete={(item) => setCardPendingDelete(item)}
+            isDeleting={deleteMutation.isPending && cardPendingDelete?.id === card.id}
           />
         ),
       },
     ],
-    [router, t],
+    [t, openManager, deleteMutation.isPending, cardPendingDelete?.id],
   );
 
   return (
@@ -136,7 +149,14 @@ export default function CreditCardsPage() {
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between gap-3">
             <CardTitle className="text-base">Lista</CardTitle>
-            <Button className="gap-2" disabled>
+            <Button
+              type="button"
+              className="gap-2"
+              onClick={() => {
+                setCardForForm(null);
+                setCardFormOpen(true);
+              }}
+            >
               <Plus className="h-4 w-4" />
               Novo cartão
             </Button>
@@ -153,17 +173,50 @@ export default function CreditCardsPage() {
             onSortChange={cardsTable.onSortChange}
             onPageChange={cardsTable.onPageChange}
             onPageSizeChange={cardsTable.onPageSizeChange}
-            onRowClick={(card) => {
-              const numericCardId = toNumericIdString(card.id);
-              if (!numericCardId) return;
-              router.push(`/credit-cards/${encodeURIComponent(numericCardId)}`);
-            }}
+            onRowClick={(card) => openManager(card)}
             getRowKey={(card) => card.id}
             emptyTitle="Nenhum cartão encontrado"
             emptyDescription="Cadastre cartões para começar a gerir faturas e compras."
           />
         </CardContent>
       </Card>
+
+      <CreditCardFormModal
+        open={cardFormOpen}
+        onOpenChange={(next) => {
+          setCardFormOpen(next);
+          if (!next) setCardForForm(null);
+        }}
+        creditCard={cardForForm}
+      />
+
+      <ConfirmDialog
+        open={!!cardPendingDelete}
+        onOpenChange={(open) => {
+          if (!open) setCardPendingDelete(null);
+        }}
+        title="Excluir cartão"
+        description={
+          cardPendingDelete
+            ? `Excluir permanentemente o cartão "${cardPendingDelete.name}"? A exclusão só é permitida se não houver lançamentos no cartão — a confirmação é feita pelo servidor.`
+            : ""
+        }
+        cancelText="Cancelar"
+        confirmText="Excluir"
+        confirmVariant="destructive"
+        isConfirming={deleteMutation.isPending}
+        onConfirm={async () => {
+          if (!cardPendingDelete) return;
+          try {
+            await deleteMutation.mutateAsync(cardPendingDelete.id);
+            success("Cartão excluído com sucesso.");
+            setCardPendingDelete(null);
+          } catch (err) {
+            const apiError = extractApiError(err);
+            error(apiError?.detail ?? "Não foi possível excluir o cartão.");
+          }
+        }}
+      />
     </div>
   );
 }
