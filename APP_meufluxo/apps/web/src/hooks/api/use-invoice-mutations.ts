@@ -9,6 +9,7 @@ import type {
 import {
   closeInvoiceById,
   createInvoicePayment,
+  deleteInvoicePaymentById,
   reopenInvoiceById,
   updateInvoiceCharges,
 } from "@/features/invoices/invoices.service";
@@ -41,6 +42,17 @@ export function useCreateInvoicePayment() {
   return useMutation({
     mutationFn: (params: { invoiceId: string; request: InvoicePaymentCreateRequest }) =>
       createInvoicePayment(params.invoiceId, params.request),
+    onSuccess: async (_, params) => {
+      await invalidateInvoices(queryClient, params.invoiceId);
+    },
+  });
+}
+
+export function useDeleteInvoicePayment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: { invoiceId: string; paymentId: string }) =>
+      deleteInvoicePaymentById(params.paymentId),
     onSuccess: async (_, params) => {
       await invalidateInvoices(queryClient, params.invoiceId);
     },

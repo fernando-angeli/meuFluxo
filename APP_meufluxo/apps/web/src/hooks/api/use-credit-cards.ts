@@ -6,8 +6,10 @@ import { useAuthOptional } from "@/hooks/useAuth";
 import { buildPageableParams } from "@/lib/pageable";
 import { api } from "@/services/api";
 import { env } from "@/lib/env";
-import { mockCreditCards } from "@/services/mocks/credit-cards";
-import { normalizeCreditCardFromApi } from "@/features/credit-cards/credit-cards.service";
+import {
+  getMockCreditCardsSnapshot,
+  normalizeCreditCardFromApi,
+} from "@/features/credit-cards/credit-cards.service";
 
 export const creditCardsQueryKey = ["credit-cards"] as const;
 
@@ -17,7 +19,7 @@ export function useCreditCards() {
   return useQuery({
     queryKey: creditCardsQueryKey,
     queryFn: async () => {
-      if (env.useMocks) return mockCreditCards;
+      if (env.useMocks) return getMockCreditCardsSnapshot();
       const params = buildPageableParams({
         page: 0,
         size: 1000,

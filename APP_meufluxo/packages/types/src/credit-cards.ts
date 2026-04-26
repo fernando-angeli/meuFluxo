@@ -1,6 +1,5 @@
 import type { EntityMeta } from "./categories";
-
-export type BrandCard = "VISA" | "MASTERCARD";
+import type { BrandCard } from "./card-brands";
 
 export type CreditCardId = string;
 

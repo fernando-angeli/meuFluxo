@@ -14,6 +14,7 @@ import type {
 import { env } from "@/lib/env";
 import { api } from "@/services/api";
 import { mockInvoiceDetailsById, mockInvoices } from "@/services/mocks/invoices";
+import { normalizeCardBrand } from "@/constants/card-brands";
 
 function toNumber(value: unknown): number {
   const n = Number(value);
@@ -38,16 +39,30 @@ function toStatus(value: unknown): InvoiceStatus {
   return "OPEN";
 }
 
+function buildCardDisplayName(
+  name: string,
+  brand: ReturnType<typeof normalizeCardBrand>,
+): string | null {
+  const normalizedName = String(name ?? "").trim();
+  if (!normalizedName) return brand;
+  if (!brand) return normalizedName;
+  return `${normalizedName} - ${brand}`;
+}
+
 function normalizeInvoice(raw: unknown): Invoice {
   const r = raw as Record<string, unknown>;
+  const creditCardName = toStringOrEmpty(r.creditCardName) || "—";
+  const creditCardBrand = normalizeCardBrand(r.creditCardBrand ?? r.brand ?? r.brandCard);
+  const fallbackDisplayName = buildCardDisplayName(creditCardName, creditCardBrand);
   return {
     id: toStringOrEmpty(r.id),
     creditCardId: toStringOrEmpty(r.creditCardId),
-    creditCardName: toStringOrEmpty(r.creditCardName) || "—",
+    creditCardName,
+    creditCardBrand,
     cardDisplayName:
       r.cardDisplayName != null && String(r.cardDisplayName).trim() !== ""
         ? String(r.cardDisplayName)
-        : null,
+        : fallbackDisplayName,
     referenceLabel: toStringOrEmpty(r.referenceLabel) || "—",
     periodStart: r.periodStart != null ? String(r.periodStart) : null,
     periodEnd: r.periodEnd != null ? String(r.periodEnd) : null,
@@ -74,13 +89,41 @@ function normalizeInvoice(raw: unknown): Invoice {
 
 function normalizeInvoiceExpenseItem(raw: unknown): InvoiceExpenseItem {
   const r = raw as Record<string, unknown>;
+  const installmentNumberRaw = r.installmentNumber ?? r.installment_number;
+  const installmentCountRaw = r.installmentCount ?? r.installment_count;
+  const installmentLabelRaw =
+    r.installmentLabel != null && String(r.installmentLabel).trim() !== ""
+      ? String(r.installmentLabel)
+      : r.installment_label != null && String(r.installment_label).trim() !== ""
+        ? String(r.installment_label)
+      : null;
+  const installmentNumber =
+    installmentNumberRaw != null && Number.isFinite(Number(installmentNumberRaw))
+      ? Number(installmentNumberRaw)
+      : null;
+  const installmentCount =
+    installmentCountRaw != null && Number.isFinite(Number(installmentCountRaw))
+      ? Number(installmentCountRaw)
+      : null;
+  const installmentLabel =
+    installmentLabelRaw ??
+    (installmentNumber != null && installmentCount != null
+      ? `${installmentNumber}/${installmentCount}`
+      : null);
   return {
     id: toStringOrEmpty(r.id),
     description: toStringOrEmpty(r.description) || "—",
     categoryName: toStringOrEmpty(r.categoryName) || "—",
-    subCategoryName: r.subCategoryName != null ? String(r.subCategoryName) : null,
+    subCategoryName:
+      r.subCategoryName != null
+        ? String(r.subCategoryName)
+        : r.subcategoryName != null
+          ? String(r.subcategoryName)
+          : null,
     purchaseDate: toStringOrEmpty(r.purchaseDate),
-    installmentLabel: r.installmentLabel != null ? String(r.installmentLabel) : null,
+    installmentLabel,
+    installmentNumber,
+    installmentCount,
     amount: toNumber(r.amount),
     status:
       String(r.status ?? "").toUpperCase() === "CANCELED"
@@ -133,8 +176,40 @@ function normalizePage(rawPage: unknown): PageResponse<Invoice> {
         ? Math.ceil(totalElements / resolvedSize)
         : 0;
 
+  const normalizedContent = rawContent.map((item) => normalizeInvoice(item));
+  const adjustedById = new Map<string, number>();
+
+  const byCard = new Map<string, Invoice[]>();
+  normalizedContent.forEach((invoice) => {
+    const list = byCard.get(invoice.creditCardId) ?? [];
+    list.push(invoice);
+    byCard.set(invoice.creditCardId, list);
+  });
+
+  byCard.forEach((items) => {
+    const sorted = [...items].sort((a, b) => String(a.dueDate).localeCompare(String(b.dueDate)));
+    sorted.forEach((invoice, index) => {
+      if (index === 0) {
+        adjustedById.set(invoice.id, 0);
+        return;
+      }
+      const previousInvoice = sorted[index - 1];
+      const hasCarryOverFromPrevious =
+        previousInvoice.status === "PARTIALLY_PAID" &&
+        previousInvoice.paidAmount > 0 &&
+        previousInvoice.remainingAmount > 0;
+      adjustedById.set(
+        invoice.id,
+        hasCarryOverFromPrevious ? invoice.previousBalance : 0,
+      );
+    });
+  });
+
   return {
-    content: rawContent.map((item) => normalizeInvoice(item)),
+    content: normalizedContent.map((invoice) => ({
+      ...invoice,
+      previousBalance: adjustedById.get(invoice.id) ?? 0,
+    })),
     page: resolvedPage,
     size: resolvedSize,
     totalElements,
@@ -262,6 +337,13 @@ export async function createInvoicePayment(
   }
   const updated = await api.invoices.createPayment(id, request);
   return normalizeInvoiceDetails(updated);
+}
+
+export async function deleteInvoicePaymentById(paymentId: string): Promise<void> {
+  if (env.useMocks) {
+    return;
+  }
+  await api.invoices.deletePaymentById(paymentId);
 }
 
 export async function updateInvoiceCharges(

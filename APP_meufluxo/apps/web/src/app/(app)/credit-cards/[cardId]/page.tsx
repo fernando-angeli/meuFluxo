@@ -3,18 +3,19 @@
 import * as React from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Eye, History, Plus, RotateCcw } from "lucide-react";
+import { ArrowLeft, Pencil, Plus, Trash2 } from "lucide-react";
 import type {
   CreditCard,
   CreditCardExpense,
   DashboardCategoryKpi,
   Invoice,
+  InvoicePaymentItem,
+  InvoiceStatus,
 } from "@meufluxo/types";
 import { formatCurrency } from "@meufluxo/utils";
 
 import { api } from "@/services/api";
 import { env } from "@/lib/env";
-import { mockCreditCards } from "@/services/mocks/credit-cards";
 import { toNumericIdString } from "@/lib/numeric-id";
 import { useServerDataTable } from "@/hooks/useServerDataTable";
 import { useAuthOptional } from "@/hooks/useAuth";
@@ -23,6 +24,8 @@ import {
   useCancelCreditCardExpense,
   useCategories,
   useCloseInvoice,
+  useDeleteInvoicePayment,
+  useDeleteCreditCard,
   useInvoiceDetails,
   useInvoices,
   useReopenInvoice,
@@ -33,34 +36,35 @@ import { getQueryErrorMessage } from "@/lib/query-error";
 import { extractApiError } from "@/lib/api-error";
 import { fetchCreditCardExpensesPage } from "@/features/credit-card-expenses/credit-card-expenses.service";
 import { getCreditCardExpensesColumns } from "@/features/credit-card-expenses/credit-card-expenses.columns";
-import { InvoiceStatusBadge } from "@/features/invoices/components/invoice-status-badge";
 import { CreditCardExpenseRowActions } from "@/features/credit-card-expenses/components/credit-card-expense-row-actions";
 import { InvoicePaymentModal } from "@/features/invoices/components/invoice-payment-modal";
 import { InvoiceChargesModal } from "@/features/invoices/components/invoice-charges-modal";
 import { CreditCardExpenseFormModal } from "@/features/credit-card-expenses/components/credit-card-expense-form-modal";
-import { InvoiceDetailsPanel } from "@/components/invoices";
+import { InvoiceDetailsPanel, InvoicesTable } from "@/components/invoices";
 import { CreditCardExpensesTable } from "@/components/credit-card-expenses";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { FilterSelect, DateRangePicker } from "@/components/filters";
+import { FilterMultiSelect, FilterSelect, DateRangePicker } from "@/components/filters";
 import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
 import { SectionErrorState, SectionLoadingState } from "@/components/patterns";
-import { RowActionButtons } from "@/components/patterns";
-import { DataTable } from "@/components/data-table/DataTable";
 import { DetailsDrawer } from "@/components/details";
-import { AnalyticPieChart, KpiCard, getDefaultDashboardDateRange } from "@/features/dashboard";
-import type { DataTableColumn } from "@/components/data-table/types";
+import { getMockCreditCardsSnapshot } from "@/features/credit-cards/credit-cards.service";
+import { CreditCardFormModal } from "@/features/credit-cards/components/credit-card-form-modal";
+import { getCardBrandLabel } from "@/constants/card-brands";
+import { fetchInvoicesPage } from "@/features/invoices/invoices.service";
+import { getInvoicesTableColumns } from "@/features/invoices/invoices.columns";
+import { DateRangeValue } from "@/components/filters/date-range-picker";
+import { InvoiceRowActions } from "@/features/invoices/components/invoice-row-actions";
 
 function normalizeCardFromMocks(cardId: string): CreditCard | null {
-  const byRaw = mockCreditCards.find((card) => card.id === cardId);
+  const effective = getMockCreditCardsSnapshot();
+  const byRaw = effective.find((card) => card.id === cardId);
   if (byRaw) return byRaw;
   const normalizedTarget = toNumericIdString(cardId);
   if (!normalizedTarget) return null;
-  return (
-    mockCreditCards.find((card) => toNumericIdString(card.id) === normalizedTarget) ?? null
-  );
+  return effective.find((card) => toNumericIdString(card.id) === normalizedTarget) ?? null;
 }
 
 function buildExpenseCategoryKpis(expenses: CreditCardExpense[]): DashboardCategoryKpi[] {
@@ -96,15 +100,25 @@ function buildExpenseCategoryKpis(expenses: CreditCardExpense[]): DashboardCateg
     .sort((a, b) => b.total - a.total);
 }
 
-function toIsoDate(iso: string): number {
-  return new Date(`${iso}T00:00:00`).getTime();
-}
-
 function formatBrDate(iso: string): string {
   if (!iso) return "—";
   const date = new Date(`${iso}T00:00:00`);
   if (Number.isNaN(date.getTime())) return "—";
   return new Intl.DateTimeFormat("pt-BR").format(date);
+}
+
+function isZeroAmount(value: number | null | undefined): boolean {
+  return Math.abs(Number(value ?? 0)) < 0.000001;
+}
+
+function isEmptyInvoice(invoice: Invoice): boolean {
+  return (
+    isZeroAmount(invoice.purchasesAmount) &&
+    isZeroAmount(invoice.previousBalance) &&
+    isZeroAmount(invoice.totalAmount) &&
+    isZeroAmount(invoice.paidAmount) &&
+    isZeroAmount(invoice.remainingAmount)
+  );
 }
 
 export default function CreditCardManagerPage() {
@@ -115,8 +129,9 @@ export default function CreditCardManagerPage() {
   const cardId = String(params?.cardId ?? "");
 
   const closeInvoiceMutation = useCloseInvoice();
-  const reopenInvoiceMutation = useReopenInvoice();
+  const deleteInvoicePaymentMutation = useDeleteInvoicePayment();
   const cancelExpenseMutation = useCancelCreditCardExpense();
+  const deleteCardMutation = useDeleteCreditCard();
   const { data: accounts = [] } = useAccounts();
   const { data: categories = [] } = useCategories({ realOnly: true });
   const { data: subCategories = [] } = useSubCategories({ realOnly: true });
@@ -138,75 +153,78 @@ export default function CreditCardManagerPage() {
   });
 
   const [selectedInvoiceId, setSelectedInvoiceId] = React.useState<string | null>(null);
+  const [invoiceDetailsOpen, setInvoiceDetailsOpen] = React.useState(false);
   const [closeConfirmOpen, setCloseConfirmOpen] = React.useState(false);
-  const [historyOpen, setHistoryOpen] = React.useState(false);
-  const [historyReopenConfirmOpen, setHistoryReopenConfirmOpen] = React.useState(false);
-  const [historyTargetInvoice, setHistoryTargetInvoice] = React.useState<Invoice | null>(null);
+  const [selectedInvoicePreview, setSelectedInvoicePreview] = React.useState<Invoice | null>(null);
   const [paymentModalOpen, setPaymentModalOpen] = React.useState(false);
   const [chargesModalOpen, setChargesModalOpen] = React.useState(false);
-  const [dashboardDateRange, setDashboardDateRange] = React.useState(getDefaultDashboardDateRange());
+  const [deletePaymentConfirmOpen, setDeletePaymentConfirmOpen] = React.useState(false);
+  const [paymentToDelete, setPaymentToDelete] = React.useState<InvoicePaymentItem | null>(null);
+  const [invoiceFilters, setInvoiceFilters] = React.useState<{
+    statuses: InvoiceStatus[];
+    dueDateRange: DateRangeValue | null;
+  }>({
+    statuses: [],
+    dueDateRange: null,
+  });
 
-  const operationalInvoices = React.useMemo(() => {
-    const nowTs = Date.now();
-    const upcoming = [...allInvoicesByCard]
-      .sort((a, b) => toIsoDate(a.dueDate) - toIsoDate(b.dueDate))
-      .find((item) => toIsoDate(item.dueDate) >= nowTs);
+  const invoicesTable = useServerDataTable<Invoice>({
+    queryKey: ["card-manager", "invoices", cardId],
+    fetchPage: fetchInvoicesPage,
+    initialPageSize: 10,
+    initialSortKey: "dueDate",
+    initialDirection: "desc",
+    enabled: !!cardId && !auth?.isBootstrapping && !!auth?.isAuthenticated,
+    extraQueryParams: {
+      creditCardId: cardId,
+      ...(invoiceFilters.statuses.length === 1 ? { status: invoiceFilters.statuses[0] } : {}),
+      ...(invoiceFilters.dueDateRange?.startDate ? { dueDateStart: invoiceFilters.dueDateRange.startDate } : {}),
+      ...(invoiceFilters.dueDateRange?.endDate ? { dueDateEnd: invoiceFilters.dueDateRange.endDate } : {}),
+    },
+  });
 
-    const selectedSet = new Map<string, Invoice>();
-    allInvoicesByCard.forEach((invoice) => {
-      const isOpen = invoice.status === "OPEN";
-      const hasPending = (invoice.remainingAmount ?? 0) > 0;
-      const isOverdue = invoice.status === "OVERDUE";
-      const isUpcoming = upcoming?.id === invoice.id;
-      if (isOpen || hasPending || isOverdue || isUpcoming) {
-        selectedSet.set(invoice.id, invoice);
-      }
-    });
-
-    return Array.from(selectedSet.values()).sort((a, b) => toIsoDate(a.dueDate) - toIsoDate(b.dueDate));
-  }, [allInvoicesByCard]);
-
-  const historyInvoices = React.useMemo(
+  const invoiceFilterKey = React.useMemo(
     () =>
-      allInvoicesByCard
-        .filter((invoice) => invoice.status === "CLOSED" || invoice.status === "PAID")
-        .sort((a, b) => toIsoDate(b.dueDate) - toIsoDate(a.dueDate)),
-    [allInvoicesByCard],
+      JSON.stringify({
+        statuses: invoiceFilters.statuses,
+        dueDateRange: invoiceFilters.dueDateRange,
+      }),
+    [invoiceFilters],
   );
 
   React.useEffect(() => {
-    if (!operationalInvoices.length) {
-      setSelectedInvoiceId(null);
-      return;
-    }
-    const exists = selectedInvoiceId ? operationalInvoices.some((item) => item.id === selectedInvoiceId) : false;
-    if (!exists) {
-      setSelectedInvoiceId(operationalInvoices[0].id);
-    }
-  }, [operationalInvoices, selectedInvoiceId]);
+    invoicesTable.onReset();
+  }, [invoiceFilterKey, invoicesTable.onReset]);
 
   const invoiceDetailsQuery = useInvoiceDetails(
     selectedInvoiceId,
-    !!selectedInvoiceId || paymentModalOpen || chargesModalOpen,
+    !!selectedInvoiceId || paymentModalOpen || chargesModalOpen || invoiceDetailsOpen,
   );
 
   const refreshInvoices = React.useCallback(async () => {
-    await Promise.all([refetchInvoicesByCard(), cardQuery.refetch()]);
+    await Promise.all([
+      refetchInvoicesByCard(),
+      cardQuery.refetch(),
+      invoicesTable.pageResponseQuery.refetch(),
+    ]);
     if (selectedInvoiceId) {
       await invoiceDetailsQuery.refetch();
     }
-  }, [refetchInvoicesByCard, cardQuery, invoiceDetailsQuery, selectedInvoiceId]);
+  }, [refetchInvoicesByCard, cardQuery, invoiceDetailsQuery, selectedInvoiceId, invoicesTable.pageResponseQuery]);
 
   const [expenseFilters, setExpenseFilters] = React.useState({
-    invoiceId: "",
-    categoryId: "",
-    subCategoryId: "",
+    invoiceIds: [] as string[],
+    categoryIds: [] as string[],
+    subCategoryIds: [] as string[],
     dateRange: null as { startDate: string; endDate: string } | null,
   });
   const [expenseFormOpen, setExpenseFormOpen] = React.useState(false);
   const [editingExpense, setEditingExpense] = React.useState<CreditCardExpense | null>(null);
   const [cancelExpenseOpen, setCancelExpenseOpen] = React.useState(false);
   const [cancelingExpense, setCancelingExpense] = React.useState<CreditCardExpense | null>(null);
+  const [cardEditModalOpen, setCardEditModalOpen] = React.useState(false);
+  const [cardDeleteConfirmOpen, setCardDeleteConfirmOpen] = React.useState(false);
+  const [activeTab, setActiveTab] = React.useState<"invoices" | "expenses">("invoices");
 
   const expensesTable = useServerDataTable<CreditCardExpense>({
     queryKey: ["card-manager", "expenses", cardId],
@@ -217,9 +235,9 @@ export default function CreditCardManagerPage() {
     enabled: !!cardId && !auth?.isBootstrapping && !!auth?.isAuthenticated,
     extraQueryParams: {
       creditCardId: cardId,
-      ...(expenseFilters.invoiceId ? { invoiceId: expenseFilters.invoiceId } : {}),
-      ...(expenseFilters.categoryId ? { categoryId: expenseFilters.categoryId } : {}),
-      ...(expenseFilters.subCategoryId ? { subCategoryId: expenseFilters.subCategoryId } : {}),
+      ...(expenseFilters.invoiceIds.length === 1 ? { invoiceId: expenseFilters.invoiceIds[0] } : {}),
+      ...(expenseFilters.categoryIds.length === 1 ? { categoryId: expenseFilters.categoryIds[0] } : {}),
+      ...(expenseFilters.subCategoryIds.length === 1 ? { subCategoryId: expenseFilters.subCategoryIds[0] } : {}),
       ...(expenseFilters.dateRange?.startDate ? { purchaseDateStart: expenseFilters.dateRange.startDate } : {}),
       ...(expenseFilters.dateRange?.endDate ? { purchaseDateEnd: expenseFilters.dateRange.endDate } : {}),
     },
@@ -228,12 +246,13 @@ export default function CreditCardManagerPage() {
   const expenseFilterKey = React.useMemo(() => JSON.stringify(expenseFilters), [expenseFilters]);
   React.useEffect(() => {
     expensesTable.onReset();
-  }, [expenseFilterKey, expensesTable]);
+  }, [expenseFilterKey, expensesTable.onReset]);
 
   const availableSubCategories = React.useMemo(() => {
-    if (!expenseFilters.categoryId) return [];
-    return subCategories.filter((item) => item.category.id === expenseFilters.categoryId);
-  }, [expenseFilters.categoryId, subCategories]);
+    if (expenseFilters.categoryIds.length === 0) return [];
+    const categoryIds = new Set(expenseFilters.categoryIds);
+    return subCategories.filter((item) => categoryIds.has(item.category.id));
+  }, [expenseFilters.categoryIds, subCategories]);
 
   const expenseColumns = React.useMemo(
     () =>
@@ -256,30 +275,9 @@ export default function CreditCardManagerPage() {
     [cancelExpenseMutation.isPending, cancelingExpense?.id],
   );
 
-  const analyticsQuery = useQuery({
-    queryKey: [
-      "card-manager",
-      "analytics",
-      cardId,
-      dashboardDateRange.startDate,
-      dashboardDateRange.endDate,
-    ],
-    queryFn: () =>
-      fetchCreditCardExpensesPage({
-        page: 0,
-        size: 500,
-        sort: "purchaseDate,DESC",
-        creditCardId: cardId,
-        purchaseDateStart: dashboardDateRange.startDate,
-        purchaseDateEnd: dashboardDateRange.endDate,
-      }),
-    enabled: !!cardId && !auth?.isBootstrapping && !!auth?.isAuthenticated,
-  });
-
   const refreshExpenses = React.useCallback(async () => {
     await Promise.all([
       expensesTable.pageResponseQuery.refetch(),
-      analyticsQuery.refetch(),
       refetchInvoicesByCard(),
       cardQuery.refetch(),
     ]);
@@ -288,7 +286,6 @@ export default function CreditCardManagerPage() {
     }
   }, [
     expensesTable.pageResponseQuery,
-    analyticsQuery,
     refetchInvoicesByCard,
     cardQuery,
     selectedInvoiceId,
@@ -296,6 +293,10 @@ export default function CreditCardManagerPage() {
   ]);
 
   const card = cardQuery.data ?? null;
+  const visibleInvoicesByCard = React.useMemo(
+    () => allInvoicesByCard.filter((invoice) => !isEmptyInvoice(invoice)),
+    [allInvoicesByCard],
+  );
   const usedAmount = allInvoicesByCard.reduce(
     (sum, invoice) => sum + (invoice.status === "PAID" ? 0 : invoice.remainingAmount),
     0,
@@ -303,113 +304,107 @@ export default function CreditCardManagerPage() {
   const creditLimit = card?.creditLimit ?? 0;
   const availableAmount = Math.max(0, creditLimit - usedAmount);
   const utilization = creditLimit > 0 ? Math.min(100, (usedAmount / creditLimit) * 100) : 0;
-  const openInvoices = allInvoicesByCard.filter((invoice) => invoice.status !== "PAID").length;
   const expensesTotal =
     expensesTable.pageResponseQuery.data?.content.reduce((sum, item) => sum + (item.totalAmount || 0), 0) ?? 0;
-  const analyticsExpenses = analyticsQuery.data?.content ?? [];
-  const periodSpent = analyticsExpenses.reduce((sum, item) => sum + (item.totalAmount || 0), 0);
-  const nextInvoice = [...allInvoicesByCard]
-    .filter((invoice) => invoice.remainingAmount > 0)
-    .sort((a, b) => toIsoDate(a.dueDate) - toIsoDate(b.dueDate))
-    .find((invoice) => toIsoDate(invoice.dueDate) >= Date.now());
-  const nextInvoiceTotal = nextInvoice?.remainingAmount ?? 0;
-  const categoryKpis = React.useMemo(() => buildExpenseCategoryKpis(analyticsExpenses), [analyticsExpenses]);
-  const historyPage = React.useMemo(
-    () => ({
-      content: historyInvoices,
-      page: 0,
-      size: Math.max(historyInvoices.length, 1),
-      totalElements: historyInvoices.length,
-      totalPages: 1,
-      first: true,
-      last: true,
-    }),
-    [historyInvoices],
+  const filteredInvoices = React.useMemo(() => {
+    const rows = invoicesTable.pageResponseQuery.data?.content ?? [];
+    const nonEmptyRows = rows.filter((row) => !isEmptyInvoice(row));
+    if (invoiceFilters.statuses.length === 0) return nonEmptyRows;
+    return nonEmptyRows.filter((row) => invoiceFilters.statuses.includes(row.status));
+  }, [invoicesTable.pageResponseQuery.data?.content, invoiceFilters.statuses]);
+  const filteredExpenses = React.useMemo(() => {
+    const rows = expensesTable.pageResponseQuery.data?.content ?? [];
+    return rows.filter((row) => {
+      if (row.status === "CANCELED") return false;
+      const byInvoice =
+        expenseFilters.invoiceIds.length === 0 ||
+        (row.invoiceId != null && expenseFilters.invoiceIds.includes(String(row.invoiceId)));
+      const byCategory =
+        expenseFilters.categoryIds.length === 0 || expenseFilters.categoryIds.includes(String(row.categoryId));
+      const bySubCategory =
+        expenseFilters.subCategoryIds.length === 0 ||
+        (row.subCategoryId != null && expenseFilters.subCategoryIds.includes(String(row.subCategoryId)));
+      return byInvoice && byCategory && bySubCategory;
+    });
+  }, [
+    expensesTable.pageResponseQuery.data?.content,
+    expenseFilters.invoiceIds,
+    expenseFilters.categoryIds,
+    expenseFilters.subCategoryIds,
+  ]);
+  const filteredExpensesTotal = React.useMemo(
+    () => filteredExpenses.reduce((sum, item) => sum + (item.totalAmount || 0), 0),
+    [filteredExpenses],
   );
 
-  const historyColumns = React.useMemo<Array<DataTableColumn<Invoice>>>(
-    () => [
-      {
-        key: "reference",
-        title: "Referência",
-        sortable: false,
-        render: (row) => row.referenceLabel || "—",
-      },
-      {
-        key: "dueDate",
-        title: "Vencimento",
-        sortable: false,
-        render: (row) => formatBrDate(row.dueDate),
-      },
-      {
-        key: "total",
-        title: "Total",
-        align: "right",
-        sortable: false,
-        render: (row) => formatCurrency(row.totalAmount, "BRL"),
-      },
-      {
-        key: "paid",
-        title: "Pago",
-        align: "right",
-        sortable: false,
-        render: (row) => formatCurrency(row.paidAmount, "BRL"),
-      },
-      {
-        key: "status",
-        title: "Situação",
-        sortable: false,
-        render: (row) => <InvoiceStatusBadge status={row.status} />,
-      },
-      {
-        key: "actions",
-        title: "Ações",
-        align: "right",
-        sortable: false,
-        render: (row) => (
-          <RowActionButtons
-            actions={[
-              {
-                key: `view-${row.id}`,
-                label: "Ver detalhes na tela principal",
-                icon: Eye,
-                ariaLabel: "Ver detalhes da fatura",
-                onClick: () => {
-                  setSelectedInvoiceId(row.id);
-                  setHistoryOpen(false);
-                },
-              },
-              {
-                key: `reopen-${row.id}`,
-                label: "Reabrir fatura",
-                icon: RotateCcw,
-                ariaLabel: "Reabrir fatura",
-                disabled: !(row.canReopen ?? row.status === "CLOSED"),
-                onClick: () => {
-                  setHistoryTargetInvoice(row);
-                  setHistoryReopenConfirmOpen(true);
-                },
-              },
-            ]}
-            density="compact"
+  const handleViewInvoiceDetails = React.useCallback((invoice: Invoice) => {
+    setSelectedInvoiceId(invoice.id);
+    setSelectedInvoicePreview(invoice);
+    setInvoiceDetailsOpen(true);
+  }, []);
+
+  const handleCloseInvoice = React.useCallback((invoice: Invoice) => {
+    setSelectedInvoiceId(invoice.id);
+    setSelectedInvoicePreview(invoice);
+    setCloseConfirmOpen(true);
+  }, []);
+
+  const handlePayInvoice = React.useCallback((invoice: Invoice) => {
+    setSelectedInvoiceId(invoice.id);
+    setSelectedInvoicePreview(invoice);
+    setPaymentModalOpen(true);
+  }, []);
+
+  const invoiceTableColumns = React.useMemo(
+    () =>
+      getInvoicesTableColumns({
+        renderActions: (invoice) => (
+          <InvoiceRowActions
+            invoice={invoice}
+            onViewDetails={handleViewInvoiceDetails}
+            onCloseInvoice={handleCloseInvoice}
+            onPayInvoice={handlePayInvoice}
           />
         ),
-      },
-    ],
-    [],
+      }).filter((column) => column.key !== "creditCardName"),
+    [handleViewInvoiceDetails, handleCloseInvoice, handlePayInvoice],
   );
 
   return (
     <>
       <div className="space-y-6">
         <PageHeader
-          title={card?.name ? `Cartão • ${card.name}` : "Visão gerencial do cartão"}
+          title={card?.name ? `${card.name}` : "Visão gerencial do cartão"}
           description="Contexto operacional do cartão selecionado: limite, faturas, detalhes e lançamentos."
           right={
-            <Button type="button" variant="outline" className="gap-2" onClick={() => router.push("/credit-cards")}>
-              <ArrowLeft className="h-4 w-4" />
-              Voltar para cartões
-            </Button>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {card ? (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="gap-2"
+                    onClick={() => setCardEditModalOpen(true)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                    Editar cartão
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="gap-2 text-destructive hover:text-destructive"
+                    onClick={() => setCardDeleteConfirmOpen(true)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Excluir cartão
+                  </Button>
+                </>
+              ) : null}
+              <Button type="button" variant="outline" className="gap-2" onClick={() => router.push("/credit-cards")}>
+                <ArrowLeft className="h-4 w-4" />
+                Voltar para cartões
+              </Button>
+            </div>
           }
         />
 
@@ -423,14 +418,10 @@ export default function CreditCardManagerPage() {
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">Dados do cartão</CardTitle>
               </CardHeader>
-              <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-                <div>
-                  <p className="text-xs text-muted-foreground">Nome</p>
-                  <p className="font-medium">{card.name}</p>
-                </div>
+              <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <div>
                   <p className="text-xs text-muted-foreground">Bandeira</p>
-                  <p className="font-medium">{card.brandCard ?? "—"}</p>
+                  <p className="font-medium">{getCardBrandLabel(card.brand ?? card.brandCard)}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Fechamento</p>
@@ -455,153 +446,136 @@ export default function CreditCardManagerPage() {
                 <div className="h-3 w-full overflow-hidden rounded-full bg-muted">
                   <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${utilization}%` }} />
                 </div>
-                <div className="grid gap-3 sm:grid-cols-3">
+                <div className="flex justify-between">
                   <div>
                     <p className="text-xs text-muted-foreground">Utilizado</p>
-                    <p className="font-medium">{formatCurrency(usedAmount, "BRL")}</p>
+                    <p className="font-medium">
+                      {formatCurrency(usedAmount, "BRL")}
+                      <span className="tabular-nums text-xs text-muted-foreground"> ({utilization.toFixed(1)}%)</span>
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Utilização</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Disponível</p>
                     <p className="font-medium">{formatCurrency(availableAmount, "BRL")}</p>
                   </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Utilização</p>
-                    <p className="font-medium">{utilization.toFixed(1)}%</p>
-                  </div>
                 </div>
               </CardContent>
             </Card>
 
-            <section className="space-y-3">
-              <div className="flex flex-wrap items-end justify-between gap-2">
-                <h2 className="text-base font-semibold">Mini dashboard do cartão</h2>
-                <div className="w-full max-w-xs">
-                  <DateRangePicker
-                    value={dashboardDateRange}
-                    onChange={(value) => value && setDashboardDateRange(value)}
-                    placeholder="Período dos indicadores"
-                  />
-                </div>
-              </div>
+            <div className="inline-flex flex-wrap items-center gap-1 rounded-xl border bg-card p-1">
+              <button
+                type="button"
+                onClick={() => setActiveTab("invoices")}
+                className={
+                  activeTab === "invoices"
+                    ? "rounded-lg bg-primary px-3 py-1.5 text-sm text-primary-foreground"
+                    : "rounded-lg px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted"
+                }
+              >
+                Faturas
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("expenses")}
+                className={
+                  activeTab === "expenses"
+                    ? "rounded-lg bg-primary px-3 py-1.5 text-sm text-primary-foreground"
+                    : "rounded-lg px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted"
+                }
+              >
+                Lançamentos
+              </button>
+            </div>
 
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <KpiCard title="Total gasto no período" value={formatCurrency(periodSpent, "BRL")} tone="danger" />
-                <KpiCard title="Total em aberto" value={formatCurrency(usedAmount, "BRL")} tone="danger" />
-                <KpiCard title="Próxima fatura" value={formatCurrency(nextInvoiceTotal, "BRL")} />
-                <KpiCard title="Faturas em aberto" value={String(openInvoices)} />
-              </div>
-
-              {analyticsQuery.isLoading ? (
-                <SectionLoadingState message="Carregando indicadores do cartão..." />
-              ) : analyticsQuery.isError ? (
-                <SectionErrorState
-                  message={getQueryErrorMessage(
-                    analyticsQuery.error,
-                    "Não foi possível carregar os indicadores do cartão.",
-                  )}
-                />
-              ) : (
-                <AnalyticPieChart
-                  title="Gastos por categoria"
-                  data={categoryKpis}
-                  total={periodSpent}
-                  onCategoryClick={() => undefined}
-                />
-              )}
-            </section>
-
+            {activeTab === "invoices" ? (
             <Card>
-              <CardHeader className="pb-2">
+              <CardHeader className="min-h-[68px] pb-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <CardTitle className="text-base">Faturas operacionais do cartão</CardTitle>
+                  <CardTitle className="text-base">Faturas do cartão</CardTitle>
                   <Button
                     type="button"
-                    variant="outline"
-                    className="gap-2"
-                    onClick={() => setHistoryOpen(true)}
+                    className="invisible gap-2"
+                    aria-hidden="true"
+                    tabIndex={-1}
                   >
-                    <History className="h-4 w-4" />
-                    Histórico de faturas
+                    <Plus className="h-4 w-4" />
+                    Novo lançamento
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent>
-                {operationalInvoices.length === 0 ? (
-                  <SectionErrorState message="Sem faturas operacionais para este cartão no momento." />
-                ) : (
-                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                    {operationalInvoices.map((invoice) => {
-                      const isSelected = selectedInvoiceId === invoice.id;
-                      return (
-                        <button
-                          key={invoice.id}
-                          type="button"
-                          className={`rounded-xl border p-3 text-left transition ${
-                            isSelected ? "border-primary bg-primary/5" : "hover:bg-muted/40"
-                          }`}
-                          onClick={() => {
-                            setSelectedInvoiceId(invoice.id);
-                          }}
-                        >
-                          <div className="mb-2 flex items-start justify-between gap-2">
-                            <div>
-                              <p className="text-sm font-semibold">{invoice.referenceLabel}</p>
-                              <p className="text-xs text-muted-foreground">
-                                Vencimento: {formatBrDate(invoice.dueDate)}
-                              </p>
-                            </div>
-                            <InvoiceStatusBadge status={invoice.status} />
-                          </div>
-                          <div className="grid grid-cols-3 gap-2 text-xs">
-                            <div>
-                              <p className="text-muted-foreground">Total</p>
-                              <p className="font-medium">{formatCurrency(invoice.totalAmount, "BRL")}</p>
-                            </div>
-                            <div>
-                              <p className="text-muted-foreground">Pago</p>
-                              <p className="font-medium">{formatCurrency(invoice.paidAmount, "BRL")}</p>
-                            </div>
-                            <div>
-                              <p className="text-muted-foreground">Pendente</p>
-                              <p className="font-medium">{formatCurrency(invoice.remainingAmount, "BRL")}</p>
-                            </div>
-                          </div>
-                        </button>
-                      );
-                    })}
+              <CardContent className="space-y-4">
+                <div className="grid gap-3 xl:grid-cols-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="manager-invoices-filter-status">Status</Label>
+                    <FilterMultiSelect
+                      value={invoiceFilters.statuses}
+                      onChange={(value) => {
+                        setInvoiceFilters((prev) => ({ ...prev, statuses: value as InvoiceStatus[] }));
+                      }}
+                      placeholder="Selecione um ou mais status"
+                      options={[
+                        { value: "OPEN", label: "Aberta" },
+                        { value: "CLOSED", label: "Fechada" },
+                        { value: "PARTIALLY_PAID", label: "Parcial" },
+                        { value: "PAID", label: "Quitada" },
+                        { value: "OVERDUE", label: "Em atraso" },
+                      ]}
+                    />
                   </div>
-                )}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="manager-invoices-filter-period">Período</Label>
+                    <DateRangePicker
+                      value={invoiceFilters.dueDateRange}
+                      onChange={(value) => {
+                        setInvoiceFilters((prev) => ({ ...prev, dueDateRange: value }));
+                      }}
+                      placeholder="Período de vencimento"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Limpar período</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-10 w-full"
+                      disabled={!invoiceFilters.dueDateRange}
+                      onClick={() => {
+                        setInvoiceFilters((prev) => ({ ...prev, dueDateRange: null }));
+                      }}
+                    >
+                      Limpar filtro
+                    </Button>
+                  </div>
+                  <div className="hidden xl:block" aria-hidden="true" />
+                </div>
+                <InvoicesTable
+                  columns={invoiceTableColumns}
+                  data={filteredInvoices}
+                  loading={invoicesTable.pageResponseQuery.isLoading}
+                  error={
+                    invoicesTable.pageResponseQuery.isError
+                      ? getQueryErrorMessage(
+                          invoicesTable.pageResponseQuery.error,
+                          "Não foi possível carregar as faturas deste cartão.",
+                        )
+                      : null
+                  }
+                  pageResponse={invoicesTable.pageResponseQuery.data ?? null}
+                  sortState={{ sortKey: invoicesTable.sortKey, direction: invoicesTable.direction }}
+                  onSortChange={invoicesTable.onSortChange}
+                  onPageChange={invoicesTable.onPageChange}
+                  onPageSizeChange={invoicesTable.onPageSizeChange}
+                />
               </CardContent>
             </Card>
+            ) : null}
 
+            {activeTab === "expenses" ? (
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Detalhe da fatura selecionada</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {!selectedInvoiceId ? (
-                  <SectionErrorState message="Selecione uma fatura para ver o detalhe." />
-                ) : invoiceDetailsQuery.isLoading ? (
-                  <SectionLoadingState message="Carregando detalhe da fatura..." />
-                ) : invoiceDetailsQuery.isError || !invoiceDetailsQuery.data ? (
-                  <SectionErrorState
-                    message={getQueryErrorMessage(invoiceDetailsQuery.error, "Não foi possível carregar o detalhe da fatura.")}
-                  />
-                ) : (
-                  <InvoiceDetailsPanel
-                    invoice={invoiceDetailsQuery.data}
-                    closing={closeInvoiceMutation.isPending}
-                    onCloseInvoice={() => setCloseConfirmOpen(true)}
-                    onPayInvoice={() => setPaymentModalOpen(true)}
-                    onEditCharges={() => setChargesModalOpen(true)}
-                    onEditExpenses={() => setExpenseFilters((prev) => ({ ...prev, invoiceId: invoiceDetailsQuery.data.id }))}
-                  />
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
+              <CardHeader className="min-h-[68px] pb-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <CardTitle className="text-base">Lançamentos do cartão</CardTitle>
                   <Button
@@ -621,26 +595,24 @@ export default function CreditCardManagerPage() {
                 <div className="grid gap-3 xl:grid-cols-4">
                   <div className="space-y-1.5">
                     <Label htmlFor="manager-expenses-filter-invoice">Fatura</Label>
-                    <FilterSelect
-                      id="manager-expenses-filter-invoice"
-                      value={expenseFilters.invoiceId}
-                      onChange={(value) => setExpenseFilters((prev) => ({ ...prev, invoiceId: value }))}
+                    <FilterMultiSelect
+                      value={expenseFilters.invoiceIds}
+                      onChange={(value) => setExpenseFilters((prev) => ({ ...prev, invoiceIds: value }))}
+                      placeholder="Selecione uma ou mais faturas"
                       options={[
-                        { value: "", label: "Todas" },
-                        ...allInvoicesByCard.map((invoice) => ({ value: invoice.id, label: invoice.referenceLabel })),
+                        ...visibleInvoicesByCard.map((invoice) => ({ value: invoice.id, label: invoice.referenceLabel })),
                       ]}
                     />
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="manager-expenses-filter-category">Categoria</Label>
-                    <FilterSelect
-                      id="manager-expenses-filter-category"
-                      value={expenseFilters.categoryId}
+                    <FilterMultiSelect
+                      value={expenseFilters.categoryIds}
                       onChange={(value) =>
-                        setExpenseFilters((prev) => ({ ...prev, categoryId: value, subCategoryId: "" }))
+                        setExpenseFilters((prev) => ({ ...prev, categoryIds: value, subCategoryIds: [] }))
                       }
+                      placeholder="Selecione uma ou mais categorias"
                       options={[
-                        { value: "", label: "Todas" },
                         ...categories
                           .filter((item) => item.movementType !== "INCOME")
                           .map((item) => ({ value: item.id, label: item.name })),
@@ -649,15 +621,14 @@ export default function CreditCardManagerPage() {
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="manager-expenses-filter-subcategory">Subcategoria</Label>
-                    <FilterSelect
-                      id="manager-expenses-filter-subcategory"
-                      value={expenseFilters.subCategoryId}
-                      onChange={(value) => setExpenseFilters((prev) => ({ ...prev, subCategoryId: value }))}
+                    <FilterMultiSelect
+                      value={expenseFilters.subCategoryIds}
+                      onChange={(value) => setExpenseFilters((prev) => ({ ...prev, subCategoryIds: value }))}
+                      placeholder="Selecione uma ou mais subcategorias"
                       options={[
-                        { value: "", label: "Todas" },
                         ...availableSubCategories.map((item) => ({ value: item.id, label: item.name })),
                       ]}
-                      disabled={!expenseFilters.categoryId}
+                      disabled={expenseFilters.categoryIds.length === 0}
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -672,7 +643,7 @@ export default function CreditCardManagerPage() {
 
                 <CreditCardExpensesTable
                   columns={expenseColumns}
-                  data={expensesTable.pageResponseQuery.data?.content ?? []}
+                  data={filteredExpenses}
                   loading={expensesTable.pageResponseQuery.isLoading}
                   error={
                     expensesTable.pageResponseQuery.isError
@@ -689,35 +660,47 @@ export default function CreditCardManagerPage() {
                   onPageSizeChange={expensesTable.onPageSizeChange}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Total dos lançamentos exibidos: {formatCurrency(expensesTotal, "BRL")}
+                  Total dos lançamentos exibidos: {formatCurrency(filteredExpensesTotal, "BRL")}
                 </p>
               </CardContent>
             </Card>
+            ) : null}
           </>
         )}
       </div>
 
       <DetailsDrawer
-        isOpen={historyOpen}
-        onClose={() => setHistoryOpen(false)}
-        title="Histórico de faturas"
-        description="Faturas antigas, fechadas ou quitadas deste cartão."
-        widthClassName="w-full sm:max-w-4xl"
+        isOpen={invoiceDetailsOpen}
+        onClose={() => setInvoiceDetailsOpen(false)}
+        title={invoiceDetailsQuery.data?.referenceLabel ?? selectedInvoicePreview?.referenceLabel ?? "Detalhes da fatura"}
+        description="Dashboard e gestão operacional da fatura selecionada."
+        widthClassName="w-full sm:max-w-5xl"
       >
-        <DataTable
-          columns={historyColumns}
-          data={historyInvoices}
-          loading={false}
-          error={null}
-          pageResponse={historyPage}
-          sortState={{ sortKey: "dueDate", direction: "desc" }}
-          onSortChange={() => undefined}
-          onPageChange={() => undefined}
-          onPageSizeChange={() => undefined}
-          getRowKey={(row) => row.id}
-          emptyTitle="Sem histórico para este cartão"
-          emptyDescription="As faturas antigas fechadas/quitadas aparecerão aqui."
-        />
+        {!selectedInvoiceId ? (
+          <SectionErrorState message="Selecione uma fatura para ver o detalhe." />
+        ) : invoiceDetailsQuery.isLoading ? (
+          <SectionLoadingState message="Carregando detalhe da fatura..." />
+        ) : invoiceDetailsQuery.isError || !invoiceDetailsQuery.data ? (
+          <SectionErrorState
+            message={getQueryErrorMessage(invoiceDetailsQuery.error, "Não foi possível carregar o detalhe da fatura.")}
+          />
+        ) : (
+          <InvoiceDetailsPanel
+            invoice={invoiceDetailsQuery.data}
+            closing={closeInvoiceMutation.isPending}
+            onCloseInvoice={() => setCloseConfirmOpen(true)}
+            onPayInvoice={() => setPaymentModalOpen(true)}
+            onEditCharges={() => setChargesModalOpen(true)}
+            onDeletePayment={(payment) => {
+              setPaymentToDelete(payment);
+              setDeletePaymentConfirmOpen(true);
+            }}
+            deletingPaymentId={
+              deleteInvoicePaymentMutation.isPending ? (paymentToDelete?.id ?? null) : null
+            }
+            onEditExpenses={() => setExpenseFilters((prev) => ({ ...prev, invoiceId: invoiceDetailsQuery.data.id }))}
+          />
+        )}
       </DetailsDrawer>
 
       <ConfirmDialog
@@ -739,29 +722,6 @@ export default function CreditCardManagerPage() {
         }}
       />
 
-      <ConfirmDialog
-        open={historyReopenConfirmOpen}
-        onOpenChange={setHistoryReopenConfirmOpen}
-        title="Reabrir fatura"
-        description="Confirma a reabertura desta fatura no histórico?"
-        confirmText="Reabrir fatura"
-        isConfirming={reopenInvoiceMutation.isPending}
-        onConfirm={async () => {
-          if (!historyTargetInvoice?.id) return;
-          try {
-            await reopenInvoiceMutation.mutateAsync(historyTargetInvoice.id);
-            success("Fatura reaberta com sucesso.");
-            setHistoryReopenConfirmOpen(false);
-            setHistoryOpen(false);
-            setSelectedInvoiceId(historyTargetInvoice.id);
-            setHistoryTargetInvoice(null);
-            await refreshInvoices();
-          } catch (err) {
-            error(getQueryErrorMessage(err, "Não foi possível reabrir a fatura."));
-          }
-        }}
-      />
-
       <InvoicePaymentModal
         open={paymentModalOpen}
         onOpenChange={setPaymentModalOpen}
@@ -775,6 +735,34 @@ export default function CreditCardManagerPage() {
         onOpenChange={setChargesModalOpen}
         invoice={invoiceDetailsQuery.data ?? null}
         onSaved={refreshInvoices}
+      />
+
+      <ConfirmDialog
+        open={deletePaymentConfirmOpen}
+        onOpenChange={(open) => {
+          setDeletePaymentConfirmOpen(open);
+          if (!open) setPaymentToDelete(null);
+        }}
+        title="Excluir pagamento"
+        description="Confirma a exclusão deste pagamento? O saldo da conta será estornado e a fatura recalculada."
+        confirmText="Excluir pagamento"
+        confirmVariant="destructive"
+        isConfirming={deleteInvoicePaymentMutation.isPending}
+        onConfirm={async () => {
+          if (!selectedInvoiceId || !paymentToDelete) return;
+          try {
+            await deleteInvoicePaymentMutation.mutateAsync({
+              invoiceId: selectedInvoiceId,
+              paymentId: paymentToDelete.id,
+            });
+            success("Pagamento excluído com sucesso.");
+            setPaymentToDelete(null);
+            await refreshInvoices();
+          } catch (err) {
+            const apiError = extractApiError(err);
+            error(apiError?.detail ?? "Não foi possível excluir o pagamento.");
+          }
+        }}
       />
 
       <CreditCardExpenseFormModal
@@ -799,21 +787,59 @@ export default function CreditCardManagerPage() {
       <ConfirmDialog
         open={cancelExpenseOpen}
         onOpenChange={setCancelExpenseOpen}
-        title="Cancelar lançamento"
-        description="Confirma o cancelamento deste lançamento no cartão?"
-        confirmText="Confirmar cancelamento"
+        title="Excluir lançamento"
+        description="Confirma a exclusão deste lançamento? A ação só é permitida para faturas em aberto."
+        confirmText="Confirmar exclusão"
         confirmVariant="destructive"
         isConfirming={cancelExpenseMutation.isPending}
         onConfirm={async () => {
           if (!cancelingExpense) return;
           try {
             await cancelExpenseMutation.mutateAsync(cancelingExpense.id);
-            success("Lançamento cancelado com sucesso.");
+            success("Lançamento excluído com sucesso.");
             setCancelingExpense(null);
             await refreshExpenses();
           } catch (err) {
             const apiError = extractApiError(err);
-            error(apiError?.detail ?? "Não foi possível cancelar este lançamento.");
+            error(apiError?.detail ?? "Não foi possível excluir este lançamento.");
+          }
+        }}
+      />
+
+      <CreditCardFormModal
+        open={cardEditModalOpen && !!card}
+        onOpenChange={(open) => {
+          setCardEditModalOpen(open);
+          if (!open) void cardQuery.refetch();
+        }}
+        creditCard={cardEditModalOpen && card ? card : null}
+      />
+
+      <ConfirmDialog
+        open={cardDeleteConfirmOpen && !!card}
+        onOpenChange={(open) => {
+          if (!open) setCardDeleteConfirmOpen(false);
+        }}
+        title="Excluir cartão"
+        description={
+          card
+            ? `Excluir permanentemente o cartão "${card.name}"? A exclusão só é permitida se não houver lançamentos — o servidor valida isso.`
+            : ""
+        }
+        cancelText="Cancelar"
+        confirmText="Excluir"
+        confirmVariant="destructive"
+        isConfirming={deleteCardMutation.isPending}
+        onConfirm={async () => {
+          if (!card) return;
+          try {
+            await deleteCardMutation.mutateAsync(card.id);
+            success("Cartão excluído com sucesso.");
+            setCardDeleteConfirmOpen(false);
+            router.push("/credit-cards");
+          } catch (err) {
+            const apiError = extractApiError(err);
+            error(apiError?.detail ?? "Não foi possível excluir o cartão.");
           }
         }}
       />

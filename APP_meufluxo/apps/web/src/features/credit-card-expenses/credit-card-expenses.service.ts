@@ -39,6 +39,23 @@ function toEntryType(value: unknown): CreditCardExpense["entryType"] {
 
 export function normalizeCreditCardExpenseFromApi(raw: unknown): CreditCardExpense {
   const r = raw as Record<string, unknown>;
+  const subId = r.subCategoryId ?? r.subcategoryId;
+  const subName = r.subCategoryName ?? r.subcategoryName;
+  const amountValue = r.totalAmount ?? r.amount;
+  const installmentNumberRaw = r.installmentNumber ?? r.installment_number;
+  const installmentCountRaw = r.installmentCount ?? r.installment_count;
+  const installmentNumber =
+    installmentNumberRaw != null && Number.isFinite(Number(installmentNumberRaw))
+      ? Number(installmentNumberRaw)
+      : null;
+  const installmentCount =
+    installmentCountRaw != null && Number.isFinite(Number(installmentCountRaw))
+      ? Math.max(1, Number(installmentCountRaw))
+      : 1;
+  const installmentLabelRaw =
+    r.installmentLabel != null && String(r.installmentLabel).trim() !== ""
+      ? String(r.installmentLabel).trim()
+      : null;
   return {
     id: toStringOrEmpty(r.id),
     creditCardId: toStringOrEmpty(r.creditCardId),
@@ -47,15 +64,18 @@ export function normalizeCreditCardExpenseFromApi(raw: unknown): CreditCardExpen
     invoiceReference: r.invoiceReference != null ? String(r.invoiceReference) : null,
     categoryId: toStringOrEmpty(r.categoryId),
     categoryName: toStringOrEmpty(r.categoryName) || "—",
-    subCategoryId: r.subCategoryId != null ? String(r.subCategoryId) : null,
-    subCategoryName: r.subCategoryName != null ? String(r.subCategoryName) : null,
+    subCategoryId: subId != null ? String(subId) : null,
+    subCategoryName: subName != null ? String(subName) : null,
     description: toStringOrEmpty(r.description),
     purchaseDate: toStringOrEmpty(r.purchaseDate),
-    installmentLabel: r.installmentLabel != null ? String(r.installmentLabel) : null,
-    totalAmount: toNumber(r.totalAmount),
+    installmentLabel:
+      installmentLabelRaw ??
+      (installmentNumber != null ? `${installmentNumber}/${installmentCount}` : null),
+    installmentNumber,
+    totalAmount: toNumber(amountValue),
     notes: r.notes != null ? String(r.notes) : null,
     entryType: toEntryType(r.entryType),
-    installmentCount: Math.max(1, toNumber(r.installmentCount) || 1),
+    installmentCount,
     status: toStatus(r.status),
   };
 }
@@ -170,8 +190,12 @@ export async function fetchCreditCardExpensesPage(
 export async function createCreditCardExpense(
   request: CreditCardExpenseCreateRequest,
 ): Promise<CreditCardExpense> {
-  const created = await api.creditCardExpenses.create(request);
-  return normalizeCreditCardExpenseFromApi(created);
+  const response = await api.creditCardExpenses.create(request);
+  const first = response.expenses?.[0];
+  if (first && typeof first === "object") {
+    return normalizeCreditCardExpenseFromApi(first);
+  }
+  return normalizeCreditCardExpenseFromApi(response as unknown);
 }
 
 export async function updateCreditCardExpense(

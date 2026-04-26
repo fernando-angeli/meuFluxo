@@ -6,9 +6,8 @@ export const mockCreditCards: CreditCard[] = [
   {
     id: "cc_1",
     name: "Nubank Platinum",
-    cardDisplayName: "Nubank Platinum - MASTERCARD",
-    brand: "MASTERCARD",
-    brandCard: "MASTERCARD",
+    brand: "Mastercard",
+    brandCard: "Mastercard",
     lastFourDigits: "1234",
     creditLimit: 8000,
     closingDay: 5,

@@ -1,4 +1,5 @@
 import type { ID } from "./index";
+import type { BrandCard } from "./card-brands";
 
 export type InvoiceStatus =
   | "OPEN"
@@ -11,6 +12,7 @@ export type CreditCardInvoiceListItem = {
   id: ID;
   creditCardId: ID;
   creditCardName: string;
+  creditCardBrand?: BrandCard | null;
   cardDisplayName?: string | null;
   referenceLabel: string;
   periodStart?: string | null;
@@ -41,6 +43,8 @@ export type InvoiceExpenseItem = {
   subCategoryName: string | null;
   purchaseDate: string;
   installmentLabel: string | null;
+  installmentNumber?: number | null;
+  installmentCount?: number | null;
   amount: number;
   status: InvoiceStatus | "OPEN" | "INVOICED" | "PAID" | "CANCELED";
 };
@@ -102,8 +106,8 @@ export type CreditCardInvoiceDetails = {
   id: ID;
   creditCardId: ID;
   creditCardName: string;
+  creditCardBrand: BrandCard | null;
   cardDisplayName: string | null;
-  creditCardBrand: "VISA" | "MASTERCARD" | null;
   closingDay: number | null;
   dueDay: number | null;
   referenceYear: number | null;

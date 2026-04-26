@@ -115,6 +115,9 @@ export function FilterMultiSelect({
 
   const handleClearPending = () => {
     setPending([]);
+    onChange([]);
+    setOpen(false);
+    setSearch("");
   };
 
   const removeChip = (id: string) => {

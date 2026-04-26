@@ -37,6 +37,7 @@ export {
   createCreditCardExpensesApi,
   type CreditCardExpensesApi,
   type CreditCardExpensesListParams,
+  type CreditCardExpenseCreateApiResponse,
 } from "./credit-card-expenses";
 export {
   createInvoicesApi,

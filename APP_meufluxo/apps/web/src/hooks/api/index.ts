@@ -13,6 +13,7 @@ export {
   useCreateCreditCard,
   useUpdateCreditCard,
   useUpdateCreditCardActive,
+  useDeleteCreditCard,
 } from "./use-credit-card-mutations";
 export {
   useCreateCreditCardExpense,
@@ -61,6 +62,7 @@ export {
 export {
   useCloseInvoice,
   useCreateInvoicePayment,
+  useDeleteInvoicePayment,
   useReopenInvoice,
   useUpdateInvoiceCharges,
 } from "./use-invoice-mutations";

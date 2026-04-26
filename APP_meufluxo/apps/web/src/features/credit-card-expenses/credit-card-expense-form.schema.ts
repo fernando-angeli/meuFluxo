@@ -13,7 +13,7 @@ export const creditCardExpenseFormSchema = z
     subcategoryId: z.number().nullable(),
     totalAmount: z.string().min(1, "Informe o valor da compra."),
     entryType: z.enum(["SINGLE", "INSTALLMENT"]),
-    installmentCount: z.number().min(2, "Mínimo de 2 parcelas.").max(99, "Máximo de 99 parcelas."),
+    installmentCount: z.number().min(1, "Informe a quantidade de parcelas.").max(99, "Máximo de 99 parcelas."),
     notes: z.string().max(250, "Observação deve ter no máximo 250 caracteres.").optional(),
   })
   .superRefine((values, ctx) => {

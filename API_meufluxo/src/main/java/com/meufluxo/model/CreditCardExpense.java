@@ -37,8 +37,8 @@ public class CreditCardExpense extends UserOwnedEntity {
     @JoinColumn(name = "category_id", nullable = false)
     private Category category;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "subcategory_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "subcategory_id", nullable = true)
     private SubCategory subcategory;
 
     @Column(nullable = false, precision = 15, scale = 2)

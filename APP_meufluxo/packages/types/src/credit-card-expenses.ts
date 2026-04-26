@@ -21,6 +21,7 @@ export type CreditCardExpense = {
   description: string;
   purchaseDate: string;
   installmentLabel: string | null;
+  installmentNumber?: number | null;
   totalAmount: number;
   notes: string | null;
   entryType: CreditCardExpenseEntryType;
@@ -28,6 +29,7 @@ export type CreditCardExpense = {
   status: CreditCardExpenseStatus;
 };
 
+/** Corpo enviado ao POST /credit-card-expenses (o backend não usa entryType). */
 export type CreditCardExpenseCreateRequest = {
   creditCardId: number;
   description: string;
@@ -35,19 +37,16 @@ export type CreditCardExpenseCreateRequest = {
   categoryId: number;
   subcategoryId?: number | null;
   totalAmount: number;
-  entryType: CreditCardExpenseEntryType;
   installmentCount?: number | null;
   notes?: string | null;
 };
 
+/** Corpo enviado ao PUT /credit-card-expenses/:id (valor da parcela/linha, alinhado à API Java). */
 export type CreditCardExpenseUpdateRequest = {
-  creditCardId: number;
   description: string;
   purchaseDate: string;
   categoryId: number;
   subcategoryId?: number | null;
-  totalAmount: number;
-  entryType: CreditCardExpenseEntryType;
-  installmentCount?: number | null;
+  amount: number;
   notes?: string | null;
 };

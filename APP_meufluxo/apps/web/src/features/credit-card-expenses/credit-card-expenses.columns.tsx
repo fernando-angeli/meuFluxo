@@ -19,12 +19,32 @@ function formatDate(value: string): string {
   }
 }
 
+function formatInstallmentDisplay(expense: CreditCardExpense): string {
+  if (expense.installmentNumber != null) {
+    return `${expense.installmentNumber}/${Math.max(1, expense.installmentCount || 1)}`;
+  }
+
+  const rawLabel = expense.installmentLabel?.trim();
+  if (!rawLabel) return "1/1";
+  const normalized = rawLabel.toLowerCase();
+  if (normalized === "única" || normalized === "unica") return "1/1";
+  if (rawLabel.includes("/")) return rawLabel;
+  return "1/1";
+}
+
 export function getCreditCardExpensesColumns({
   renderActions,
 }: {
   renderActions: (expense: CreditCardExpense) => ReactNode;
 }): Array<DataTableColumn<CreditCardExpense>> {
   return [
+    {
+      key: "invoiceReference",
+      title: "Fatura",
+      sortable: true,
+      sortKey: "purchaseDate",
+      render: (expense) => expense.invoiceReference ?? "—",
+    },
     {
       key: "description",
       title: "Descrição",
@@ -34,18 +54,16 @@ export function getCreditCardExpensesColumns({
       cellClassName: "font-medium",
     },
     {
-      key: "creditCardName",
-      title: "Cartão",
-      dataIndex: "creditCardName",
-      sortable: true,
-      sortKey: "creditCardName",
+      key: "installmentLabel",
+      title: "Parcela",
+      render: (expense) => formatInstallmentDisplay(expense),
     },
     {
-      key: "invoiceReference",
-      title: "Fatura",
+      key: "purchaseDate",
+      title: "Vencimento",
       sortable: true,
-      sortKey: "invoiceReference",
-      render: (expense) => expense.invoiceReference ?? "—",
+      sortKey: "purchaseDate",
+      render: (expense) => formatDate(expense.purchaseDate),
     },
     {
       key: "categoryName",
@@ -60,21 +78,6 @@ export function getCreditCardExpensesColumns({
       sortable: true,
       sortKey: "subCategoryName",
       render: (expense) => expense.subCategoryName ?? "—",
-    },
-    {
-      key: "purchaseDate",
-      title: "Data da compra",
-      sortable: true,
-      sortKey: "purchaseDate",
-      render: (expense) => formatDate(expense.purchaseDate),
-    },
-    {
-      key: "installmentLabel",
-      title: "Parcela",
-      render: (expense) =>
-        expense.entryType === "INSTALLMENT"
-          ? expense.installmentLabel ?? `1/${expense.installmentCount}`
-          : "Única",
     },
     {
       key: "totalAmount",
