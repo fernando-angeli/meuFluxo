@@ -4,6 +4,7 @@ import com.meufluxo.common.exception.BusinessException;
 import com.meufluxo.dto.creditCardExpense.CreditCardExpenseCreateResponse;
 import com.meufluxo.dto.creditCardExpense.CreditCardExpenseRequest;
 import com.meufluxo.dto.creditCardExpense.CreditCardExpenseResponse;
+import com.meufluxo.enums.BrandCard;
 import com.meufluxo.mapper.CreditCardExpenseMapper;
 import com.meufluxo.model.Category;
 import com.meufluxo.model.CreditCard;
@@ -77,6 +78,7 @@ class CreditCardExpenseServiceTest {
         CreditCard card = new CreditCard();
         card.setId(1L);
         card.setName("Nubank");
+        card.setBrand(BrandCard.MASTERCARD);
 
         Category category = new Category();
         category.setId(2L);
@@ -109,7 +111,7 @@ class CreditCardExpenseServiceTest {
                     e.getId(),
                     1L,
                     "Nubank",
-                    "Nubank",
+                    BrandCard.MASTERCARD,
                     11L,
                     "04/2026",
                     e.getDescription(),
@@ -159,7 +161,7 @@ class CreditCardExpenseServiceTest {
         expense.setInvoice(new CreditCardInvoice());
         when(creditCardExpenseRepository.findByIdAndWorkspaceId(20L, 10L)).thenReturn(Optional.of(expense));
         doThrow(new BusinessException("A operação só é permitida para lançamentos em faturas com status OPEN."))
-                .when(creditCardInvoiceService).assertInvoiceOpen(any(CreditCardInvoice.class));
+                .when(creditCardInvoiceService).assertInvoiceAllowsExpenseChanges(any(CreditCardInvoice.class));
 
         assertThrows(BusinessException.class, () -> service.cancel(20L));
     }

@@ -3,7 +3,18 @@ package com.meufluxo.enums;
 public enum BrandCard {
 
     VISA("Visa"),
-    MASTERCARD("Masters");
+    MASTERCARD("Mastercard"),
+    ELO("Elo"),
+    AMERICAN_EXPRESS("American Express"),
+    HIPERCARD("Hipercard"),
+    DINERS_CLUB("Diners Club"),
+    DISCOVER("Discover"),
+    BANRICOMPRAS("Banricompras"),
+    CABAL("Cabal"),
+    AURA("Aura"),
+    JCB("JCB"),
+    UNIONPAY("UnionPay"),
+    OUTRO("Outro");
 
     private final String labelPtBr;
 

@@ -1,6 +1,7 @@
 package com.meufluxo.dto.creditCardExpense;
 
 import com.meufluxo.enums.CreditCardExpenseStatus;
+import com.meufluxo.enums.BrandCard;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -11,7 +12,7 @@ public record CreditCardExpenseResponse(
         Long id,
         Long creditCardId,
         String creditCardName,
-        String cardDisplayName,
+        BrandCard creditCardBrand,
         Long invoiceId,
         String invoiceReference,
         String description,

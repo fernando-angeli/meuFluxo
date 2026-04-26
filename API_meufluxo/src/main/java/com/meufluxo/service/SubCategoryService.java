@@ -11,6 +11,7 @@ import com.meufluxo.model.Category;
 import com.meufluxo.model.SubCategory;
 import com.meufluxo.repository.CashMovementRepository;
 import com.meufluxo.repository.SubCategoryRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -18,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class SubCategoryService extends BaseUserService {
+    private static final String DEFAULT_SUBCATEGORY_NAME = "Geral";
 
     private final SubCategoryRepository subCategoryRepository;
     private final CashMovementRepository cashMovementRepository;
@@ -142,6 +144,32 @@ public class SubCategoryService extends BaseUserService {
     public void existsId(Long id) {
         subCategoryRepository.findByIdAndWorkspaceId(id, getCurrentWorkspaceId())
                 .orElseThrow(() -> new NotFoundException("SubCategoria não encontrada com ID: " + id));
+    }
+
+    @Transactional
+    public SubCategory getOrCreateDefaultForCategory(Category category) {
+        Long workspaceId = getCurrentWorkspaceId();
+        return subCategoryRepository
+                .findByNameIgnoreCaseAndCategoryIdAndWorkspaceId(DEFAULT_SUBCATEGORY_NAME, category.getId(), workspaceId)
+                .orElseGet(() -> createDefaultSubCategory(category, workspaceId));
+    }
+
+    private SubCategory createDefaultSubCategory(Category category, Long workspaceId) {
+        SubCategory subCategory = new SubCategory();
+        subCategory.setName(DEFAULT_SUBCATEGORY_NAME);
+        subCategory.setDescription("Subcategoria padrão gerada automaticamente.");
+        subCategory.setCategory(category);
+        subCategory.setWorkspace(getCurrentWorkspace());
+
+        try {
+            SubCategory saved = subCategoryRepository.saveAndFlush(subCategory);
+            workspaceSyncStateService.incrementCategoriesVersion(workspaceId);
+            return saved;
+        } catch (DataIntegrityViolationException e) {
+            return subCategoryRepository
+                    .findByNameIgnoreCaseAndCategoryIdAndWorkspaceId(DEFAULT_SUBCATEGORY_NAME, category.getId(), workspaceId)
+                    .orElseThrow(() -> e);
+        }
     }
 
     private static String trimToNull(String value) {

@@ -140,7 +140,8 @@ public class CreditCardInvoiceService extends BaseUserService {
                         p.getAccount() != null ? p.getAccount().getName() : null,
                         p.getPaymentDate(),
                         p.getAmount(),
-                        p.getNotes()
+                        p.getNotes(),
+                        p.getMovement() != null ? p.getMovement().getId() : null
                 ))
                 .toList();
 
@@ -202,9 +203,11 @@ public class CreditCardInvoiceService extends BaseUserService {
     @Transactional
     public CreditCardInvoice recalculateInvoiceTotals(Long invoiceId) {
         CreditCardInvoice invoice = findByIdOrThrow(invoiceId);
-        BigDecimal purchasesAmount = creditCardInvoiceRepository.sumOpenExpensesByInvoiceId(invoiceId);
+        BigDecimal billedAmount = creditCardInvoiceRepository.sumOpenExpensesByInvoiceId(invoiceId);
+        BigDecimal purchasesAmount = creditCardExpenseRepository
+                .sumPurchasesStartedInInvoice(invoiceId, getCurrentWorkspaceId());
         BigDecimal paidAmount = creditCardInvoicePaymentRepository.sumActivePaymentsByInvoiceId(invoiceId);
-        BigDecimal totalAmount = purchasesAmount
+        BigDecimal totalAmount = billedAmount
                 .add(nvl(invoice.getPreviousBalance()))
                 .add(nvl(invoice.getRevolvingInterest()))
                 .add(nvl(invoice.getLateFee()))
@@ -214,7 +217,7 @@ public class CreditCardInvoiceService extends BaseUserService {
             remaining = BigDecimal.ZERO;
         }
 
-        invoice.setPurchasesAmount(purchasesAmount);
+        invoice.setPurchasesAmount(nvl(purchasesAmount));
         invoice.setPaidAmount(paidAmount);
         invoice.setTotalAmount(totalAmount);
         invoice.setRemainingAmount(remaining);
@@ -222,10 +225,29 @@ public class CreditCardInvoiceService extends BaseUserService {
         return creditCardInvoiceRepository.save(invoice);
     }
 
-    public void assertInvoiceOpen(CreditCardInvoice invoice) {
-        if (invoice.getStatus() != CreditCardInvoiceStatus.OPEN) {
-            throw new BusinessException("A operação só é permitida para lançamentos em faturas com status OPEN.");
+    public void assertInvoiceAllowsExpenseChanges(CreditCardInvoice invoice) {
+        if (invoice.getStatus() == CreditCardInvoiceStatus.OPEN) {
+            return;
         }
+
+        // Permite ajustes/lancamentos em faturas pagas/parciais antes do fechamento,
+        // cobrindo o caso de pagamento antecipado com nova compra no mesmo ciclo.
+        if (
+                invoice.getClosingDate() != null &&
+                LocalDate.now().isBefore(invoice.getClosingDate()) &&
+                (invoice.getStatus() == CreditCardInvoiceStatus.PAID
+                        || invoice.getStatus() == CreditCardInvoiceStatus.PARTIALLY_PAID)
+        ) {
+            return;
+        }
+
+        throw new BusinessException(
+                "Fatura fechada para lancamentos. Novos lancamentos so sao permitidos ate o dia de fechamento."
+        );
+    }
+
+    public BigDecimal calculateOutstandingAmount(Long creditCardId) {
+        return nvl(creditCardInvoiceRepository.sumOutstandingByCreditCardId(creditCardId, getCurrentWorkspaceId()));
     }
 
     private CreditCardInvoice createInvoice(
@@ -263,7 +285,13 @@ public class CreditCardInvoiceService extends BaseUserService {
                         prevRef.getMonthValue(),
                         getCurrentWorkspaceId()
                 )
-                .map(previous -> nvl(previous.getRemainingAmount()))
+                .map(previous -> {
+                    boolean shouldCarryOver =
+                            previous.getStatus() == CreditCardInvoiceStatus.PARTIALLY_PAID
+                                    && nvl(previous.getPaidAmount()).compareTo(BigDecimal.ZERO) > 0
+                                    && nvl(previous.getRemainingAmount()).compareTo(BigDecimal.ZERO) > 0;
+                    return shouldCarryOver ? nvl(previous.getRemainingAmount()) : BigDecimal.ZERO;
+                })
                 .orElse(BigDecimal.ZERO);
     }
 

@@ -3,13 +3,21 @@ package com.meufluxo.service;
 import com.meufluxo.common.dto.PageResponse;
 import com.meufluxo.common.exception.BusinessException;
 import com.meufluxo.common.exception.NotFoundException;
+import com.meufluxo.dto.cashMovement.CashMovementRequest;
+import com.meufluxo.dto.creditCardInvoicePayment.CreditCardInvoicePaymentByInvoiceRequest;
 import com.meufluxo.dto.creditCardInvoicePayment.CreditCardInvoicePaymentRequest;
 import com.meufluxo.dto.creditCardInvoicePayment.CreditCardInvoicePaymentResponse;
+import com.meufluxo.enums.MovementType;
+import com.meufluxo.enums.PaymentMethod;
 import com.meufluxo.mapper.CreditCardInvoicePaymentMapper;
 import com.meufluxo.model.Account;
+import com.meufluxo.model.Category;
 import com.meufluxo.model.CreditCardInvoice;
 import com.meufluxo.model.CreditCardInvoicePayment;
+import com.meufluxo.model.SubCategory;
+import com.meufluxo.repository.CategoryRepository;
 import com.meufluxo.repository.CreditCardInvoicePaymentRepository;
+import com.meufluxo.repository.SubCategoryRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -23,11 +31,16 @@ import java.util.Optional;
 
 @Service
 public class CreditCardInvoicePaymentService extends BaseUserService {
+    private static final String INVOICE_PAYMENT_CATEGORY_NAME = "Pagamento de fatura de cartao";
+    private static final String DEFAULT_SUBCATEGORY_NAME = "Geral";
 
     private final CreditCardInvoicePaymentRepository creditCardInvoicePaymentRepository;
     private final CreditCardInvoicePaymentMapper creditCardInvoicePaymentMapper;
     private final CreditCardInvoiceService creditCardInvoiceService;
     private final AccountService accountService;
+    private final CashMovementService cashMovementService;
+    private final CategoryRepository categoryRepository;
+    private final SubCategoryRepository subCategoryRepository;
     private final WorkspaceSyncStateService workspaceSyncStateService;
 
     public CreditCardInvoicePaymentService(
@@ -36,6 +49,9 @@ public class CreditCardInvoicePaymentService extends BaseUserService {
             CreditCardInvoicePaymentMapper creditCardInvoicePaymentMapper,
             CreditCardInvoiceService creditCardInvoiceService,
             AccountService accountService,
+            CashMovementService cashMovementService,
+            CategoryRepository categoryRepository,
+            SubCategoryRepository subCategoryRepository,
             WorkspaceSyncStateService workspaceSyncStateService
     ) {
         super(currentUserService);
@@ -43,6 +59,9 @@ public class CreditCardInvoicePaymentService extends BaseUserService {
         this.creditCardInvoicePaymentMapper = creditCardInvoicePaymentMapper;
         this.creditCardInvoiceService = creditCardInvoiceService;
         this.accountService = accountService;
+        this.cashMovementService = cashMovementService;
+        this.categoryRepository = categoryRepository;
+        this.subCategoryRepository = subCategoryRepository;
         this.workspaceSyncStateService = workspaceSyncStateService;
     }
 
@@ -103,6 +122,7 @@ public class CreditCardInvoicePaymentService extends BaseUserService {
         payment.setPaymentDate(request.paymentDate());
         payment.setAmount(request.amount().setScale(2, java.math.RoundingMode.HALF_UP));
         payment.setNotes(trimToNull(request.notes()));
+        payment.setMovement(createPaymentMovement(invoice, account, request));
 
         CreditCardInvoicePayment saved = creditCardInvoicePaymentRepository.save(payment);
         creditCardInvoiceService.recalculateInvoiceTotals(invoice.getId());
@@ -110,9 +130,39 @@ public class CreditCardInvoicePaymentService extends BaseUserService {
         return creditCardInvoicePaymentMapper.toResponse(saved);
     }
 
+    @Transactional
+    public CreditCardInvoicePaymentResponse createForInvoice(Long invoiceId, CreditCardInvoicePaymentByInvoiceRequest request) {
+        return create(new CreditCardInvoicePaymentRequest(
+                invoiceId,
+                request.accountId(),
+                request.paymentDate(),
+                request.amount(),
+                request.notes()
+        ));
+    }
+
     public CreditCardInvoicePayment findByIdOrThrow(Long id) {
         return creditCardInvoicePaymentRepository.findByIdAndWorkspaceId(id, getCurrentWorkspaceId())
                 .orElseThrow(() -> new NotFoundException("Pagamento de fatura não encontrado com ID: " + id));
+    }
+
+    @Transactional
+    public void delete(Long paymentId) {
+        CreditCardInvoicePayment payment = findByIdOrThrow(paymentId);
+        Long invoiceId = payment.getInvoice().getId();
+        Long movementId = payment.getMovement() != null ? payment.getMovement().getId() : null;
+
+        // Remove primeiro o vínculo/pagamento para não violar FK do movement_id
+        // ao excluir o movimento de caixa.
+        creditCardInvoicePaymentRepository.delete(payment);
+        creditCardInvoicePaymentRepository.flush();
+
+        if (movementId != null) {
+            cashMovementService.delete(movementId);
+        }
+
+        creditCardInvoiceService.recalculateInvoiceTotals(invoiceId);
+        workspaceSyncStateService.incrementCreditCardsVersion(getCurrentWorkspaceId());
     }
 
     private void validateDateRange(LocalDate paymentDateStart, LocalDate paymentDateEnd) {
@@ -127,5 +177,60 @@ public class CreditCardInvoicePaymentService extends BaseUserService {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private com.meufluxo.model.CashMovement createPaymentMovement(
+            CreditCardInvoice invoice,
+            Account account,
+            CreditCardInvoicePaymentRequest request
+    ) {
+        SubCategory subCategory = resolveInvoicePaymentSubCategory();
+        var movementResponse = cashMovementService.create(new CashMovementRequest(
+                request.amount(),
+                MovementType.EXPENSE,
+                PaymentMethod.INVOICE_CREDIT_CARD,
+                request.paymentDate(),
+                subCategory.getId(),
+                account.getId(),
+                buildMovementDescription(invoice),
+                trimToNull(request.notes())
+        ));
+        return cashMovementService.findByIdOrThrow(movementResponse.id());
+    }
+
+    private SubCategory resolveInvoicePaymentSubCategory() {
+        Long workspaceId = getCurrentWorkspaceId();
+        Category category = categoryRepository
+                .findByNameIgnoreCaseAndWorkspaceId(INVOICE_PAYMENT_CATEGORY_NAME, workspaceId)
+                .orElseGet(() -> {
+                    Category created = new Category();
+                    created.setWorkspace(getCurrentWorkspace());
+                    created.setName(INVOICE_PAYMENT_CATEGORY_NAME);
+                    created.setMovementType(MovementType.EXPENSE);
+                    created.setDescription("Categoria tecnica para pagamento de faturas de cartao.");
+                    return categoryRepository.save(created);
+                });
+
+        return subCategoryRepository
+                .findByNameIgnoreCaseAndCategoryIdAndWorkspaceId(DEFAULT_SUBCATEGORY_NAME, category.getId(), workspaceId)
+                .orElseGet(() -> {
+                    SubCategory created = new SubCategory();
+                    created.setWorkspace(getCurrentWorkspace());
+                    created.setCategory(category);
+                    created.setName(DEFAULT_SUBCATEGORY_NAME);
+                    created.setDescription("Subcategoria tecnica para pagamento de faturas de cartao.");
+                    return subCategoryRepository.save(created);
+                });
+    }
+
+    private String buildMovementDescription(CreditCardInvoice invoice) {
+        if (invoice.getReferenceMonth() == null || invoice.getReferenceYear() == null) {
+            return "Pagamento de fatura de cartao";
+        }
+        return String.format(
+                "Pagamento fatura %02d/%04d",
+                invoice.getReferenceMonth(),
+                invoice.getReferenceYear()
+        );
     }
 }
