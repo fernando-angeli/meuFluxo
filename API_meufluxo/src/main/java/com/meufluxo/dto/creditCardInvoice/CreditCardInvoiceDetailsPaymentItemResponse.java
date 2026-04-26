@@ -9,6 +9,7 @@ public record CreditCardInvoiceDetailsPaymentItemResponse(
         String accountName,
         LocalDate paymentDate,
         BigDecimal amount,
-        String notes
+        String notes,
+        Long movementId
 ) {
 }

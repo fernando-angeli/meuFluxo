@@ -130,13 +130,10 @@ public class CreditCardExpenseService extends BaseUserService {
                 request.installmentCount()
         );
         CreditCard creditCard = creditCardService.findByIdOrThrow(request.creditCardId());
+        assertCreditCardActive(creditCard);
+        assertCreditLimitNotExceededOnCreate(creditCard, request.totalAmount());
         Category category = categoryService.findByIdOrThrow(request.categoryId());
-        SubCategory subCategory = request.subcategoryId() != null
-                ? subCategoryService.findByIdOrThrow(request.subcategoryId())
-                : null;
-        if (subCategory != null) {
-            validateSubCategoryBelongsToCategory(category, subCategory);
-        }
+        SubCategory subCategory = resolveSubCategory(category, request.subcategoryId());
 
         int installmentCount = normalizeInstallmentCount(request.installmentCount());
         UUID installmentGroupId = installmentCount > 1 ? UUID.randomUUID() : null;
@@ -148,7 +145,7 @@ public class CreditCardExpenseService extends BaseUserService {
         for (int installmentNumber = 1; installmentNumber <= installmentCount; installmentNumber++) {
             LocalDate installmentPurchaseDate = request.purchaseDate().plusMonths(installmentNumber - 1L);
             CreditCardInvoice invoice = creditCardInvoiceService.findOrCreateForPurchaseDate(creditCard, installmentPurchaseDate);
-            creditCardInvoiceService.assertInvoiceOpen(invoice);
+            creditCardInvoiceService.assertInvoiceAllowsExpenseChanges(invoice);
 
             CreditCardExpense expense = new CreditCardExpense();
             expense.setWorkspace(getCurrentWorkspace());
@@ -185,19 +182,16 @@ public class CreditCardExpenseService extends BaseUserService {
     @Transactional
     public CreditCardExpenseResponse update(Long id, CreditCardExpenseUpdateRequest request) {
         CreditCardExpense expense = findByIdOrThrow(id);
-        creditCardInvoiceService.assertInvoiceOpen(expense.getInvoice());
+        assertCreditCardActive(expense.getCreditCard());
+        creditCardInvoiceService.assertInvoiceAllowsExpenseChanges(expense.getInvoice());
+        assertCreditLimitNotExceededOnUpdate(expense, request.amount());
 
         Category category = categoryService.findByIdOrThrow(request.categoryId());
-        SubCategory subCategory = request.subcategoryId() != null
-                ? subCategoryService.findByIdOrThrow(request.subcategoryId())
-                : null;
-        if (subCategory != null) {
-            validateSubCategoryBelongsToCategory(category, subCategory);
-        }
+        SubCategory subCategory = resolveSubCategory(category, request.subcategoryId());
 
         CreditCardInvoice oldInvoice = expense.getInvoice();
         CreditCardInvoice newInvoice = creditCardInvoiceService.findOrCreateForPurchaseDate(expense.getCreditCard(), request.purchaseDate());
-        creditCardInvoiceService.assertInvoiceOpen(newInvoice);
+        creditCardInvoiceService.assertInvoiceAllowsExpenseChanges(newInvoice);
 
         expense.setDescription(request.description().trim());
         expense.setPurchaseDate(request.purchaseDate());
@@ -221,7 +215,7 @@ public class CreditCardExpenseService extends BaseUserService {
     @Transactional
     public CreditCardExpenseResponse cancel(Long id) {
         CreditCardExpense expense = findByIdOrThrow(id);
-        creditCardInvoiceService.assertInvoiceOpen(expense.getInvoice());
+        creditCardInvoiceService.assertInvoiceAllowsExpenseChanges(expense.getInvoice());
 
         expense.setStatus(CreditCardExpenseStatus.CANCELED);
         CreditCardExpense saved = creditCardExpenseRepository.save(expense);
@@ -242,6 +236,15 @@ public class CreditCardExpenseService extends BaseUserService {
         if (!subCategory.getCategory().getId().equals(category.getId())) {
             throw new BusinessException("A subcategoria informada não pertence à categoria selecionada.");
         }
+    }
+
+    private SubCategory resolveSubCategory(Category category, Long subCategoryId) {
+        if (subCategoryId == null) {
+            return subCategoryService.getOrCreateDefaultForCategory(category);
+        }
+        SubCategory subCategory = subCategoryService.findByIdOrThrow(subCategoryId);
+        validateSubCategoryBelongsToCategory(category, subCategory);
+        return subCategory;
     }
 
     private int normalizeInstallmentCount(Integer installmentCount) {
@@ -281,5 +284,72 @@ public class CreditCardExpenseService extends BaseUserService {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private void assertCreditLimitNotExceededOnCreate(CreditCard creditCard, BigDecimal requestedTotalAmount) {
+        BigDecimal limit = resolveCreditLimit(creditCard);
+        if (limit == null) {
+            return;
+        }
+
+        BigDecimal outstanding = creditCardInvoiceService.calculateOutstandingAmount(creditCard.getId());
+        BigDecimal projectedOutstanding = outstanding.add(nvl(requestedTotalAmount));
+        if (projectedOutstanding.compareTo(limit) > 0) {
+            throw new BusinessException(
+                    "Limite do cartao excedido. Disponivel: "
+                            + toMoney(limit.subtract(outstanding))
+                            + ", solicitado: "
+                            + toMoney(requestedTotalAmount)
+                            + "."
+            );
+        }
+    }
+
+    private void assertCreditLimitNotExceededOnUpdate(CreditCardExpense expense, BigDecimal requestedAmount) {
+        BigDecimal limit = resolveCreditLimit(expense.getCreditCard());
+        if (limit == null) {
+            return;
+        }
+
+        BigDecimal outstanding = creditCardInvoiceService.calculateOutstandingAmount(expense.getCreditCard().getId());
+        BigDecimal delta = nvl(requestedAmount).subtract(nvl(expense.getAmount()));
+        BigDecimal projectedOutstanding = outstanding.add(delta);
+        if (projectedOutstanding.compareTo(limit) > 0) {
+            throw new BusinessException(
+                    "Limite do cartao excedido. Disponivel: "
+                            + toMoney(limit.subtract(outstanding))
+                            + ", incremento solicitado: "
+                            + toMoney(delta)
+                            + "."
+            );
+        }
+    }
+
+    private BigDecimal resolveCreditLimit(CreditCard creditCard) {
+        if (creditCard == null) {
+            return null;
+        }
+        BigDecimal limit = creditCard.getCreditLimit();
+        if (limit == null) {
+            limit = creditCard.getLimitAmount();
+        }
+        if (limit == null || limit.signum() <= 0) {
+            return null;
+        }
+        return limit;
+    }
+
+    private BigDecimal nvl(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
+    }
+
+    private String toMoney(BigDecimal value) {
+        return nvl(value).setScale(2, java.math.RoundingMode.HALF_UP).toPlainString();
+    }
+
+    private void assertCreditCardActive(CreditCard creditCard) {
+        if (creditCard == null || !creditCard.isActive()) {
+            throw new BusinessException("Nao e possivel lancar despesas em cartao inativo.");
+        }
     }
 }

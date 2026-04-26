@@ -67,4 +67,11 @@ public class CreditCardInvoicePaymentController {
     ) {
         return service.findByFilters(invoiceId, accountId, paymentDateStart, paymentDateEnd, pageable);
     }
+
+    @DeleteMapping("/{id}")
+    @Operation(summary = "Excluir pagamento de fatura", description = "Desfaz impacto financeiro na conta, remove pagamento e recalcula a fatura.")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        service.delete(id);
+        return ResponseEntity.noContent().build();
+    }
 }

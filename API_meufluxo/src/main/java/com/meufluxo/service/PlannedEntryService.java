@@ -478,6 +478,8 @@ public class PlannedEntryService extends BaseUserService {
             );
         }
         return cb.equal(root.get("status"), status);
+    }
+
     private PlannedEntryResponse settleByDirection(Long id, PlannedEntrySettleRequest request, FinancialDirection direction) {
         PlannedEntry entry = findByIdOrThrow(id, direction);
         if (entry.getStatus() != PlannedEntryStatus.OPEN) {

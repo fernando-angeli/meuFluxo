@@ -21,6 +21,7 @@ public interface SubCategoryRepository extends JpaRepository<SubCategory, Long> 
     boolean existsByCategoryId(Long categoryId);
 
     Optional<SubCategory> findByIdAndWorkspaceId(Long id, Long currentWorkspaceId);
+    Optional<SubCategory> findByNameIgnoreCaseAndCategoryIdAndWorkspaceId(String name, Long categoryId, Long workspaceId);
 
     Page<SubCategory> findAllByWorkspaceId(Long currentWorkspaceId, Pageable pageable);
 

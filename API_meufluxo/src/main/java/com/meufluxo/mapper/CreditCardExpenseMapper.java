@@ -10,7 +10,7 @@ public interface CreditCardExpenseMapper {
 
     @Mapping(target = "creditCardId", source = "creditCard.id")
     @Mapping(target = "creditCardName", source = "creditCard.name")
-    @Mapping(target = "cardDisplayName", expression = "java(toCardDisplayName(expense))")
+    @Mapping(target = "creditCardBrand", source = "creditCard.brand")
     @Mapping(target = "invoiceId", source = "invoice.id")
     @Mapping(target = "invoiceReference", expression = "java(formatInvoiceReference(expense))")
     @Mapping(target = "categoryId", source = "category.id")
@@ -36,13 +36,4 @@ public interface CreditCardExpenseMapper {
         return expense.getStatus().getLabelPtBr();
     }
 
-    default String toCardDisplayName(CreditCardExpense expense) {
-        if (expense == null || expense.getCreditCard() == null) {
-            return null;
-        }
-        if (expense.getCreditCard().getBrand() == null) {
-            return expense.getCreditCard().getName();
-        }
-        return expense.getCreditCard().getName() + " - " + expense.getCreditCard().getBrand().name();
-    }
 }
