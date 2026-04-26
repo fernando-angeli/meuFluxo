@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 
 import type { CreditCard } from "@meufluxo/types";
 import { formatCurrency } from "@meufluxo/utils";
-import { getBrandCardLabel } from "@meufluxo/types";
+import { getCardBrandLabel } from "@/constants/card-brands";
 
 import type { DataTableColumn } from "@/components/data-table/types";
 import { AccountStatusBadge } from "@/features/accounts/components/account-status-badge";
@@ -30,7 +30,7 @@ export function getCreditCardsTableColumns({
       title: "Bandeira",
       sortable: true,
       sortKey: "brand",
-      render: (card) => getBrandCardLabel(card.brand),
+      render: (card) => getCardBrandLabel(card.brand ?? card.brandCard) ?? "—",
     },
     {
       key: "closingDay",

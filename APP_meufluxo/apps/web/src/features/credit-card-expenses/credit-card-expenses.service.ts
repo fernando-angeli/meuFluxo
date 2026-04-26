@@ -42,6 +42,20 @@ export function normalizeCreditCardExpenseFromApi(raw: unknown): CreditCardExpen
   const subId = r.subCategoryId ?? r.subcategoryId;
   const subName = r.subCategoryName ?? r.subcategoryName;
   const amountValue = r.totalAmount ?? r.amount;
+  const installmentNumberRaw = r.installmentNumber ?? r.installment_number;
+  const installmentCountRaw = r.installmentCount ?? r.installment_count;
+  const installmentNumber =
+    installmentNumberRaw != null && Number.isFinite(Number(installmentNumberRaw))
+      ? Number(installmentNumberRaw)
+      : null;
+  const installmentCount =
+    installmentCountRaw != null && Number.isFinite(Number(installmentCountRaw))
+      ? Math.max(1, Number(installmentCountRaw))
+      : 1;
+  const installmentLabelRaw =
+    r.installmentLabel != null && String(r.installmentLabel).trim() !== ""
+      ? String(r.installmentLabel).trim()
+      : null;
   return {
     id: toStringOrEmpty(r.id),
     creditCardId: toStringOrEmpty(r.creditCardId),
@@ -54,11 +68,14 @@ export function normalizeCreditCardExpenseFromApi(raw: unknown): CreditCardExpen
     subCategoryName: subName != null ? String(subName) : null,
     description: toStringOrEmpty(r.description),
     purchaseDate: toStringOrEmpty(r.purchaseDate),
-    installmentLabel: r.installmentLabel != null ? String(r.installmentLabel) : null,
+    installmentLabel:
+      installmentLabelRaw ??
+      (installmentNumber != null ? `${installmentNumber}/${installmentCount}` : null),
+    installmentNumber,
     totalAmount: toNumber(amountValue),
     notes: r.notes != null ? String(r.notes) : null,
     entryType: toEntryType(r.entryType),
-    installmentCount: Math.max(1, toNumber(r.installmentCount) || 1),
+    installmentCount,
     status: toStatus(r.status),
   };
 }

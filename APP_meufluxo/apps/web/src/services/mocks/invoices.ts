@@ -8,7 +8,7 @@ export const mockInvoices: Invoice[] = [
     id: "inv_1",
     creditCardId: "cc_1",
     creditCardName: "Cartao principal",
-    cardDisplayName: "Visa final 2121",
+    creditCardBrand: "Visa",
     referenceLabel: isoMonth(now),
     dueDate: isoDate(new Date(now.getFullYear(), now.getMonth(), 15)),
     purchasesAmount: 1249.32,

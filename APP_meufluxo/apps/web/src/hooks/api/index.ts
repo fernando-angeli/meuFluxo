@@ -62,6 +62,7 @@ export {
 export {
   useCloseInvoice,
   useCreateInvoicePayment,
+  useDeleteInvoicePayment,
   useReopenInvoice,
   useUpdateInvoiceCharges,
 } from "./use-invoice-mutations";

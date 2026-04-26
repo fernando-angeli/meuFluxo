@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
+import { FilterMultiSelect } from "@/components/filters";
 import { useToast } from "@/components/toast";
 import { creditCardsQueryKey, useDeleteCreditCard } from "@/hooks/api";
 import { useAuthOptional } from "@/hooks/useAuth";
@@ -23,6 +24,11 @@ import type { DataTableColumn } from "@/components/data-table/types";
 import { fetchCreditCardsPage } from "@/features/credit-cards/credit-cards.service";
 import { CreditCardFormModal } from "@/features/credit-cards/components/credit-card-form-modal";
 import { CreditCardRowActions } from "@/features/credit-cards/components/credit-card-row-actions";
+import {
+  CARD_BRAND_OPTIONS,
+  getCardBrandLabel,
+  normalizeCardBrand,
+} from "@/constants/card-brands";
 
 function formatDay(day: number | null | undefined): string {
   const numericDay = Number(day);
@@ -39,6 +45,7 @@ export default function CreditCardsPage() {
   const [cardFormOpen, setCardFormOpen] = React.useState(false);
   const [cardForForm, setCardForForm] = React.useState<CreditCard | null>(null);
   const [cardPendingDelete, setCardPendingDelete] = React.useState<CreditCard | null>(null);
+  const [selectedBrands, setSelectedBrands] = React.useState<string[]>([]);
 
   const deleteMutation = useDeleteCreditCard();
 
@@ -53,6 +60,13 @@ export default function CreditCardsPage() {
 
   const pageResponse = cardsTable.pageResponseQuery.data ?? null;
   const creditCards = pageResponse?.content ?? [];
+  const filteredCreditCards = React.useMemo(() => {
+    if (selectedBrands.length === 0) return creditCards;
+    return creditCards.filter((card) => {
+      const normalizedBrand = normalizeCardBrand(card.brand ?? card.brandCard);
+      return normalizedBrand != null && selectedBrands.includes(normalizedBrand);
+    });
+  }, [creditCards, selectedBrands]);
   const errorMessage = cardsTable.pageResponseQuery.isError
     ? getQueryErrorMessage(cardsTable.pageResponseQuery.error, "Não foi possível carregar os cartões.")
     : null;
@@ -81,7 +95,7 @@ export default function CreditCardsPage() {
         title: "Bandeira",
         sortable: true,
         sortKey: "brandCard",
-        render: (card) => card.brandCard ?? "—",
+        render: (card) => getCardBrandLabel(card.brand ?? card.brandCard) ?? "—",
       },
       {
         key: "closingDay",
@@ -163,9 +177,18 @@ export default function CreditCardsPage() {
           </div>
         </CardHeader>
         <CardContent>
+          <div className="mb-4 w-full max-w-sm">
+            <p className="mb-1.5 text-sm font-medium">Filtrar por bandeira</p>
+            <FilterMultiSelect
+              value={selectedBrands}
+              onChange={setSelectedBrands}
+              options={CARD_BRAND_OPTIONS}
+              placeholder="Selecione uma ou mais bandeiras"
+            />
+          </div>
           <DataTable
             columns={columns}
-            data={creditCards}
+            data={filteredCreditCards}
             loading={cardsTable.pageResponseQuery.isLoading}
             error={errorMessage}
             pageResponse={pageResponse}

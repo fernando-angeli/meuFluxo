@@ -25,6 +25,7 @@ export type InvoicesApi = {
   close: (id: string) => Promise<InvoiceDetails>;
   reopen: (id: string) => Promise<InvoiceDetails>;
   createPayment: (id: string, request: InvoicePaymentCreateRequest) => Promise<InvoiceDetails>;
+  deletePaymentById: (paymentId: string) => Promise<void>;
   updateCharges: (id: string, request: InvoiceChargesUpdateRequest) => Promise<InvoiceDetails>;
 };
 
@@ -46,7 +47,9 @@ export function createInvoicesApi(http: HttpClient): InvoicesApi {
         } as Record<string, string | number | boolean | null | undefined>,
       }),
     getById: (id) =>
-      http.request<InvoiceDetails>(`${INVOICES_BASE_PATH}/${encodeURIComponent(id)}`, { method: "GET" }),
+      http.request<InvoiceDetails>(`${INVOICES_BASE_PATH}/${encodeURIComponent(id)}/details`, {
+        method: "GET",
+      }),
     close: (id) =>
       http.request<InvoiceDetails>(`${INVOICES_BASE_PATH}/${encodeURIComponent(id)}/close`, {
         method: "PATCH",
@@ -59,6 +62,10 @@ export function createInvoicesApi(http: HttpClient): InvoicesApi {
       http.request<InvoiceDetails>(`${INVOICES_BASE_PATH}/${encodeURIComponent(id)}/payments`, {
         method: "POST",
         body: request,
+      }),
+    deletePaymentById: (paymentId) =>
+      http.request<void>(`/credit-card-invoice-payments/${encodeURIComponent(paymentId)}`, {
+        method: "DELETE",
       }),
     updateCharges: (id, request) =>
       http.request<InvoiceDetails>(`${INVOICES_BASE_PATH}/${encodeURIComponent(id)}/charges`, {

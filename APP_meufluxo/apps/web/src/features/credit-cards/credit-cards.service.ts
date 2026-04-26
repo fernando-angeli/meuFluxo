@@ -10,6 +10,7 @@ import type {
 import { env } from "@/lib/env";
 import { api } from "@/services/api";
 import { mockCreditCards } from "@/services/mocks/credit-cards";
+import { normalizeCardBrand, toApiCardBrand } from "@/constants/card-brands";
 
 /** Em modo mock, ids removidos para refletir exclusão na lista sem backend. */
 const mockDeletedCreditCardIds = new Set<string>();
@@ -55,6 +56,15 @@ function toNullableNumber(value: unknown): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function isNotFoundError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "status" in error &&
+    Number((error as { status?: unknown }).status) === 404
+  );
+}
+
 function resolveActiveFlag(r: Record<string, unknown>): boolean {
   const meta = r.meta as Record<string, unknown> | undefined;
   if (meta && typeof meta.active === "boolean") return meta.active;
@@ -64,12 +74,17 @@ function resolveActiveFlag(r: Record<string, unknown>): boolean {
 
 export function normalizeCreditCardFromApi(raw: unknown): CreditCard {
   const r = raw as Record<string, unknown>;
-  const brand = String(r.brand ?? r.brandCard ?? "MASTERCARD").toUpperCase();
-  const resolvedBrand = brand === "VISA" ? "VISA" : "MASTERCARD";
+  const resolvedBrand = normalizeCardBrand(r.brand ?? r.brandCard) ?? "Outro";
+  const cardName = toStringOrEmpty(r.name);
   return {
     id: toStringOrEmpty(r.id),
-    name: toStringOrEmpty(r.name),
-    cardDisplayName: r.cardDisplayName != null ? String(r.cardDisplayName) : null,
+    name: cardName,
+    cardDisplayName:
+      r.cardDisplayName != null && String(r.cardDisplayName).trim() !== ""
+        ? String(r.cardDisplayName)
+        : cardName
+          ? `${cardName} - ${resolvedBrand}`
+          : resolvedBrand,
     brand: resolvedBrand,
     brandCard: resolvedBrand,
     creditLimit: toNullableNumber(r.creditLimit),
@@ -135,7 +150,17 @@ export async function fetchCreditCardsPage(params: PageQueryParams): Promise<Pag
 
   const allCards = env.useMocks
     ? getEffectiveMockCreditCards()
-    : ((await api.creditCards.list())?.content ?? []).map((item) => normalizeCreditCardFromApi(item));
+    : await (async () => {
+        try {
+          const pageResponse = await api.creditCards.list();
+          return (pageResponse?.content ?? []).map((item) => normalizeCreditCardFromApi(item));
+        } catch (error) {
+          // Alguns ambientes respondem 404 quando nao existem cartoes.
+          // Para listagem, tratamos como "sem registros".
+          if (isNotFoundError(error)) return [];
+          throw error;
+        }
+      })();
   const sorted = [...allCards].sort((a, b) => compareCards(a, b, key, direction));
 
   const totalElements = sorted.length;
@@ -155,7 +180,10 @@ export async function fetchCreditCardsPage(params: PageQueryParams): Promise<Pag
 }
 
 export async function createCreditCard(request: CreditCardCreateRequest): Promise<CreditCard> {
-  const created = await api.creditCards.create(request);
+  const created = await api.creditCards.create({
+    ...request,
+    brand: toApiCardBrand(request.brand) as unknown as BrandCard,
+  });
   return normalizeCreditCardFromApi(created);
 }
 
@@ -163,7 +191,10 @@ export async function updateCreditCard(
   id: string,
   request: CreditCardUpdateRequest,
 ): Promise<CreditCard> {
-  const updated = await api.creditCards.update(id, request);
+  const updated = await api.creditCards.update(id, {
+    ...request,
+    brand: toApiCardBrand(request.brand) as unknown as BrandCard,
+  });
   let normalized = normalizeCreditCardFromApi(updated);
   if (!env.useMocks && normalized.meta.active !== request.active) {
     const patched = await api.creditCards.updateActive(id, { active: request.active });

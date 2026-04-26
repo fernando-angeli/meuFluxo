@@ -32,8 +32,8 @@ function getStatusTone(status: CreditCardInvoiceStatus): {
     case "OPEN":
     default:
       return {
-        dot: "bg-blue-500",
-        badge: "border-blue-500/20 bg-blue-500/10 text-blue-700",
+        dot: "bg-amber-500",
+        badge: "border-amber-500/20 bg-amber-500/10 text-amber-700",
       };
   }
 }

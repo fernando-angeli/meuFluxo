@@ -21,6 +21,7 @@ export type CreditCardExpense = {
   description: string;
   purchaseDate: string;
   installmentLabel: string | null;
+  installmentNumber?: number | null;
   totalAmount: number;
   notes: string | null;
   entryType: CreditCardExpenseEntryType;

@@ -31,9 +31,9 @@ export function CreditCardExpenseRowActions({
         },
         {
           key: "cancel",
-          label: blockedByStatus ? "Cancelamento indisponível para este status" : "Cancelar",
+          label: blockedByStatus ? "Exclusão indisponível para este status" : "Excluir",
           icon: Trash2,
-          ariaLabel: "Cancelar despesa do cartão",
+          ariaLabel: "Excluir despesa do cartão",
           disabled: blockedByStatus || canceling,
           onClick: () => onCancel(expense),
         },

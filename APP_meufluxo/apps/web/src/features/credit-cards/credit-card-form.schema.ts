@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { parseMoneyInput } from "@meufluxo/utils";
+import { CARD_BRANDS } from "@/constants/card-brands";
 
 export const creditCardFormSchema = z.object({
   name: z
@@ -8,7 +9,7 @@ export const creditCardFormSchema = z.object({
     .trim()
     .min(3, "O nome deve conter ao menos 3 caracteres.")
     .max(120, "O nome deve ter no máximo 120 caracteres."),
-  brand: z.enum(["VISA", "MASTERCARD"], {
+  brand: z.enum([CARD_BRANDS[0], ...CARD_BRANDS.slice(1)], {
     error: "A bandeira do cartão é obrigatória.",
   }),
   closingDay: z

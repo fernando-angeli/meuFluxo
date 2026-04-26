@@ -17,6 +17,7 @@ export const mockCreditCardExpenses: CreditCardExpense[] = [
     description: "Compra no mercado",
     purchaseDate: isoDate(new Date(now.getFullYear(), now.getMonth(), 10)),
     installmentLabel: "1/3",
+    installmentNumber: 1,
     totalAmount: 349.9,
     notes: "Compra mensal",
     entryType: "INSTALLMENT",

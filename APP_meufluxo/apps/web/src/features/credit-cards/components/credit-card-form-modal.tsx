@@ -31,6 +31,11 @@ import {
   creditCardFormSchema,
   type CreditCardFormValues,
 } from "@/features/credit-cards/credit-card-form.schema";
+import {
+  CARD_BRANDS,
+  CARD_BRAND_OPTIONS,
+  normalizeCardBrand,
+} from "@/constants/card-brands";
 
 export type CreditCardFormModalProps = {
   open: boolean;
@@ -65,7 +70,7 @@ export function CreditCardFormModal({
     resolver: zodResolver(creditCardFormSchema),
     defaultValues: {
       name: "",
-      brand: "VISA",
+      brand: CARD_BRANDS[0],
       closingDay: 1,
       dueDay: 1,
       creditLimit: "",
@@ -84,7 +89,7 @@ export function CreditCardFormModal({
     if (creditCard) {
       form.reset({
         name: creditCard.name ?? "",
-        brand: creditCard.brand ?? "VISA",
+        brand: normalizeCardBrand(creditCard.brand) ?? "Outro",
         closingDay: creditCard.closingDay ?? 1,
         dueDay: creditCard.dueDay ?? 1,
         creditLimit:
@@ -95,14 +100,14 @@ export function CreditCardFormModal({
             ? String(creditCard.defaultPaymentAccountId).trim()
             : "",
         notes: creditCard.notes ?? "",
-        active: !!creditCard.meta.active,
+        active: !!creditCard.meta?.active,
       });
       return;
     }
 
     form.reset({
       name: "",
-      brand: "VISA",
+      brand: CARD_BRANDS[0],
       closingDay: 1,
       dueDay: 1,
       creditLimit: "",
@@ -209,7 +214,7 @@ export function CreditCardFormModal({
               value={brand}
               disabled={isSubmitting}
               onValueChange={(value) => {
-                form.setValue("brand", value as "VISA" | "MASTERCARD", {
+                form.setValue("brand", value as CreditCardFormValues["brand"], {
                   shouldDirty: true,
                 });
                 clearFieldError("brand");
@@ -219,8 +224,11 @@ export function CreditCardFormModal({
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="VISA">Visa</SelectItem>
-                <SelectItem value="MASTERCARD">Mastercard</SelectItem>
+                {CARD_BRAND_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <FormFieldError message={fieldErrors.brand} />

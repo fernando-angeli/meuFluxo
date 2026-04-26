@@ -1,6 +1,6 @@
 import type { AccountType } from "./accounts";
 import type { CreditCardExpenseStatus } from "./credit-card-expenses";
-import type { BrandCard } from "./credit-cards";
+import type { BrandCard } from "./card-brands";
 import type { UserLanguage, UserTheme, WorkspaceMembershipRole } from "./session";
 
 export type CreditCardInstallmentStatus =
@@ -61,8 +61,19 @@ export const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
 };
 
 export const BRAND_CARD_LABELS: Record<BrandCard, string> = {
-  VISA: "Visa",
-  MASTERCARD: "Masters",
+  Visa: "Visa",
+  Mastercard: "Mastercard",
+  Elo: "Elo",
+  "American Express": "American Express",
+  Hipercard: "Hipercard",
+  "Diners Club": "Diners Club",
+  Discover: "Discover",
+  Banricompras: "Banricompras",
+  Cabal: "Cabal",
+  Aura: "Aura",
+  JCB: "JCB",
+  UnionPay: "UnionPay",
+  Outro: "Outro",
 };
 
 export const CREDIT_CARD_INSTALLMENT_STATUS_LABELS: Record<

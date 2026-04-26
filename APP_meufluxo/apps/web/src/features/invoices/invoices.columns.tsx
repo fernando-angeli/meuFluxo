@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 
 import type { Invoice } from "@meufluxo/types";
 import { formatCurrency } from "@meufluxo/utils";
+import { getCardBrandLabel } from "@/constants/card-brands";
 
 import type { DataTableColumn } from "@/components/data-table/types";
 import { InvoiceStatusBadge } from "@/features/invoices/components/invoice-status-badge";
@@ -19,6 +20,12 @@ function formatDueDate(value: string): string {
   }
 }
 
+function getCardLabel(invoice: Invoice): string {
+  const name = invoice.creditCardName?.trim() || "—";
+  const brandLabel = getCardBrandLabel(invoice.creditCardBrand);
+  return brandLabel ? `${name} - ${brandLabel}` : name;
+}
+
 export function getInvoicesTableColumns({
   renderActions,
 }: {
@@ -30,14 +37,14 @@ export function getInvoicesTableColumns({
       title: "Cartão",
       sortable: true,
       sortKey: "creditCardName",
-      render: (invoice) => invoice.cardDisplayName || invoice.creditCardName || "—",
+      render: (invoice) => getCardLabel(invoice),
       cellClassName: "font-medium",
     },
     {
       key: "referenceLabel",
-      title: "Referência",
+      title: "Fatura",
       sortable: true,
-      sortKey: "referenceLabel",
+      sortKey: "dueDate",
       dataIndex: "referenceLabel",
     },
     {
