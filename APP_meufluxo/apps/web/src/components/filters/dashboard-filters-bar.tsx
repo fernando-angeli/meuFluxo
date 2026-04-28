@@ -10,23 +10,23 @@ import {
 import {
   DateRangePicker,
   FilterSelect,
-  MovementTypeSelect,
   AccountsMultiSelect,
   CategoriesMultiSelect,
   SubcategoriesMultiSelect,
   type DateRangeValue,
-  type MovementTypeFilter,
 } from "@/components/filters";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { useTranslation } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 export type DashboardFiltersValue = {
   dateRange: DateRangeValue;
-  movementType: MovementTypeFilter;
   accountIds: string[];
   categoryIds: string[];
   subcategoryIds: string[];
+  /** Quando true, inclui planejados em aberto ou em atraso (vencimento no período ou antes do início) nos KPIs, gráficos e tabela. */
+  includeProjections: boolean;
 };
 
 type DashboardFiltersBarProps = {
@@ -40,10 +40,10 @@ const defaultFilters = (): DashboardFiltersValue => {
   const { startDate, endDate } = getDefaultDashboardDateRange();
   return {
     dateRange: { startDate, endDate },
-    movementType: "ALL",
     accountIds: [],
     categoryIds: [],
     subcategoryIds: [],
+    includeProjections: false,
   };
 };
 
@@ -205,23 +205,23 @@ export function DashboardFiltersBar({
         </div>
       </div>
 
+      {!compact && (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-input bg-muted/20 px-3 py-2.5">
+          <Switch
+            checked={value.includeProjections}
+            onCheckedChange={(checked) => update({ includeProjections: checked })}
+            aria-label={t("dashboard.includeProjections.aria")}
+          />
+          <div className="min-w-0 flex-1 space-y-0.5">
+            <p className="text-sm font-medium leading-tight">{t("dashboard.includeProjections.label")}</p>
+            <p className="text-xs text-muted-foreground">{t("dashboard.includeProjections.hint")}</p>
+          </div>
+        </div>
+      )}
+
       {/* Segunda linha: filtros complementares */}
       {!compact && (
         <div className="flex flex-wrap items-stretch gap-3">
-          <div
-            className={cn(
-              "flex items-center",
-              FILTER_HEIGHT,
-              FILTER_MIN_WIDTH,
-            )}
-          >
-            <MovementTypeSelect
-              value={value.movementType}
-              onChange={(movementType) => update({ movementType })}
-              placeholder={t("filters.type")}
-              className={cn("h-full w-full", FILTER_HEIGHT)}
-            />
-          </div>
           <div
             className={cn(
               "flex items-center",
@@ -245,7 +245,6 @@ export function DashboardFiltersBar({
             <CategoriesMultiSelect
               value={value.categoryIds}
               onChange={(categoryIds) => update({ categoryIds })}
-              movementType={value.movementType}
               triggerClassName={cn("h-full w-full", FILTER_HEIGHT)}
             />
           </div>

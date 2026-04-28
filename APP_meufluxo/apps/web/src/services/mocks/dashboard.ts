@@ -3,6 +3,9 @@ import type {
   DashboardCategoryKpi,
   DashboardMovementRow,
   DashboardMovementStatus,
+  DashboardKpisParams,
+  DashboardTemporalSeries,
+  CashMovement,
 } from "@meufluxo/types";
 import { sum } from "@meufluxo/utils";
 import { mockCashMovements } from "./cash-movements";
@@ -21,47 +24,34 @@ export function getDashboardKpis() {
   };
 }
 
-export const mockChartData = [
-  { name: "Sem 1", income: 5200, expenses: 1800 },
-  { name: "Sem 2", income: 0, expenses: 900 },
-  { name: "Sem 3", income: 0, expenses: 1100 },
-  { name: "Sem 4", income: 0, expenses: 700 },
-];
+function trailingNumericId(value: unknown): number | null {
+  if (value === undefined || value === null) return null;
+  const s = String(value);
+  const m = s.match(/(\d+)$/);
+  if (!m) return null;
+  const n = Number(m[1]);
+  return Number.isFinite(n) ? n : null;
+}
 
-const incomeByCategoryMock: DashboardCategoryKpi[] = [
-  {
-    categoryId: 1,
-    categoryName: "Salário",
-    total: 5200,
-    percent: 100,
-    subCategories: [
-      { subCategoryId: 1, subCategoryName: "Salário principal", total: 5200, percent: 100 },
-    ],
-  },
-];
-
-const expensesByCategoryMock: DashboardCategoryKpi[] = [
-  {
-    categoryId: 2,
-    categoryName: "Casa",
-    total: 2260.8,
-    percent: 89,
-    subCategories: [
-      { subCategoryId: 16, subCategoryName: "Manutenção", total: 1260.7, percent: 56 },
-      { subCategoryId: 14, subCategoryName: "IPTU", total: 1000.1, percent: 44 },
-    ],
-  },
-  {
-    categoryId: 3,
-    categoryName: "Carro",
-    total: 291.55,
-    percent: 11,
-    subCategories: [
-      { subCategoryId: 18, subCategoryName: "Combustível", total: 151.05, percent: 52 },
-      { subCategoryId: 17, subCategoryName: "Manutenção", total: 140.5, percent: 48 },
-    ],
-  },
-];
+function matchesMockFilters(m: CashMovement, params: DashboardKpisParams): boolean {
+  if (m.occurredAt < params.startDate || m.occurredAt > params.endDate) {
+    return false;
+  }
+  if (params.accountIds?.length) {
+    const id = trailingNumericId(m.accountId) ?? Number(m.accountId);
+    if (!Number.isFinite(id) || !params.accountIds.includes(Number(id))) {
+      return false;
+    }
+  }
+  if (params.categoryIds?.length) {
+    const id = trailingNumericId(m.categoryId) ?? Number(m.categoryId);
+    if (!Number.isFinite(id) || !params.categoryIds.includes(Number(id))) {
+      return false;
+    }
+  }
+  // Mock não tem subcategoria por movimento; subCategoryIds só afeta a API real.
+  return true;
+}
 
 function paymentMethodLabel(method: string): string {
   const map: Record<string, string> = {
@@ -81,8 +71,77 @@ function statusForMovement(index: number): DashboardMovementStatus {
   return "projeção";
 }
 
-function buildMovementsMock(): DashboardMovementRow[] {
-  return mockCashMovements.map((m, index) => ({
+function stableCategoryId(key: string): number {
+  let h = 0;
+  for (let i = 0; i < key.length; i += 1) {
+    h = (h * 31 + key.charCodeAt(i)) | 0;
+  }
+  const n = Math.abs(h);
+  return n > 0 ? n : 1;
+}
+
+function buildCategoryKpis(
+  movements: CashMovement[],
+  targetType: "INCOME" | "EXPENSE",
+  typeTotal: number,
+): DashboardCategoryKpi[] {
+  const rows = movements.filter((m) => m.type === targetType);
+  if (!typeTotal || typeTotal <= 0 || rows.length === 0) return [];
+
+  const byCat = new Map<string, number>();
+  for (const m of rows) {
+    const key = m.categoryId != null ? String(m.categoryId) : "—";
+    byCat.set(key, (byCat.get(key) ?? 0) + m.amount);
+  }
+
+  const result: DashboardCategoryKpi[] = [];
+  for (const [key, catTotal] of byCat) {
+    const categoryId = stableCategoryId(key);
+    const percent = Math.min(100, Math.round((catTotal / typeTotal) * 100));
+    result.push({
+      categoryId,
+      categoryName: key.startsWith("cat_") ? `Categoria ${key.replace(/^cat_/, "")}` : key,
+      total: catTotal,
+      percent,
+      subCategories: [
+        {
+          subCategoryId: categoryId,
+          subCategoryName: "—",
+          total: catTotal,
+          percent: 100,
+        },
+      ],
+    });
+  }
+  return result;
+}
+
+function buildTemporalEvolution(
+  movements: CashMovement[],
+  startDate: string,
+  endDate: string,
+): DashboardTemporalSeries {
+  const labels = ["Sem 1", "Sem 2", "Sem 3", "Sem 4"];
+  const income = [0, 0, 0, 0];
+  const expenses = [0, 0, 0, 0];
+  const start = new Date(`${startDate}T12:00:00`);
+  const end = new Date(`${endDate}T12:00:00`);
+  const span = end.getTime() - start.getTime();
+  if (!Number.isFinite(span) || span <= 0) {
+    return { labels: [], income: [], expenses: [] };
+  }
+  const bucket = span / 4;
+  for (const m of movements) {
+    const t = new Date(`${m.occurredAt}T12:00:00`).getTime();
+    const idx = Math.min(3, Math.max(0, Math.floor((t - start.getTime()) / bucket)));
+    if (m.type === "INCOME") income[idx] += m.amount;
+    else if (m.type === "EXPENSE") expenses[idx] += m.amount;
+  }
+  return { labels, income, expenses };
+}
+
+function buildMovementsMock(movements: CashMovement[]): DashboardMovementRow[] {
+  return movements.map((m, index) => ({
     id: m.id,
     description: m.description ?? "—",
     categoryName: "Categoria",
@@ -95,31 +154,31 @@ function buildMovementsMock(): DashboardMovementRow[] {
   }));
 }
 
-/** Mock do GET /kpis/dashboard — mesmo formato da API para trocar depois. */
-export function getMockDashboardKpis(
-  startDate = "2026-03-01",
-  endDate = "2026-03-31",
-): DashboardKpisResponse {
-  const totalExpense = 2552.35;
-  const totalIncome = 5200;
-  const movements = buildMovementsMock();
+/** Mock do GET /kpis/dashboard — mesmo contrato da API; filtra mocks por período e filtros suportados. */
+export function getMockDashboardKpis(params: DashboardKpisParams): DashboardKpisResponse {
+  const { startDate, endDate } = params;
+  const filtered = mockCashMovements.filter((m) => matchesMockFilters(m, params));
+
+  let totalIncome = sum(filtered.filter((m) => m.type === "INCOME").map((m) => m.amount));
+  let totalExpense = sum(filtered.filter((m) => m.type === "EXPENSE").map((m) => m.amount));
+  if (params.includeProjections === true) {
+    totalIncome += 800;
+    totalExpense += 450;
+  }
+  const netBalance = totalIncome - totalExpense;
+
   return {
     startDate,
     endDate,
-    accountIds: [2],
-    categoryIds: null,
-    currentBalance: -2452.35,
+    accountIds: params.accountIds?.length ? params.accountIds : null,
+    categoryIds: params.categoryIds?.length ? params.categoryIds : null,
+    currentBalance: netBalance,
     totalIncome,
     totalExpense,
-    netBalance: totalIncome - totalExpense,
-    expensesByCategory: expensesByCategoryMock,
-    incomeByCategory: incomeByCategoryMock,
-    temporalEvolution: {
-      labels: ["Sem 1", "Sem 2", "Sem 3", "Sem 4"],
-      income: [5200, 0, 0, 0],
-      expenses: [325.8, 1000.1, 826.45, 400],
-    },
-    movements,
+    netBalance,
+    expensesByCategory: buildCategoryKpis(filtered, "EXPENSE", totalExpense),
+    incomeByCategory: buildCategoryKpis(filtered, "INCOME", totalIncome),
+    temporalEvolution: buildTemporalEvolution(filtered, startDate, endDate),
+    movements: buildMovementsMock(filtered),
   };
 }
-

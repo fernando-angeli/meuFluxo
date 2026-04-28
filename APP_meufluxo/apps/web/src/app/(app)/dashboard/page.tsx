@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { format, parse } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { formatCurrency } from "@meufluxo/utils";
@@ -15,6 +15,7 @@ import {
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { DashboardFiltersBar, getDefaultDashboardFilters } from "@/components/filters";
+import { toDashboardKpisParams } from "@/features/dashboard/lib/kpis-params";
 import { useDashboardKpis } from "@/hooks/api";
 import { useTranslation } from "@/lib/i18n";
 import { AlertCircle } from "lucide-react";
@@ -24,10 +25,22 @@ export default function DashboardPage() {
   const { startDate, endDate } = filters.dateRange;
   const periodLabel = `${format(parse(startDate, "yyyy-MM-dd", new Date()), "dd/MM/yyyy", { locale: ptBR })} - ${format(parse(endDate, "yyyy-MM-dd", new Date()), "dd/MM/yyyy", { locale: ptBR })}`;
 
-  const { data, isLoading, isError, error } = useDashboardKpis({
-    startDate,
-    endDate,
-  });
+  const kpisParams = useMemo(() => toDashboardKpisParams(filters), [filters]);
+
+  const chartsRemountKey = useMemo(
+    () =>
+      [
+        filters.dateRange.startDate,
+        filters.dateRange.endDate,
+        filters.includeProjections,
+        filters.accountIds.join(","),
+        filters.categoryIds.join(","),
+        filters.subcategoryIds.join(","),
+      ].join("|"),
+    [filters],
+  );
+
+  const { data, isLoading, isError, error } = useDashboardKpis(kpisParams);
 
   const { t } = useTranslation();
 
@@ -99,34 +112,32 @@ export default function DashboardPage() {
         </Card>
       ) : (
         <>
-          <section aria-label={t("dashboard.analysisByCategory")}>
-            <CategoryAnalysisSection
-              incomeByCategory={data.incomeByCategory ?? []}
-              expensesByCategory={data.expensesByCategory}
-              totalIncome={data.totalIncome}
-              totalExpense={data.totalExpense}
-              periodLabel={periodLabel}
-            />
-          </section>
+          <Fragment key={chartsRemountKey}>
+            <section aria-label={t("dashboard.analysisByCategory")}>
+              <CategoryAnalysisSection
+                incomeByCategory={data.incomeByCategory ?? []}
+                expensesByCategory={data.expensesByCategory}
+                totalIncome={data.totalIncome}
+                totalExpense={data.totalExpense}
+                periodLabel={periodLabel}
+              />
+            </section>
 
-          <section aria-label={t("dashboard.temporalEvolution")}>
-            <TemporalEvolutionChart
-              data={
-                data.temporalEvolution ?? {
-                  labels: [],
-                  income: [],
-                  expenses: [],
+            <section aria-label={t("dashboard.temporalEvolution")}>
+              <TemporalEvolutionChart
+                data={
+                  data.temporalEvolution ?? {
+                    labels: [],
+                    income: [],
+                    expenses: [],
+                  }
                 }
-              }
-            />
-          </section>
+              />
+            </section>
+          </Fragment>
 
           <section aria-label={t("dashboard.movements")}>
-            <DashboardMovementsTable
-              movements={data.movements ?? []}
-              isLoading={false}
-              error={null}
-            />
+            <DashboardMovementsTable filters={filters} />
           </section>
         </>
       )}
