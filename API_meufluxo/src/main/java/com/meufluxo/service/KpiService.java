@@ -4,26 +4,33 @@ import com.meufluxo.dto.kpi.CategoryGroupedKpiResponse;
 import com.meufluxo.dto.kpi.DashboardKpiRequest;
 import com.meufluxo.dto.kpi.DashboardKpiResponse;
 import com.meufluxo.dto.kpi.SubCategoryGroupedKpiResponse;
+import com.meufluxo.enums.FinancialDirection;
 import com.meufluxo.enums.MovementType;
+import com.meufluxo.enums.PlannedEntryStatus;
 import com.meufluxo.model.CashMovement;
+import com.meufluxo.model.PlannedEntry;
 import com.meufluxo.repository.AccountRepository;
 import com.meufluxo.repository.CashMovementRepository;
+import com.meufluxo.repository.PlannedEntryRepository;
+import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
 @Service
-public class KpiService extends BaseUserService{
+public class KpiService extends BaseUserService {
 
     private final AccountRepository accountRepository;
     private final CashMovementRepository cashMovementRepository;
+    private final PlannedEntryRepository plannedEntryRepository;
     private final AccountService accountService;
     private final CategoryService categoryService;
     private final SubCategoryService subCategoryService;
@@ -32,6 +39,7 @@ public class KpiService extends BaseUserService{
             CurrentUserService currentUserService,
             AccountRepository accountRepository,
             CashMovementRepository cashMovementRepository,
+            PlannedEntryRepository plannedEntryRepository,
             AccountService accountService,
             CategoryService categoryService,
             SubCategoryService subCategoryService
@@ -39,11 +47,13 @@ public class KpiService extends BaseUserService{
         super(currentUserService);
         this.accountRepository = accountRepository;
         this.cashMovementRepository = cashMovementRepository;
+        this.plannedEntryRepository = plannedEntryRepository;
         this.accountService = accountService;
         this.categoryService = categoryService;
         this.subCategoryService = subCategoryService;
     }
 
+    @Transactional(readOnly = true)
     public DashboardKpiResponse getDashboardKpis(DashboardKpiRequest request) {
         validatePeriod(request);
 
@@ -69,18 +79,24 @@ public class KpiService extends BaseUserService{
         );
         List<CashMovement> filteredMovements = cashMovementRepository.findAll(specification);
 
-        BigDecimal totalIncome = sumByType(filteredMovements, MovementType.INCOME);
-        BigDecimal totalExpense = sumByType(filteredMovements, MovementType.EXPENSE);
+        List<KpiAmountLine> lines = new ArrayList<>(toLinesFromCashMovements(filteredMovements));
+
+        if (Boolean.TRUE.equals(request.includeProjections())) {
+            lines.addAll(loadOpenPlannedLines(request, accountFilterIds, categoryFilterIds, subCategoryFilterIds));
+        }
+
+        BigDecimal totalIncome = sumByMovementType(lines, MovementType.INCOME);
+        BigDecimal totalExpense = sumByMovementType(lines, MovementType.EXPENSE);
 
         BigDecimal netBalance = totalIncome.subtract(totalExpense);
 
-        List<CategoryGroupedKpiResponse> expensesByCategory = buildCategoryGroupedKpis(
-                filteredMovements,
+        List<CategoryGroupedKpiResponse> expensesByCategory = buildCategoryGroupedKpisFromLines(
+                lines,
                 totalExpense,
                 MovementType.EXPENSE
         );
-        List<CategoryGroupedKpiResponse> incomesByCategory = buildCategoryGroupedKpis(
-                filteredMovements,
+        List<CategoryGroupedKpiResponse> incomesByCategory = buildCategoryGroupedKpisFromLines(
+                lines,
                 totalIncome,
                 MovementType.INCOME
         );
@@ -122,35 +138,155 @@ public class KpiService extends BaseUserService{
         return value != null ? value : BigDecimal.ZERO;
     }
 
-    private BigDecimal sumByType(List<CashMovement> movements, MovementType movementType) {
-        return movements.stream()
-                .filter(movement -> movement.getMovementType() == movementType)
-                .map(CashMovement::getAmount)
-                .filter(amount -> amount != null)
+    private List<KpiAmountLine> toLinesFromCashMovements(List<CashMovement> movements) {
+        List<KpiAmountLine> lines = new ArrayList<>();
+        for (CashMovement movement : movements) {
+            if (movement.getSubCategory() == null || movement.getSubCategory().getCategory() == null) {
+                continue;
+            }
+            lines.add(new KpiAmountLine(
+                    movement.getMovementType(),
+                    defaultIfNull(movement.getAmount()),
+                    movement.getSubCategory().getCategory().getId(),
+                    movement.getSubCategory().getCategory().getName(),
+                    movement.getSubCategory().getCategory().getMovementType(),
+                    movement.getSubCategory().getId(),
+                    movement.getSubCategory().getName()
+            ));
+        }
+        return lines;
+    }
+
+    private List<KpiAmountLine> loadOpenPlannedLines(
+            DashboardKpiRequest request,
+            List<Long> accountFilterIds,
+            List<Long> categoryFilterIds,
+            List<Long> subCategoryFilterIds
+    ) {
+        List<KpiAmountLine> lines = new ArrayList<>();
+        Long workspaceId = getCurrentWorkspaceId();
+        MovementType movementFilter = request.movementType();
+
+        if (movementFilter == null || movementFilter == MovementType.EXPENSE) {
+            lines.addAll(plannedEntryRepository.findAll(
+                    openPlannedSpecification(
+                            workspaceId,
+                            request.startDate(),
+                            request.endDate(),
+                            accountFilterIds,
+                            categoryFilterIds,
+                            subCategoryFilterIds,
+                            FinancialDirection.EXPENSE
+                    )
+            ).stream().map(this::toLineFromPlanned).toList());
+        }
+        if (movementFilter == null || movementFilter == MovementType.INCOME) {
+            lines.addAll(plannedEntryRepository.findAll(
+                    openPlannedSpecification(
+                            workspaceId,
+                            request.startDate(),
+                            request.endDate(),
+                            accountFilterIds,
+                            categoryFilterIds,
+                            subCategoryFilterIds,
+                            FinancialDirection.INCOME
+                    )
+            ).stream().map(this::toLineFromPlanned).toList());
+        }
+        return lines;
+    }
+
+    private KpiAmountLine toLineFromPlanned(PlannedEntry entry) {
+        MovementType movementType = entry.getDirection() == FinancialDirection.INCOME
+                ? MovementType.INCOME
+                : MovementType.EXPENSE;
+        var category = entry.getCategory();
+        var sub = entry.getSubCategory();
+        if (sub == null) {
+            return new KpiAmountLine(
+                    movementType,
+                    defaultIfNull(entry.getExpectedAmount()),
+                    category.getId(),
+                    category.getName(),
+                    category.getMovementType(),
+                    category.getId(),
+                    "—"
+            );
+        }
+        return new KpiAmountLine(
+                movementType,
+                defaultIfNull(entry.getExpectedAmount()),
+                category.getId(),
+                category.getName(),
+                category.getMovementType(),
+                sub.getId(),
+                sub.getName()
+        );
+    }
+
+    private Specification<PlannedEntry> openPlannedSpecification(
+            Long workspaceId,
+            java.time.LocalDate start,
+            java.time.LocalDate end,
+            List<Long> accountFilterIds,
+            List<Long> categoryFilterIds,
+            List<Long> subCategoryFilterIds,
+            FinancialDirection direction
+    ) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            predicates.add(cb.equal(root.get("workspace").get("id"), workspaceId));
+            predicates.add(cb.equal(root.get("direction"), direction));
+            predicates.add(cb.equal(root.get("status"), PlannedEntryStatus.OPEN));
+            /*
+             * No período filtrado: vencimento entre start e end.
+             * Também inclui contas em atraso ainda OPEN com vencimento antes do início do período
+             * (saldo de obrigações/recebíveis não liquidados).
+             */
+            Predicate dueInSelectedPeriod = cb.and(
+                    cb.greaterThanOrEqualTo(root.get("dueDate"), start),
+                    cb.lessThanOrEqualTo(root.get("dueDate"), end)
+            );
+            Predicate overdueBeforePeriod = cb.lessThan(root.get("dueDate"), start);
+            predicates.add(cb.or(dueInSelectedPeriod, overdueBeforePeriod));
+            if (!accountFilterIds.isEmpty()) {
+                predicates.add(root.get("defaultAccount").get("id").in(accountFilterIds));
+            }
+            if (!categoryFilterIds.isEmpty()) {
+                predicates.add(root.get("category").get("id").in(categoryFilterIds));
+            }
+            if (!subCategoryFilterIds.isEmpty()) {
+                predicates.add(root.get("subCategory").get("id").in(subCategoryFilterIds));
+            }
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+    }
+
+    private BigDecimal sumByMovementType(List<KpiAmountLine> lines, MovementType movementType) {
+        return lines.stream()
+                .filter(line -> line.movementType() == movementType)
+                .map(KpiAmountLine::amount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    private List<CategoryGroupedKpiResponse> buildCategoryGroupedKpis(
-            List<CashMovement> movements,
+    private List<CategoryGroupedKpiResponse> buildCategoryGroupedKpisFromLines(
+            List<KpiAmountLine> lines,
             BigDecimal totalByType,
             MovementType targetType
     ) {
         Map<Long, CategoryAccumulator> categoryMap = new LinkedHashMap<>();
 
-        for (CashMovement movement : movements) {
-            if (movement.getMovementType() != targetType) {
-                continue;
-            }
-            if (movement.getSubCategory() == null || movement.getSubCategory().getCategory() == null) {
+        for (KpiAmountLine line : lines) {
+            if (line.movementType() != targetType) {
                 continue;
             }
 
-            Long categoryId = movement.getSubCategory().getCategory().getId();
-            String categoryName = movement.getSubCategory().getCategory().getName();
-            MovementType categoryMovementType = movement.getSubCategory().getCategory().getMovementType();
-            Long subCategoryId = movement.getSubCategory().getId();
-            String subCategoryName = movement.getSubCategory().getName();
-            BigDecimal amount = defaultIfNull(movement.getAmount());
+            Long categoryId = line.categoryId();
+            String categoryName = line.categoryName();
+            MovementType categoryMovementType = line.categoryMovementType();
+            Long subCategoryId = line.subCategoryId();
+            String subCategoryName = line.subCategoryName();
+            BigDecimal amount = line.amount();
 
             CategoryAccumulator categoryAccumulator = categoryMap.computeIfAbsent(
                     categoryId,
@@ -278,4 +414,14 @@ public class KpiService extends BaseUserService{
                 .intValue();
     }
 
+    private record KpiAmountLine(
+            MovementType movementType,
+            BigDecimal amount,
+            Long categoryId,
+            String categoryName,
+            MovementType categoryMovementType,
+            Long subCategoryId,
+            String subCategoryName
+    ) {
+    }
 }
