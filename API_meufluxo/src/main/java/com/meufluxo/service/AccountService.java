@@ -119,6 +119,9 @@ public class AccountService extends BaseUserService{
         if (request.overdraftLimit() != null) {
             existingAccount.setOverdraftLimit(request.overdraftLimit());
         }
+        if (request.initialBalanceDate() != null) {
+            existingAccount.setInitialBalanceDate(request.initialBalanceDate());
+        }
         existingAccount = accountRepository.save(existingAccount);
         workspaceSyncStateService.incrementAccountsVersion(getCurrentWorkspaceId());
         return accountMapper.toResponse(existingAccount);

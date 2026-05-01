@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 public record AccountRequest(
 
@@ -18,6 +19,9 @@ public record AccountRequest(
 
         @NotNull(message = "O saldo inicial é obrigatório")
         BigDecimal initialBalance,
+
+        @NotNull(message = "A data do saldo inicial é obrigatória")
+        LocalDate initialBalanceDate,
 
         Integer bankCode,
         String bankName,

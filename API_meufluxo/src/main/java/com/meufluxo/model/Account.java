@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -33,6 +34,9 @@ public class Account extends UserOwnedEntity {
 
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal initialBalance;
+
+    @Column(nullable = false)
+    private LocalDate initialBalanceDate;
 
     @Column
     private Integer bankCode;
