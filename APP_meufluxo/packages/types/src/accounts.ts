@@ -14,6 +14,8 @@ export type Account = {
   id: AccountId;
   name: string;
   accountType: AccountType;
+  /** Data de referência do saldo inicial (YYYY-MM-DD). */
+  initialBalanceDate?: string | null;
   currentBalance: number;
   balanceUpdatedAt: string | null;
   meta: EntityMeta;
@@ -45,6 +47,8 @@ export type AccountDetailsMeta = EntityMeta & {
 
 export type AccountDetails = Omit<Account, "meta"> & {
   initialBalance: number;
+  /** Data em que o saldo inicial foi fixado (imutável para histórico anterior). */
+  initialBalanceDate?: string | null;
   meta: AccountDetailsMeta;
   /** Campos futuros opcionais, quando o backend expor. */
   movementCount?: number | null;

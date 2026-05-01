@@ -292,6 +292,16 @@ export const ptBR = {
   "auth.entering": "Entrando...",
   "auth.noAccount": "Ainda sem conta?",
   "auth.createWorkspace": "Criar workspace (em breve)",
+  "auth.error.invalidCredentials": "E-mail ou senha inválidos.",
+  "auth.error.authenticationRequired":
+    "É necessário autenticar-se ou o token enviado é inválido.",
+  "auth.error.noToken": "O login não retornou um token de acesso.",
+  "auth.error.sessionLoadFailed": "Não foi possível carregar sua sessão.",
+  "auth.error.loginFailed": "Não foi possível entrar.",
+  "auth.error.connectionFailed": "Falha na conexão com o servidor.",
+  "auth.error.genericConnection": "Erro de conexão.",
+  "auth.error.requestFailed": "Erro na requisição ao servidor.",
+  "auth.error.validationFields": "Um ou mais campos são inválidos.",
 
   // Comum / acessibilidade
   "common.close": "Fechar",

@@ -47,6 +47,22 @@ type PreviewContext = {
   subCategoryName: string | null;
 };
 
+function validateAccountAnchorDate(params: {
+  accountIdRaw: string | undefined;
+  dueDate: string;
+  accounts: Array<{ id: string; name: string; initialBalanceDate?: string | null }>;
+}): { accountName: string; minAllowedDate: string } | null {
+  if (!params.accountIdRaw) return null;
+  const account = params.accounts.find((item) => item.id === params.accountIdRaw);
+  const anchor = account?.initialBalanceDate?.slice(0, 10);
+  if (!anchor) return null;
+  if (params.dueDate > anchor) return null;
+  return {
+    accountName: account?.name ?? "conta selecionada",
+    minAllowedDate: anchor,
+  };
+}
+
 function todayIsoDate(): string {
   const now = new Date();
   const y = now.getFullYear();
@@ -154,6 +170,22 @@ export default function ExpenseRegistrationsPage() {
       notes: values.notes?.trim() ? values.notes.trim() : null,
     } as const;
 
+    const anchorViolation = validateAccountAnchorDate({
+      accountIdRaw: values.defaultAccountId,
+      dueDate: values.dueDate,
+      accounts: accounts.map((a) => ({
+        id: String(a.id),
+        name: a.name,
+        initialBalanceDate: a.initialBalanceDate,
+      })),
+    });
+    if (anchorViolation) {
+      form.setError("dueDate", {
+        message: `Para ${anchorViolation.accountName}, o vencimento deve ser após ${anchorViolation.minAllowedDate}.`,
+      });
+      return;
+    }
+
     try {
       if (values.creationType === "SINGLE") {
         await createSingleMutation.mutateAsync({
@@ -198,6 +230,36 @@ export default function ExpenseRegistrationsPage() {
       }
 
       const previewEntries = await applyBusinessDayAdjustmentsToPreviewEntries(generatedEntries);
+      if (payloadBase.defaultAccountId != null) {
+        const accountIdRaw = String(payloadBase.defaultAccountId);
+        const offending = previewEntries.find((entry) => {
+          const check = validateAccountAnchorDate({
+            accountIdRaw,
+            dueDate: entry.dueDate,
+            accounts: accounts.map((a) => ({
+              id: String(a.id),
+              name: a.name,
+              initialBalanceDate: a.initialBalanceDate,
+            })),
+          });
+          return check != null;
+        });
+        if (offending) {
+          const check = validateAccountAnchorDate({
+            accountIdRaw,
+            dueDate: offending.dueDate,
+            accounts: accounts.map((a) => ({
+              id: String(a.id),
+              name: a.name,
+              initialBalanceDate: a.initialBalanceDate,
+            })),
+          });
+          form.setError("dueDate", {
+            message: `Há projeções com vencimento inválido. Use datas após ${check?.minAllowedDate ?? "a data base"} para a conta selecionada.`,
+          });
+          return;
+        }
+      }
 
       setPreviewContext({
         description: payloadBase.description,
@@ -224,6 +286,33 @@ export default function ExpenseRegistrationsPage() {
     async (entries: ExpenseBatchConfirmEntry[]) => {
       if (!previewContext) return;
       try {
+        if (previewContext.defaultAccountId != null) {
+          const accountIdRaw = String(previewContext.defaultAccountId);
+          const accountList = accounts.map((a) => ({
+            id: String(a.id),
+            name: a.name,
+            initialBalanceDate: a.initialBalanceDate,
+          }));
+          const offending = entries.find((entry) => {
+            const check = validateAccountAnchorDate({
+              accountIdRaw,
+              dueDate: entry.dueDate,
+              accounts: accountList,
+            });
+            return check != null;
+          });
+          if (offending) {
+            const check = validateAccountAnchorDate({
+              accountIdRaw,
+              dueDate: offending.dueDate,
+              accounts: accountList,
+            });
+            const message = `Existe lançamento com vencimento inválido para a conta selecionada. Use datas após ${check?.minAllowedDate ?? "a data base"}.`;
+            setBatchConfirmError(message);
+            error(message);
+            return;
+          }
+        }
         setBatchConfirmError(null);
         await createBatchMutation.mutateAsync({
           description: previewContext.description,

@@ -19,36 +19,58 @@ export function monthKeyFromDate(d: Date): string {
 }
 
 /**
- * Botões de mês na visão da conta:
- * 4 meses anteriores ao corrente, mês corrente, depois meses futuros (apenas com lançamentos), máx. 12.
+ * Atalhos de mês na visão da conta:
+ * - Com `minMonthKey` (mês da data de referência do saldo inicial): o primeiro botão é esse mês; em seguida,
+ *   todos os meses civis consecutivos até o mês corrente.
+ * - Sem `minMonthKey`: começa em (mês corrente − 6), até o mês corrente.
+ * - Depois do mês corrente: até 6 meses à frente, somente meses que tenham lançamento (`futureMonthKeysWithMovements`).
  */
 export function buildAccountMonthQuickRanges(params: {
   today: Date;
   /** Chaves `yyyy-MM` de meses **estritamente posteriores** ao mês corrente que possuem lançamento. */
   futureMonthKeysWithMovements: ReadonlySet<string>;
+  /** Mês mínimo permitido (mês civil de `initialBalanceDate`). Formato `yyyy-MM`. */
+  minMonthKey?: string;
 }): DateRangeValue[] {
-  const { today, futureMonthKeysWithMovements } = params;
+  const { today, futureMonthKeysWithMovements, minMonthKey } = params;
   const cur = startOfMonth(today);
-  const monthStarts: Date[] = [];
+  const winStartFallback = addMonths(cur, -6);
+  const winEnd = addMonths(cur, 6);
+  const winEndKey = monthKeyFromDate(winEnd);
 
-  for (let k = 4; k >= 1; k -= 1) {
-    monthStarts.push(addMonths(cur, -k));
+  let leftNav: Date;
+  if (minMonthKey) {
+    const anchor = parseISO(`${minMonthKey}-01`);
+    if (Number.isNaN(anchor.getTime())) {
+      leftNav = winStartFallback;
+    } else {
+      leftNav = startOfMonth(anchor);
+    }
+  } else {
+    leftNav = winStartFallback;
   }
-  monthStarts.push(cur);
+
+  if (leftNav.getTime() > cur.getTime()) {
+    leftNav = cur;
+  }
+
+  const monthStarts: Date[] = [];
+  for (let d = leftNav; d.getTime() <= cur.getTime(); d = addMonths(d, 1)) {
+    monthStarts.push(startOfMonth(d));
+  }
 
   const currentKey = format(cur, "yyyy-MM");
   const sortedFuture = Array.from(futureMonthKeysWithMovements)
-    .filter((key) => key > currentKey)
+    .filter((key) => key > currentKey && key <= winEndKey)
     .sort();
 
   for (const key of sortedFuture) {
-    if (monthStarts.length >= 12) break;
     const d = parseISO(`${key}-01`);
     if (Number.isNaN(d.getTime())) continue;
     monthStarts.push(startOfMonth(d));
   }
 
-  return monthStarts.slice(0, 12).map((d) => monthRangeForDate(d));
+  return monthStarts.map((d) => monthRangeForDate(d));
 }
 
 export function rangesEqual(a: DateRangeValue, b: DateRangeValue) {

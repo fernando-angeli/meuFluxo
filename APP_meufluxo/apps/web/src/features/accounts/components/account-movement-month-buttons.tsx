@@ -23,11 +23,13 @@ export function AccountMovementMonthButtons({
   filters,
   onChange,
   futureMovementMonthKeys,
+  minMonthKey,
   disabled,
 }: {
   filters: AccountMovementMonthFilterSlice;
   onChange: (next: AccountMovementMonthFilterSlice) => void;
   futureMovementMonthKeys: readonly string[];
+  minMonthKey?: string;
   disabled?: boolean;
 }) {
   const futureSet = React.useMemo(
@@ -40,8 +42,9 @@ export function AccountMovementMonthButtons({
       buildAccountMonthQuickRanges({
         today: new Date(),
         futureMonthKeysWithMovements: futureSet,
+        minMonthKey,
       }),
-    [futureSet],
+    [futureSet, minMonthKey],
   );
 
   return (

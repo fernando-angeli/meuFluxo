@@ -19,6 +19,8 @@ function alignClass(align: DataTableAlign | undefined) {
   return "text-left";
 }
 
+const INITIAL_PAGE_SIZE = 20;
+
 export function DataTable<T>({
   columns,
   data,
@@ -60,7 +62,7 @@ export function DataTable<T>({
   const colSpan = columns.length;
 
   const page = pageResponse?.page ?? 0;
-  const size = pageResponse?.size ?? 20;
+  const size = pageResponse?.size ?? INITIAL_PAGE_SIZE;
   const totalElements = pageResponse?.totalElements ?? 0;
   const totalPages = pageResponse?.totalPages ?? 0;
   const first = pageResponse?.first ?? true;

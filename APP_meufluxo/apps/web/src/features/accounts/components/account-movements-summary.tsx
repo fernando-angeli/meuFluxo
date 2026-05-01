@@ -10,12 +10,14 @@ export function AccountMovementsSummary({
   currency,
   totalIncome,
   totalExpense,
+  currentBalance,
   loading,
   errorMessage,
 }: {
   currency: "BRL" | "USD" | "EUR";
   totalIncome: number;
   totalExpense: number;
+  currentBalance: number;
   loading: boolean;
   errorMessage: string | null;
 }) {
@@ -35,13 +37,29 @@ export function AccountMovementsSummary({
         ) : errorMessage ? (
           <SectionErrorState message={errorMessage} />
         ) : (
-          <div className="grid gap-4 sm:grid-cols-3">
-            <KpiCard title="Entradas no período" value={formatCurrency(totalIncome, currency)} tone="success" />
-            <KpiCard title="Saídas no período" value={formatCurrency(totalExpense, currency)} tone="danger" />
+          <div className="grid gap-4 sm:grid-cols-4">
+            <KpiCard 
+              title="Entradas no período" 
+              value={formatCurrency(totalIncome, currency)} 
+              tone="success" 
+              hint="Total de entradas no período"
+            />
+            <KpiCard 
+              title="Saídas no período" 
+              value={formatCurrency(totalExpense, currency)} 
+              tone="danger" 
+              hint="Total de saídas no período"
+            />
             <KpiCard
-              title="Saldo líquido do período"
+              title="Saldo do período"
               value={formatCurrency(net, currency)}
               tone={net >= 0 ? "success" : "danger"}
+            />  
+            <KpiCard
+              title="Saldo atual"
+              value={formatCurrency(currentBalance, currency)}
+              tone={currentBalance >= 0 ? "success" : "danger"}
+              hint="Saldo consolidado da conta; não muda com o período filtrado acima."
             />
           </div>
         )}

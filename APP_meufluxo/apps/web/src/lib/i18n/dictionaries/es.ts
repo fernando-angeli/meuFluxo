@@ -282,6 +282,16 @@ export const es: Record<PtBRKeys, string> = {
   "auth.entering": "Entrando...",
   "auth.noAccount": "¿Aún sin cuenta?",
   "auth.createWorkspace": "Crear espacio de trabajo (próximamente)",
+  "auth.error.invalidCredentials": "Correo o contraseña no válidos.",
+  "auth.error.authenticationRequired":
+    "Se requiere autenticación o el token proporcionado no es válido.",
+  "auth.error.noToken": "El inicio de sesión no devolvió un token de acceso.",
+  "auth.error.sessionLoadFailed": "No se pudo cargar tu sesión.",
+  "auth.error.loginFailed": "No se pudo iniciar sesión.",
+  "auth.error.connectionFailed": "No se pudo conectar con el servidor.",
+  "auth.error.genericConnection": "Error de conexión.",
+  "auth.error.requestFailed": "Error en la solicitud al servidor.",
+  "auth.error.validationFields": "Uno o más campos no son válidos.",
 
   "common.close": "Cerrar",
   "footer.ready": "v0 • listo para integrar con API REST",

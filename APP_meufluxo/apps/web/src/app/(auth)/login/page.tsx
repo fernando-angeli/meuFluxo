@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 
@@ -9,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
+import { translateAuthDisplayError } from "@/features/auth/lib/translate-auth-error";
 import { loginSchema, type LoginInput } from "@/features/auth/schemas/auth";
 import { useTranslation } from "@/lib/i18n";
 
@@ -30,6 +32,8 @@ export default function LoginPage() {
     formState: { errors, isSubmitting },
   } = form;
 
+  const errorMessage = React.useMemo(() => translateAuthDisplayError(error, t), [error, t]);
+
   return (
     <Card>
       <CardHeader className="space-y-2">
@@ -49,7 +53,7 @@ export default function LoginPage() {
             {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
           </div>
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {errorMessage && <p className="text-sm text-destructive">{errorMessage}</p>}
 
           <Button type="submit" className="w-full" disabled={isSubmitting}>
             {isSubmitting ? t("auth.entering") : t("auth.login")}
