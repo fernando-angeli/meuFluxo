@@ -68,6 +68,16 @@ export const es: Record<PtBRKeys, string> = {
   "dashboard.noDataInPeriod": "Sin datos en el período",
   "dashboard.emptyMessage": "Ningún movimiento en el período. Ajuste las fechas o registre movimientos.",
   "dashboard.loadError": "No se pudo cargar el dashboard.",
+  "dashboard.includeProjections.label": "Incluir proyecciones del período",
+  "dashboard.includeProjections.hint":
+    "Si está activo, suma ingresos y gastos planificados aún abiertos: vencimiento en el rango, vencidos en el rango y atrasados con vencimiento antes del inicio del rango (además de lo ya contabilizado en cuenta).",
+  "dashboard.includeProjections.aria": "Incluir proyecciones en el período filtrado",
+  "dashboard.movementsTable.hintCashOnly":
+    "Listado paginado del período (solo movimientos que ya impactaron la cuenta).",
+  "dashboard.movementsTable.hintWithProjections":
+    "Movimientos en cuenta más planificados abiertos o atrasados (vencimiento en el período o antes del inicio del período).",
+  "dashboard.movementsTable.mergeNote":
+    "La tabla une extracto y planificados; ordenación y paginación se aplican tras la unión (límite de 4000 filas).",
 
   "filters.period": "Período",
   "filters.type": "Tipo",
@@ -272,6 +282,16 @@ export const es: Record<PtBRKeys, string> = {
   "auth.entering": "Entrando...",
   "auth.noAccount": "¿Aún sin cuenta?",
   "auth.createWorkspace": "Crear espacio de trabajo (próximamente)",
+  "auth.error.invalidCredentials": "Correo o contraseña no válidos.",
+  "auth.error.authenticationRequired":
+    "Se requiere autenticación o el token proporcionado no es válido.",
+  "auth.error.noToken": "El inicio de sesión no devolvió un token de acceso.",
+  "auth.error.sessionLoadFailed": "No se pudo cargar tu sesión.",
+  "auth.error.loginFailed": "No se pudo iniciar sesión.",
+  "auth.error.connectionFailed": "No se pudo conectar con el servidor.",
+  "auth.error.genericConnection": "Error de conexión.",
+  "auth.error.requestFailed": "Error en la solicitud al servidor.",
+  "auth.error.validationFields": "Uno o más campos no son válidos.",
 
   "common.close": "Cerrar",
   "footer.ready": "v0 • listo para integrar con API REST",

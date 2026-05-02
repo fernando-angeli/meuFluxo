@@ -107,10 +107,6 @@ export function ExpenseSettleModal({
       ? String(settledAccountIdField).trim()
       : "";
 
-  const selectedAccountDisplayName = settledAccountIdNormalized
-    ? accounts.find((a) => String(a.id).trim() === settledAccountIdNormalized)?.name ?? null
-    : null;
-
   React.useEffect(() => {
     if (!open || !expense) return;
     form.reset({
@@ -299,11 +295,7 @@ export function ExpenseSettleModal({
                         : "border-input hover:border-input"
                     }`}
                   >
-                    <SelectValue placeholder="Selecione uma conta">
-                      {settledAccountIdNormalized
-                        ? (selectedAccountDisplayName ?? `Conta #${settledAccountIdNormalized}`)
-                        : undefined}
-                    </SelectValue>
+                    <SelectValue placeholder="Selecione uma conta" />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl border bg-popover shadow-lg" position="popper" sideOffset={6}>
                     <SelectItem value="__none" className="rounded-lg py-2 cursor-pointer focus:bg-accent">

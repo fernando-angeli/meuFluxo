@@ -13,6 +13,7 @@ export type CashMovementListItem = {
   subCategoryName: string;
   movementType: "INCOME" | "EXPENSE";
   amount: number;
+  paymentMethod?: string | null;
   sourceType?: string | null;
 };
 
@@ -35,6 +36,7 @@ function normalizeMovement(raw: unknown): CashMovementListItem {
     subCategoryName: String(subCategory.name ?? "—"),
     movementType: String(r.movementType ?? "EXPENSE") === "INCOME" ? "INCOME" : "EXPENSE",
     amount: toNumber(r.amount),
+    paymentMethod: r.paymentMethod != null ? String(r.paymentMethod) : null,
     sourceType: r.sourceType != null ? String(r.sourceType) : null,
   };
 }

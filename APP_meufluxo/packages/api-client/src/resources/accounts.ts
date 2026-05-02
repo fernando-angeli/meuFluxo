@@ -6,6 +6,7 @@ export type AccountCreateRequest = {
   name: string;
   accountType: AccountType;
   initialBalance: number;
+  initialBalanceDate: string;
   bankCode?: string | null;
   bankName?: string | null;
   agency?: string | null;
@@ -16,6 +17,8 @@ export type AccountCreateRequest = {
 export type AccountUpdateRequest = {
   name: string;
   active?: boolean | null;
+  initialBalance?: number;
+  initialBalanceDate?: string;
   bankCode?: string | null;
   bankName?: string | null;
   agency?: string | null;

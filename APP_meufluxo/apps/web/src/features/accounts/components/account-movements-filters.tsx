@@ -18,12 +18,23 @@ export type AccountMovementsFilterState = {
 
 export { monthRangeForDate } from "@/features/accounts/lib/account-movement-month-ranges";
 
+function toMonthKey(value?: string | null): string | undefined {
+  const raw = String(value ?? "").trim();
+  if (!raw) return undefined;
+  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw);
+  if (iso) return `${iso[1]}-${iso[2]}`;
+  const br = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(raw);
+  if (br) return `${br[3]}-${br[2]}`;
+  return undefined;
+}
+
 export function AccountMovementsFilters({
   filters,
   onChange,
   categoryOptions,
   subCategoryOptions,
   futureMovementMonthKeys,
+  initialBalanceDate,
   disabled,
 }: {
   filters: AccountMovementsFilterState;
@@ -31,8 +42,11 @@ export function AccountMovementsFilters({
   categoryOptions: Array<{ id: string; name: string }>;
   subCategoryOptions: Array<{ id: string; name: string }>;
   futureMovementMonthKeys: readonly string[];
+  initialBalanceDate?: string | null;
   disabled?: boolean;
 }) {
+  const minMonthKey = toMonthKey(initialBalanceDate);
+
   const periodLabel = React.useMemo(() => {
     try {
       const a = parseISO(filters.dateRange.startDate);
@@ -47,14 +61,9 @@ export function AccountMovementsFilters({
     <Card className="border-border/80 shadow-sm">
       <CardHeader className="space-y-1 pb-3">
         <CardTitle className="text-base">Filtros</CardTitle>
-        {periodLabel ? (
-          <p className="text-sm text-muted-foreground">
-            Período selecionado: <span className="font-medium text-foreground">{periodLabel}</span>
-          </p>
-        ) : null}
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-1.5">
             <Label htmlFor="acc-mov-category">Categoria</Label>
             <FilterSelect
@@ -90,7 +99,7 @@ export function AccountMovementsFilters({
             />
           </div>
           <div className="space-y-1.5 sm:col-span-2 lg:col-span-1">
-            <Label>Período</Label>
+            <Label>Período selecionado</Label>
             <DateRangePicker
               value={filters.dateRange}
               onChange={(value) => value && onChange({ ...filters, dateRange: value })}
@@ -104,6 +113,7 @@ export function AccountMovementsFilters({
           filters={filters}
           onChange={onChange}
           futureMovementMonthKeys={futureMovementMonthKeys}
+          minMonthKey={minMonthKey}
           disabled={disabled}
         />
       </CardContent>

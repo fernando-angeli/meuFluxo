@@ -38,6 +38,10 @@ export function useServerDataTable<T>({
     [extraQueryParams],
   );
 
+  React.useLayoutEffect(() => {
+    setPage(0);
+  }, [extraKey]);
+
   const pageResponseQuery = useQuery<PageResponse<T>, unknown>({
     queryKey: [...queryKey, page, size, sortKey, direction, extraKey] as const,
     queryFn: () =>

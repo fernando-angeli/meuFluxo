@@ -21,14 +21,16 @@ import {
   useAccounts,
   useCloseInvoice,
   useCreditCards,
+  useDeleteInvoicePayment,
   useInvoiceDetails,
 } from "@/hooks/api";
 import { useAuthOptional } from "@/hooks/useAuth";
 import { useTranslation } from "@/lib/i18n";
+import { extractApiError } from "@/lib/api-error";
 import { getQueryErrorMessage } from "@/lib/query-error";
 import { useServerDataTable } from "@/hooks/useServerDataTable";
 import { useToast } from "@/components/toast";
-import type { Invoice, InvoiceStatus } from "@meufluxo/types";
+import type { Invoice, InvoicePaymentItem, InvoiceStatus } from "@meufluxo/types";
 
 export default function InvoicesPage() {
   const router = useRouter();
@@ -37,6 +39,7 @@ export default function InvoicesPage() {
   const auth = useAuthOptional();
   const { success, error: showError } = useToast();
   const closeInvoiceMutation = useCloseInvoice();
+  const deleteInvoicePaymentMutation = useDeleteInvoicePayment();
   const { data: creditCards = [] } = useCreditCards();
   const { data: accounts = [] } = useAccounts();
 
@@ -55,6 +58,8 @@ export default function InvoicesPage() {
   const [closeConfirmOpen, setCloseConfirmOpen] = React.useState(false);
   const [paymentModalOpen, setPaymentModalOpen] = React.useState(false);
   const [chargesModalOpen, setChargesModalOpen] = React.useState(false);
+  const [deletePaymentConfirmOpen, setDeletePaymentConfirmOpen] = React.useState(false);
+  const [paymentToDelete, setPaymentToDelete] = React.useState<InvoicePaymentItem | null>(null);
 
   React.useEffect(() => {
     const nextCreditCardId = searchParams.get("creditCardId") ?? "";
@@ -106,7 +111,13 @@ export default function InvoicesPage() {
     ? getQueryErrorMessage(table.pageResponseQuery.error, "Não foi possível carregar as faturas.")
     : null;
 
-  const detailsQuery = useInvoiceDetails(selectedInvoiceId, detailsOpen || paymentModalOpen || chargesModalOpen);
+  const detailsQuery = useInvoiceDetails(
+    selectedInvoiceId,
+    detailsOpen ||
+      paymentModalOpen ||
+      chargesModalOpen ||
+      deletePaymentConfirmOpen,
+  );
   const selectedInvoice = detailsQuery.data ?? selectedInvoicePreview;
   const detailsErrorMessage = detailsQuery.isError
     ? getQueryErrorMessage(detailsQuery.error, "Não foi possível carregar os detalhes da fatura.")
@@ -262,6 +273,13 @@ export default function InvoicesPage() {
             onCloseInvoice={() => setCloseConfirmOpen(true)}
             onPayInvoice={() => setPaymentModalOpen(true)}
             onEditCharges={() => setChargesModalOpen(true)}
+            onDeletePayment={(payment) => {
+              setPaymentToDelete(payment);
+              setDeletePaymentConfirmOpen(true);
+            }}
+            deletingPaymentId={
+              deleteInvoicePaymentMutation.isPending ? (paymentToDelete?.id ?? null) : null
+            }
             onEditExpenses={() => {
               router.push(`/card-expenses?invoiceId=${detailsQuery.data.id}`);
             }}
@@ -303,6 +321,34 @@ export default function InvoicesPage() {
         onOpenChange={setChargesModalOpen}
         invoice={detailsQuery.data ?? null}
         onSaved={refreshAll}
+      />
+
+      <ConfirmDialog
+        open={deletePaymentConfirmOpen}
+        onOpenChange={(open) => {
+          setDeletePaymentConfirmOpen(open);
+          if (!open) setPaymentToDelete(null);
+        }}
+        title="Excluir pagamento"
+        description="Confirma a exclusão deste pagamento? O saldo da conta será estornado e a fatura recalculada."
+        confirmText="Excluir pagamento"
+        confirmVariant="destructive"
+        isConfirming={deleteInvoicePaymentMutation.isPending}
+        onConfirm={async () => {
+          if (!selectedInvoiceId || !paymentToDelete) return;
+          try {
+            await deleteInvoicePaymentMutation.mutateAsync({
+              invoiceId: selectedInvoiceId,
+              paymentId: paymentToDelete.id,
+            });
+            success("Pagamento excluído com sucesso.");
+            setPaymentToDelete(null);
+            await refreshAll();
+          } catch (err) {
+            const apiError = extractApiError(err);
+            showError(apiError?.detail ?? "Não foi possível excluir o pagamento.");
+          }
+        }}
       />
     </>
   );

@@ -38,7 +38,7 @@ export function Switch({
         }
       }}
       className={cn(
-        "relative inline-flex h-6 w-11 items-center rounded-full border border-transparent transition-colors",
+        "relative inline-flex h-6 w-10 items-center rounded-full border border-transparent transition-colors",
         "bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         "data-[checked=true]:bg-primary",
         "disabled:cursor-not-allowed disabled:opacity-50",
@@ -48,7 +48,7 @@ export function Switch({
     >
       <span
         className={cn(
-          "pointer-events-none block h-5 w-5 translate-x-0.5 rounded-full bg-background shadow-lg ring-1 ring-border transition-transform",
+          "pointer-events-none block h-4 w-4 translate-x-0.5 rounded-full bg-background shadow-lg ring-1 ring-border transition-transform",
           checked && "translate-x-5",
         )}
       />

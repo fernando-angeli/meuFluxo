@@ -24,6 +24,8 @@ import { AccountMovementsTableCard } from "@/features/accounts/components/accoun
 import { useAccountMovementTotals } from "@/features/accounts/hooks/use-account-movement-totals";
 import { useAccountFutureMovementMonthKeys } from "@/features/accounts/hooks/use-account-future-movement-month-keys";
 
+const EMPTY_RUNNING_BALANCE_MAP = new Map<string, number>();
+
 function getDefaultFilters(): AccountMovementsFilterState {
   return {
     categoryId: "",
@@ -64,7 +66,7 @@ export default function AccountManagerPage() {
     fetchPage: fetchCashMovementsPage,
     initialPageSize: 20,
     initialSortKey: "occurredAt",
-    initialDirection: "desc",
+    initialDirection: "asc",
     enabled: !!accountId && !auth?.isBootstrapping && !!auth?.isAuthenticated,
     extraQueryParams: {
       accountId,
@@ -80,19 +82,43 @@ export default function AccountManagerPage() {
     table.onReset();
   }, [filterKey, table]);
 
+  const account = accountQuery.data ?? null;
+
   const totalsQuery = useAccountMovementTotals({
     accountId,
     categoryId: filters.categoryId,
     subCategoryId: filters.subCategoryId,
     startDate: filters.dateRange.startDate,
     endDate: filters.dateRange.endDate,
-    enabled: !!accountId && !auth?.isBootstrapping && !!auth?.isAuthenticated,
+    currentBalance:
+      account != null && Number.isFinite(account.currentBalance) ? account.currentBalance : 0,
+    enabled:
+      !!accountId &&
+      !auth?.isBootstrapping &&
+      !!auth?.isAuthenticated &&
+      !!account &&
+      Number.isFinite(account.currentBalance),
   });
 
   const pageResponse = table.pageResponseQuery.data ?? null;
   const rows = pageResponse?.content ?? [];
-  const account = accountQuery.data ?? null;
-  const columns = React.useMemo(() => getCashMovementsColumns(), []);
+
+  const columns = React.useMemo(
+    () =>
+      getCashMovementsColumns({
+        currency,
+        accountStatement: {
+          runningBalanceById: totalsQuery.data?.runningBalanceById ?? EMPTY_RUNNING_BALANCE_MAP,
+          runningBalancesLoading: totalsQuery.isLoading || totalsQuery.isFetching,
+        },
+      }),
+    [
+      currency,
+      totalsQuery.data?.runningBalanceById,
+      totalsQuery.isLoading,
+      totalsQuery.isFetching,
+    ],
+  );
 
   const tableError = table.pageResponseQuery.isError
     ? getQueryErrorMessage(table.pageResponseQuery.error, "Não foi possível carregar lançamentos desta conta.")
@@ -130,6 +156,7 @@ export default function AccountManagerPage() {
             categoryOptions={categoryOptions}
             subCategoryOptions={availableSubCategories.map((item) => ({ id: item.id, name: item.name }))}
             futureMovementMonthKeys={futureMonthKeysQuery.data ?? []}
+            initialBalanceDate={account.initialBalanceDate}
             disabled={auth?.isBootstrapping || !auth?.isAuthenticated}
           />
 
@@ -137,6 +164,7 @@ export default function AccountManagerPage() {
             currency={currency}
             totalIncome={totalsQuery.data?.totalIncome ?? 0}
             totalExpense={totalsQuery.data?.totalExpense ?? 0}
+            currentBalance={account.currentBalance}
             loading={totalsQuery.isLoading || totalsQuery.isFetching}
             errorMessage={totalsError}
           />

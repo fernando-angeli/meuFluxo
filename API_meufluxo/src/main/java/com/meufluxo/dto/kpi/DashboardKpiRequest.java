@@ -29,6 +29,9 @@ public record DashboardKpiRequest(
         PaymentMethod paymentMethod,
 
         @Schema(description = "Movement type used to filter", example = "EXPENSE")
-        MovementType movementType
+        MovementType movementType,
+
+        @Schema(description = "When true, includes planned expenses and incomes still OPEN: due date in the period, or overdue (due before period start), in KPI totals and category breakdowns")
+        Boolean includeProjections
 
 ) {}

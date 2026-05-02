@@ -68,6 +68,16 @@ export const en: Record<PtBRKeys, string> = {
   "dashboard.noDataInPeriod": "No data in period",
   "dashboard.emptyMessage": "No movements in this period. Adjust dates or add transactions.",
   "dashboard.loadError": "Could not load dashboard.",
+  "dashboard.includeProjections.label": "Include projections for the period",
+  "dashboard.includeProjections.hint":
+    "When on, adds planned income and expenses still open: due in the range, overdue within the range, and overdue with due date before the range start (plus cash already posted).",
+  "dashboard.includeProjections.aria": "Include open planned items in the filtered period",
+  "dashboard.movementsTable.hintCashOnly":
+    "Paginated list for the period (cash movements that already hit the account only).",
+  "dashboard.movementsTable.hintWithProjections":
+    "Cash movements plus planned items open or overdue (due in the period or before the period start).",
+  "dashboard.movementsTable.mergeNote":
+    "The table merges cash and planned rows; sorting and paging run after merge (4000-row safety cap).",
 
   "filters.period": "Period",
   "filters.type": "Type",
@@ -272,6 +282,15 @@ export const en: Record<PtBRKeys, string> = {
   "auth.entering": "Signing in...",
   "auth.noAccount": "Don't have an account?",
   "auth.createWorkspace": "Create workspace (coming soon)",
+  "auth.error.invalidCredentials": "Invalid email or password.",
+  "auth.error.authenticationRequired": "Authentication is required or the provided token is invalid.",
+  "auth.error.noToken": "Sign-in did not return an access token.",
+  "auth.error.sessionLoadFailed": "Could not load your session.",
+  "auth.error.loginFailed": "Could not sign in.",
+  "auth.error.connectionFailed": "Could not connect to the server.",
+  "auth.error.genericConnection": "Connection error.",
+  "auth.error.requestFailed": "Request error.",
+  "auth.error.validationFields": "One or more fields are invalid.",
 
   "common.close": "Close",
   "footer.ready": "v0 • ready to integrate with REST API",

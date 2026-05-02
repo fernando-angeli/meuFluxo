@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -81,12 +82,31 @@ public class KpiController {
                     name = "movementType",
                     description = "Movement type used to filter the dashboard",
                     example = "EXPENSE"
+            ),
+            @Parameter(
+                    name = "includeProjections",
+                    description = "When true, includes planned income/expense still OPEN: due in the selected period, or overdue (due before period start) in KPI totals and category breakdowns",
+                    example = "false"
             )
     })
     @GetMapping("/dashboard")
     public DashboardKpiResponse getDashboardKpis(
-            @ModelAttribute DashboardKpiRequest request
+            @ModelAttribute DashboardKpiRequest request,
+            @RequestParam(name = "includeProjections", required = false) Boolean includeProjectionsQuery
     ) {
-        return kpiService.getDashboardKpis(request);
+        Boolean includeProjections = includeProjectionsQuery != null
+                ? includeProjectionsQuery
+                : request.includeProjections();
+        DashboardKpiRequest resolved = new DashboardKpiRequest(
+                request.startDate(),
+                request.endDate(),
+                request.accountIds(),
+                request.categoryIds(),
+                request.subCategoryIds(),
+                request.paymentMethod(),
+                request.movementType(),
+                includeProjections
+        );
+        return kpiService.getDashboardKpis(resolved);
     }
 }

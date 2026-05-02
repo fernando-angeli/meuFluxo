@@ -73,6 +73,16 @@ export const ptBR = {
   "dashboard.noDataInPeriod": "Nenhum dado no período",
   "dashboard.emptyMessage": "Nenhum movimento no período. Ajuste as datas ou cadastre movimentações.",
   "dashboard.loadError": "Não foi possível carregar o dashboard.",
+  "dashboard.includeProjections.label": "Incluir projeções no período",
+  "dashboard.includeProjections.hint":
+    "Quando ativo, soma receitas e despesas planejadas ainda em aberto: vencimento no intervalo, vencidas no intervalo e atrasadas com vencimento antes do início do período (além do que já caiu na conta).",
+  "dashboard.includeProjections.aria": "Incluir projeções no período filtrado",
+  "dashboard.movementsTable.hintCashOnly":
+    "Listagem paginada do período (somente movimentos que já ocorreram na conta).",
+  "dashboard.movementsTable.hintWithProjections":
+    "Movimentos na conta + planejados em aberto ou em atraso (vencimento no período ou antes do início do período).",
+  "dashboard.movementsTable.mergeNote":
+    "A tabela combina extrato e planejados; ordenação e paginação são aplicadas após unir os dados (limite de segurança de 4000 linhas).",
 
   // Filtros
   "filters.period": "Período",
@@ -282,6 +292,16 @@ export const ptBR = {
   "auth.entering": "Entrando...",
   "auth.noAccount": "Ainda sem conta?",
   "auth.createWorkspace": "Criar workspace (em breve)",
+  "auth.error.invalidCredentials": "E-mail ou senha inválidos.",
+  "auth.error.authenticationRequired":
+    "É necessário autenticar-se ou o token enviado é inválido.",
+  "auth.error.noToken": "O login não retornou um token de acesso.",
+  "auth.error.sessionLoadFailed": "Não foi possível carregar sua sessão.",
+  "auth.error.loginFailed": "Não foi possível entrar.",
+  "auth.error.connectionFailed": "Falha na conexão com o servidor.",
+  "auth.error.genericConnection": "Erro de conexão.",
+  "auth.error.requestFailed": "Erro na requisição ao servidor.",
+  "auth.error.validationFields": "Um ou mais campos são inválidos.",
 
   // Comum / acessibilidade
   "common.close": "Fechar",

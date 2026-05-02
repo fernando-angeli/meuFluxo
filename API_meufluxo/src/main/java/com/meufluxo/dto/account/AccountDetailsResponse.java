@@ -3,6 +3,7 @@ package com.meufluxo.dto.account;
 import com.meufluxo.enums.AccountType;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 public record AccountDetailsResponse(
@@ -15,6 +16,7 @@ public record AccountDetailsResponse(
         String agency,
         String accountNumber,
         BigDecimal initialBalance,
+        LocalDate initialBalanceDate,
         BigDecimal currentBalance,
         BigDecimal overdraftLimit,
         BigDecimal overdraftUsed,

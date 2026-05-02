@@ -33,7 +33,8 @@ export function AccountMovementsTableCard({
       <CardHeader className="pb-3">
         <CardTitle className="text-base">Lançamentos da conta</CardTitle>
         <p className="text-sm text-muted-foreground">
-          Lista paginada respeitando os mesmos filtros de categoria, subcategoria e período.
+          Lista paginada com os mesmos filtros; a coluna Saldo é o saldo após cada lançamento no período
+          (âncora no saldo atual da conta).
         </p>
       </CardHeader>
       <CardContent>

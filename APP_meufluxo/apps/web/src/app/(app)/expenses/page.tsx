@@ -192,7 +192,11 @@ export default function ExpensesPage() {
           name: s.name,
           categoryId: s.category.id,
         }))}
-        accounts={accounts.map((account) => ({ id: account.id, name: account.name }))}
+        accounts={accounts.map((account) => ({
+          id: account.id,
+          name: account.name,
+          initialBalanceDate: account.initialBalanceDate,
+        }))}
         onSaved={() => {
           table.pageResponseQuery.refetch();
         }}

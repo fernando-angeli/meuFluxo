@@ -33,6 +33,9 @@ function errorMessageFromPayload(
   payload: unknown,
   statusText: string,
 ): string {
+  if (typeof payload === "string" && payload.trim()) {
+    return payload.trim().slice(0, 500);
+  }
   if (payload && typeof payload === "object") {
     const p = payload as Record<string, unknown>;
     if (typeof p.detail === "string" && p.detail.trim()) return p.detail;
@@ -112,10 +115,7 @@ export class HttpClient {
     if (!res.ok) {
       const err: HttpError = {
         status: res.status,
-        message:
-          (payload && typeof payload === "object" && "message" in payload && String((payload as any).message)) ||
-          res.statusText ||
-          "Erro de requisição",
+        message: errorMessageFromPayload(payload, res.statusText || ""),
         details: payload ?? undefined,
       };
       throw err;

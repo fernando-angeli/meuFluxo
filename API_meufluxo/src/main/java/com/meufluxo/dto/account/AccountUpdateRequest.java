@@ -1,6 +1,7 @@
 package com.meufluxo.dto.account;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -17,7 +18,8 @@ public record AccountUpdateRequest(
         String bankName,
         String agency,
         String accountNumber,
-        BigDecimal overdraftLimit
+        BigDecimal overdraftLimit,
+        LocalDate initialBalanceDate
 
 ) {
 }

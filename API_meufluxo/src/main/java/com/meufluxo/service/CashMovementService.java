@@ -161,10 +161,12 @@ public class CashMovementService extends BaseUserService{
         SubCategory subCategory = subCategoryService.findByIdOrThrow(request.subCategoryId());
         Category category = subCategory.getCategory();
         Account account = accountService.findByIdOrThrow(request.accountId());
+        LocalDate occurredAt = request.occurredAt() != null ? request.occurredAt() : LocalDate.now();
+        validateMovementDateAgainstAccountInitialBalance(account, occurredAt);
         CashMovement movement = cashMovementMapper.toEntity(request);
         movement.setSubCategory(subCategory);
         movement.setAccount(account);
-        movement.setOccurredAt(request.occurredAt());
+        movement.setOccurredAt(occurredAt);
         MovementType movementType = (
                 request.movementType() != null ?
                         request.movementType() :
@@ -199,6 +201,10 @@ public class CashMovementService extends BaseUserService{
         Account newAccount = (request.accountId() != null)
                 ? accountService.findByIdOrThrow(request.accountId())
                 : oldAccount;
+        LocalDate newOccurredAt = (request.occurredAt() != null)
+                ? request.occurredAt()
+                : existingCashMovement.getOccurredAt();
+        validateMovementDateAgainstAccountInitialBalance(newAccount, newOccurredAt);
 
         BigDecimal newAmount = (request.amount() != null) ? request.amount() : oldAmount;
 
@@ -344,6 +350,18 @@ public class CashMovementService extends BaseUserService{
         // key: accountId ajuda a manter ordenação por conta
         String key = movement.getAccount() != null ? movement.getAccount().getId().toString() : movement.getId().toString();
         eventPublisher.publish(topic, key, event);
+    }
+
+    private void validateMovementDateAgainstAccountInitialBalance(Account account, LocalDate occurredAt) {
+        if (account == null || occurredAt == null || account.getInitialBalanceDate() == null) {
+            return;
+        }
+        if (occurredAt.isBefore(account.getInitialBalanceDate())) {
+            throw new BusinessException(
+                    "A data do movimento não pode ser anterior à data do saldo inicial da conta ("
+                            + account.getInitialBalanceDate() + ")."
+            );
+        }
     }
 
 }

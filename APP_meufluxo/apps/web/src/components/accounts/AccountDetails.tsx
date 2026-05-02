@@ -21,6 +21,15 @@ function formatDateTime(value?: string | null) {
   }
 }
 
+function formatDateOnly(value?: string | null) {
+  if (!value) return "Não informado";
+  try {
+    return format(parseISO(value), "dd/MM/yyyy", { locale: ptBR });
+  } catch {
+    return value;
+  }
+}
+
 function fallbackText(value?: string | null, fallback = "Ainda não disponível") {
   return value?.trim() ? value : fallback;
 }
@@ -77,6 +86,10 @@ export function AccountDetails({
               ? "Ainda não disponível"
               : formatCurrency(account.initialBalance, currency)
           }
+        />
+        <DetailsRow
+          label="Data base do saldo inicial"
+          value={formatDateOnly(account.initialBalanceDate)}
         />
         <DetailsRow
           label="Saldo atual"

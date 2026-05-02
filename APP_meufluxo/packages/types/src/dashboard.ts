@@ -55,5 +55,10 @@ export type DashboardKpisParams = {
   startDate: string;
   endDate: string;
   accountIds?: number[];
-  categoryIds?: number[] | null;
+  categoryIds?: number[];
+  subCategoryIds?: number[];
+  /** Omitido ou todos os tipos: a API considera receitas e despesas. */
+  movementType?: "INCOME" | "EXPENSE";
+  /** Inclui planejados em aberto ou em atraso (vencimento no período ou antes do início) nos KPIs e séries. */
+  includeProjections?: boolean;
 };

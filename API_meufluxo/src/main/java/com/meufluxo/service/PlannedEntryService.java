@@ -106,6 +106,7 @@ public class PlannedEntryService extends BaseUserService {
         entry.setGroupId(null);
         entry.setWorkspace(getCurrentWorkspace());
         entry.setDueDate(adjustDueDate(entry.getDueDate()));
+        validateDueDateAgainstAccountInitialBalance(entry.getDefaultAccount(), entry.getDueDate());
         entry.setIssueDate(Optional.ofNullable(request.issueDate()).orElse(entry.getDueDate()));
         entry.setDocument(trimToNull(request.document()));
         entry.setDescription(trimToNull(request.description()));
@@ -142,6 +143,7 @@ public class PlannedEntryService extends BaseUserService {
             entry.setExpectedAmount(item.expectedAmount());
             entry.setAmountBehavior(request.amountBehavior());
             entry.setDueDate(adjustDueDate(item.dueDate()));
+            validateDueDateAgainstAccountInitialBalance(defaultAccount, entry.getDueDate());
             entry.setStatus(PlannedEntryStatus.OPEN);
             entry.setDefaultAccount(defaultAccount);
             entry.setGroupId(groupId);
@@ -350,6 +352,7 @@ public class PlannedEntryService extends BaseUserService {
             if (request.defaultAccountId() != null) {
                 entry.setDefaultAccount(defaultAccount);
             }
+            validateDueDateAgainstAccountInitialBalance(entry.getDefaultAccount(), entry.getDueDate());
         }
 
         plannedEntryRepository.saveAll(futureOpenEntries);
@@ -448,6 +451,7 @@ public class PlannedEntryService extends BaseUserService {
         if (request.dueDate() != null) {
             entry.setDueDate(adjustDueDate(request.dueDate()));
         }
+        validateDueDateAgainstAccountInitialBalance(entry.getDefaultAccount(), entry.getDueDate());
 
         PlannedEntry saved = plannedEntryRepository.save(entry);
         return withComputedStatus(plannedEntryMapper.toResponse(saved));
@@ -713,6 +717,18 @@ public class PlannedEntryService extends BaseUserService {
             return null;
         }
         return businessDayService.adjustToNextBusinessDay(dueDate, getCurrentWorkspaceId());
+    }
+
+    private void validateDueDateAgainstAccountInitialBalance(Account account, LocalDate dueDate) {
+        if (account == null || dueDate == null || account.getInitialBalanceDate() == null) {
+            return;
+        }
+        if (dueDate.isBefore(account.getInitialBalanceDate())) {
+            throw new BusinessException(
+                    "A data de vencimento não pode ser anterior à data do saldo inicial da conta ("
+                            + account.getInitialBalanceDate() + ")."
+            );
+        }
     }
 
     private PlannedEntryResponse withComputedStatus(PlannedEntryResponse response) {

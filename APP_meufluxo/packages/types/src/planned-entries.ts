@@ -3,6 +3,9 @@ export type FinancialDirection = "INCOME" | "EXPENSE";
 export type PlannedAmountBehavior = "FIXED" | "ESTIMATED";
 export type PlannedEntryStatus = "OPEN" | "COMPLETED" | "CANCELED" | "OVERDUE";
 
+/** Lista GET /expenses|/income: `OPEN`+`OVERDUE` cobre tudo que segue OPEN no BD (atraso é derivado na leitura). */
+export const DASHBOARD_PROJECTION_PLANNED_STATUSES: readonly PlannedEntryStatus[] = ["OPEN", "OVERDUE"];
+
 export type ExpenseCreateType = "SINGLE" | "RECURRING";
 
 export type ExpenseCreateRequest = {

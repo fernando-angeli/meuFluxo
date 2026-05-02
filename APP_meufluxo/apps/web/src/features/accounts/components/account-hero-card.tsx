@@ -339,11 +339,6 @@ export function AccountHeroCard({
               <Badge variant={account.meta.active ? "success" : "muted"} className="rounded-lg font-normal">
                 {account.meta.active ? "Ativa" : "Inativa"}
               </Badge>
-              {normalizeBankString(account.status) ? (
-                <Badge variant="outline" className="rounded-lg font-normal text-muted-foreground">
-                  {normalizeBankString(account.status)}
-                </Badge>
-              ) : null}
             </div>
           </div>
 

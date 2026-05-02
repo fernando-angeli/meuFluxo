@@ -20,6 +20,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
 
 import { FormFieldError } from "@/components/form";
 import { ControlledMinorUnitMoneyInput } from "@/components/form/controlled-minor-unit-money-input";
@@ -45,15 +46,30 @@ const accountTypeEnum = z.enum([
   "BENEFIT_CARD",
 ]);
 
+function isValidAccountType(value: string): value is AccountType {
+  return accountTypeEnum.safeParse(value).success;
+}
+
 const accountModalSchema = z.object({
   name: z.string().min(3, "Nome deve ter pelo menos 3 caracteres."),
-  accountType: accountTypeEnum,
+  accountType: z
+    .string()
+    .trim()
+    .min(1, "Tipo da conta é obrigatório.")
+    .refine((v) => isValidAccountType(v), "Tipo da conta inválido."),
   initialBalance: z
     .string()
+    .trim()
+    .min(1, "Saldo inicial é obrigatório.")
     .refine((v) => {
       const n = parseMoneyInput((v ?? "").trim() || "0");
       return Number.isFinite(n) && n >= 0;
     }, "Saldo inicial não pode ser negativo."),
+  initialBalanceDate: z
+    .string()
+    .trim()
+    .min(1, "Data do saldo inicial é obrigatória.")
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Informe uma data válida no formato YYYY-MM-DD."),
   active: z.boolean(),
   bankCode: z.string(),
   bankName: z.string(),
@@ -67,16 +83,37 @@ const accountModalSchema = z.object({
     }, "Limite não pode ser negativo."),
 });
 
-type AccountModalValues = z.infer<typeof accountModalSchema>;
+type AccountModalValues = {
+  name: string;
+  accountType: string;
+  initialBalance: string;
+  initialBalanceDate: string;
+  active: boolean;
+  bankCode: string;
+  bankName: string;
+  agency: string;
+  accountNumber: string;
+  overdraftLimit: string;
+};
 
-function checkingPayload(values: AccountModalValues, accountType: AccountType) {
-  if (accountType !== "CHECKING") return {};
+function todayIsoDate(): string {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function accountBankPayload(values: AccountModalValues, accountType: AccountType) {
+  if (accountType !== "CHECKING" && accountType !== "INVESTMENT") return {};
   return {
     bankCode: normalizeBankString(values.bankCode) || null,
     bankName: normalizeBankString(values.bankName) || null,
     agency: normalizeBankString(values.agency) || null,
     accountNumber: normalizeBankString(values.accountNumber) || null,
-    overdraftLimit: parseMoneyInput((values.overdraftLimit ?? "").trim() || "0"),
+    ...(accountType === "CHECKING"
+      ? { overdraftLimit: parseMoneyInput((values.overdraftLimit ?? "").trim() || "0") }
+      : {}),
   };
 }
 
@@ -110,6 +147,12 @@ export function AccountModal({
 
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
   const [generalError, setGeneralError] = React.useState<string | null>(null);
+  const [impactConfirmOpen, setImpactConfirmOpen] = React.useState(false);
+  const pendingSubmitValuesRef = React.useRef<AccountModalValues | null>(null);
+  const initialAnchorRef = React.useRef<{ initialBalance: number; initialBalanceDate: string }>({
+    initialBalance: 0,
+    initialBalanceDate: todayIsoDate(),
+  });
 
   const clearFieldError = React.useCallback((field: string) => {
     setFieldErrors((prev) => {
@@ -124,8 +167,9 @@ export function AccountModal({
     resolver: zodResolver(accountModalSchema),
     defaultValues: {
       name: "",
-      accountType: "CHECKING",
+      accountType: "",
       initialBalance: "",
+      initialBalanceDate: "",
       active: true,
       ...emptyCheckingDefaults,
     },
@@ -143,11 +187,16 @@ export function AccountModal({
     if (!account) {
       form.reset({
         name: "",
-        accountType: "CHECKING",
+        accountType: "",
         initialBalance: "",
+        initialBalanceDate: "",
         active: true,
         ...emptyCheckingDefaults,
       });
+      initialAnchorRef.current = {
+        initialBalance: 0,
+        initialBalanceDate: todayIsoDate(),
+      };
       return;
     }
 
@@ -158,6 +207,7 @@ export function AccountModal({
         accountType: d.accountType as AccountType,
         initialBalance:
           (d.initialBalance ?? 0) > 0 ? amountToEditString(d.initialBalance ?? 0, intlLocale) : "",
+        initialBalanceDate: d.initialBalanceDate?.slice(0, 10) ?? todayIsoDate(),
         active: !!d.meta.active,
         bankCode: normalizeBankString(d.bankCode),
         bankName: normalizeBankString(d.bankName),
@@ -166,6 +216,10 @@ export function AccountModal({
         overdraftLimit:
           (d.overdraftLimit ?? 0) > 0 ? amountToEditString(d.overdraftLimit ?? 0, intlLocale) : "",
       });
+      initialAnchorRef.current = {
+        initialBalance: Number.isFinite(d.initialBalance) ? d.initialBalance : 0,
+        initialBalanceDate: d.initialBalanceDate?.slice(0, 10) ?? todayIsoDate(),
+      };
       return;
     }
 
@@ -176,6 +230,7 @@ export function AccountModal({
         (account.currentBalance ?? 0) > 0
           ? amountToEditString(account.currentBalance ?? 0, intlLocale)
           : "",
+      initialBalanceDate: account.initialBalanceDate?.slice(0, 10) ?? todayIsoDate(),
       active: !!account.meta.active,
       bankCode: normalizeBankString(account.bankCode),
       bankName: normalizeBankString(account.bankName),
@@ -186,30 +241,43 @@ export function AccountModal({
           ? amountToEditString(account.overdraftLimit ?? 0, intlLocale)
           : "",
     });
+    initialAnchorRef.current = {
+      initialBalance: Number.isFinite(account.currentBalance) ? account.currentBalance : 0,
+      initialBalanceDate: account.initialBalanceDate?.slice(0, 10) ?? todayIsoDate(),
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reset só quando abre / conta / detalhes carregados
   }, [open, account?.id, detailsQuery.isSuccess, detailsQuery.data, intlLocale]);
 
-  const onSubmit = form.handleSubmit(async (values) => {
+  const submitAccount = React.useCallback(async (values: AccountModalValues) => {
     setFieldErrors({});
     setGeneralError(null);
+    if (!isValidAccountType(values.accountType)) {
+      form.setError("accountType", { message: "Tipo da conta é obrigatório." });
+      return;
+    }
 
     try {
       if (isEdit) {
+        const accountType = values.accountType as AccountType;
         await updateMutation.mutateAsync({
           id: account!.id,
           request: {
             name: values.name,
             active: values.active,
-            ...checkingPayload(values, account!.accountType),
+            initialBalance: parseMoneyInput((values.initialBalance ?? "").trim() || "0"),
+            initialBalanceDate: values.initialBalanceDate,
+            ...accountBankPayload(values, accountType),
           },
         });
         success("Conta atualizada com sucesso");
       } else {
+        const accountType = values.accountType as AccountType;
         const created = await createMutation.mutateAsync({
           name: values.name,
-          accountType: values.accountType,
+          accountType,
           initialBalance: parseMoneyInput((values.initialBalance ?? "").trim() || "0"),
-          ...checkingPayload(values, values.accountType),
+          initialBalanceDate: values.initialBalanceDate,
+          ...accountBankPayload(values, accountType),
         });
         if (!values.active) {
           await updateMutation.mutateAsync({
@@ -231,13 +299,40 @@ export function AccountModal({
         error(message);
       }
     }
+  }, [
+    account,
+    createMutation,
+    error,
+    form,
+    isEdit,
+    onOpenChange,
+    success,
+    updateMutation,
+  ]);
+
+  const onSubmit = form.handleSubmit(async (values) => {
+    if (isEdit) {
+      const nextBalance = parseMoneyInput((values.initialBalance ?? "").trim() || "0");
+      const prevBalance = initialAnchorRef.current.initialBalance;
+      const nextDate = values.initialBalanceDate.slice(0, 10);
+      const prevDate = initialAnchorRef.current.initialBalanceDate.slice(0, 10);
+      const anchorChanged = Math.abs(nextBalance - prevBalance) > 0.000001 || nextDate !== prevDate;
+      if (anchorChanged) {
+        pendingSubmitValuesRef.current = values;
+        setImpactConfirmOpen(true);
+        return;
+      }
+    }
+    await submitAccount(values);
   });
 
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
   const options = React.useMemo(() => {
     const set = new Set<AccountType>(ALLOWED_ACCOUNT_TYPES);
-    if (!set.has(currentAccountType)) set.add(currentAccountType);
+    if (isValidAccountType(currentAccountType) && !set.has(currentAccountType)) {
+      set.add(currentAccountType);
+    }
     return Array.from(set);
   }, [currentAccountType]);
 
@@ -247,6 +342,7 @@ export function AccountModal({
   const bankName = normalizeBankString(bankNameRaw);
 
   return (
+    <>
     <FormDialogShell
       open={open}
       onOpenChange={onOpenChange}
@@ -271,23 +367,22 @@ export function AccountModal({
           <FormFieldError message={fieldErrors.name ?? form.formState.errors.name?.message} />
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 lg:grid-cols-3">
           <div className="space-y-2">
             <Label>Tipo</Label>
             <Select
-              value={currentAccountType}
+              value={currentAccountType || "__none__"}
               disabled={isEdit || isSubmitting}
               onValueChange={(value) => {
-                form.setValue("accountType", value as AccountType, {
-                  shouldDirty: true,
-                });
+                form.setValue("accountType", value === "__none__" ? "" : value, { shouldDirty: true });
                 clearFieldError("accountType");
               }}
             >
-              <SelectTrigger className={cn("h-10", getInputErrorClass(fieldErrors.accountType))}>
+              <SelectTrigger className={cn("h-10 w-full", getInputErrorClass(fieldErrors.accountType))}>
                 <SelectValue placeholder="Selecione o tipo" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="__none__">Selecione o tipo</SelectItem>
                 {options.map((t) => (
                   <SelectItem key={t} value={t}>
                     {getAccountTypeLabel(t)}
@@ -295,7 +390,7 @@ export function AccountModal({
                 ))}
               </SelectContent>
             </Select>
-            <FormFieldError message={fieldErrors.accountType} />
+            <FormFieldError message={fieldErrors.accountType ?? form.formState.errors.accountType?.message} />
           </div>
 
           <div className="space-y-2">
@@ -304,7 +399,7 @@ export function AccountModal({
               id="initialBalance"
               control={form.control}
               name="initialBalance"
-              disabled={isEdit || isSubmitting}
+              disabled={isSubmitting}
               className={cn(
                 "h-10 w-full",
                 getInputErrorClass(
@@ -318,11 +413,37 @@ export function AccountModal({
               message={fieldErrors.initialBalance ?? form.formState.errors.initialBalance?.message}
             />
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="initialBalanceDate">Data do saldo inicial</Label>
+            <Input
+              id="initialBalanceDate"
+              type="date"
+              disabled={isSubmitting}
+              className={cn(
+                "h-10",
+                getInputErrorClass(
+                  fieldErrors.initialBalanceDate ?? form.formState.errors.initialBalanceDate?.message,
+                ),
+              )}
+              {...form.register("initialBalanceDate", {
+                onChange: () => clearFieldError("initialBalanceDate"),
+              })}
+            />
+            <FormFieldError
+              message={fieldErrors.initialBalanceDate ?? form.formState.errors.initialBalanceDate?.message}
+            />
+          </div>
         </div>
+        <p className="text-xs text-muted-foreground">
+          Lançamentos com vencimento menor ou igual a essa data são bloqueados para preservar a
+          referência do saldo inicial.
+        </p>
 
-        {currentAccountType === "CHECKING" ? (
+        {currentAccountType === "CHECKING" || currentAccountType === "INVESTMENT" ? (
           <div className="space-y-4 rounded-xl border border-border/80 bg-muted/20 p-4 dark:bg-muted/10">
-            <p className="text-sm font-medium text-foreground">Conta corrente</p>
+            <p className="text-sm font-medium text-foreground">
+              {currentAccountType === "CHECKING" ? "Conta corrente" : "Dados bancários do investimento"}
+            </p>
             <div className="grid gap-4 md:grid-cols-2">
               <BankSelect
                 id="account-bank"
@@ -368,28 +489,30 @@ export function AccountModal({
                 />
                 <FormFieldError message={fieldErrors.accountNumber} />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="overdraftLimit">Limite (cheque especial)</Label>
-                <ControlledMinorUnitMoneyInput
-                  id="overdraftLimit"
-                  control={form.control}
-                  name="overdraftLimit"
-                  disabled={isSubmitting}
-                  className={cn(
-                    "h-10 w-full",
-                    getInputErrorClass(
-                      fieldErrors.overdraftLimit ?? form.formState.errors.overdraftLimit?.message,
-                    ),
-                  )}
-                  aria-invalid={!!(fieldErrors.overdraftLimit ?? form.formState.errors.overdraftLimit)}
-                  onMoneyBlur={() => clearFieldError("overdraftLimit")}
-                />
-                <FormFieldError
-                  message={
-                    fieldErrors.overdraftLimit ?? form.formState.errors.overdraftLimit?.message
-                  }
-                />
-              </div>
+              {currentAccountType === "CHECKING" ? (
+                <div className="space-y-2">
+                  <Label htmlFor="overdraftLimit">Limite (cheque especial)</Label>
+                  <ControlledMinorUnitMoneyInput
+                    id="overdraftLimit"
+                    control={form.control}
+                    name="overdraftLimit"
+                    disabled={isSubmitting}
+                    className={cn(
+                      "h-10 w-full",
+                      getInputErrorClass(
+                        fieldErrors.overdraftLimit ?? form.formState.errors.overdraftLimit?.message,
+                      ),
+                    )}
+                    aria-invalid={!!(fieldErrors.overdraftLimit ?? form.formState.errors.overdraftLimit)}
+                    onMoneyBlur={() => clearFieldError("overdraftLimit")}
+                  />
+                  <FormFieldError
+                    message={
+                      fieldErrors.overdraftLimit ?? form.formState.errors.overdraftLimit?.message
+                    }
+                  />
+                </div>
+              ) : null}
             </div>
           </div>
         ) : null}
@@ -433,5 +556,21 @@ export function AccountModal({
         </DialogFooter>
       </form>
     </FormDialogShell>
+    <ConfirmDialog
+      open={impactConfirmOpen}
+      onOpenChange={setImpactConfirmOpen}
+      title="Alterar saldo/data inicial da conta?"
+      description="Essa alteração impacta todo o histórico e recalcula os saldos finais dos lançamentos posteriores. Deseja continuar?"
+      cancelText="Cancelar"
+      confirmText="Sim, recalcular saldos"
+      confirmVariant="destructive"
+      isConfirming={isSubmitting}
+      onConfirm={async () => {
+        const pending = pendingSubmitValuesRef.current;
+        if (!pending) return;
+        await submitAccount(pending);
+      }}
+    />
+    </>
   );
 }
