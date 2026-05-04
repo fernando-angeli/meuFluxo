@@ -3,15 +3,24 @@ package com.meufluxo.service;
 import com.meufluxo.dto.kpi.CategoryGroupedKpiResponse;
 import com.meufluxo.dto.kpi.DashboardKpiRequest;
 import com.meufluxo.dto.kpi.DashboardKpiResponse;
+import com.meufluxo.dto.kpi.InvoicePaymentAllocationLineResponse;
+import com.meufluxo.dto.kpi.InvoicePaymentBreakdownResponse;
 import com.meufluxo.dto.kpi.SubCategoryGroupedKpiResponse;
 import com.meufluxo.enums.FinancialDirection;
 import com.meufluxo.enums.MovementType;
+import com.meufluxo.enums.PaymentMethod;
 import com.meufluxo.enums.PlannedEntryStatus;
 import com.meufluxo.model.CashMovement;
+import com.meufluxo.model.CreditCardExpense;
+import com.meufluxo.model.CreditCardInvoice;
+import com.meufluxo.model.CreditCardInvoicePayment;
 import com.meufluxo.model.PlannedEntry;
 import com.meufluxo.repository.AccountRepository;
 import com.meufluxo.repository.CashMovementRepository;
+import com.meufluxo.repository.CreditCardExpenseRepository;
+import com.meufluxo.repository.CreditCardInvoicePaymentRepository;
 import com.meufluxo.repository.PlannedEntryRepository;
+import com.meufluxo.service.kpi.InvoicePaymentExpenseAllocation;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -24,6 +33,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 public class KpiService extends BaseUserService {
@@ -31,6 +41,8 @@ public class KpiService extends BaseUserService {
     private final AccountRepository accountRepository;
     private final CashMovementRepository cashMovementRepository;
     private final PlannedEntryRepository plannedEntryRepository;
+    private final CreditCardInvoicePaymentRepository creditCardInvoicePaymentRepository;
+    private final CreditCardExpenseRepository creditCardExpenseRepository;
     private final AccountService accountService;
     private final CategoryService categoryService;
     private final SubCategoryService subCategoryService;
@@ -40,6 +52,8 @@ public class KpiService extends BaseUserService {
             AccountRepository accountRepository,
             CashMovementRepository cashMovementRepository,
             PlannedEntryRepository plannedEntryRepository,
+            CreditCardInvoicePaymentRepository creditCardInvoicePaymentRepository,
+            CreditCardExpenseRepository creditCardExpenseRepository,
             AccountService accountService,
             CategoryService categoryService,
             SubCategoryService subCategoryService
@@ -48,6 +62,8 @@ public class KpiService extends BaseUserService {
         this.accountRepository = accountRepository;
         this.cashMovementRepository = cashMovementRepository;
         this.plannedEntryRepository = plannedEntryRepository;
+        this.creditCardInvoicePaymentRepository = creditCardInvoicePaymentRepository;
+        this.creditCardExpenseRepository = creditCardExpenseRepository;
         this.accountService = accountService;
         this.categoryService = categoryService;
         this.subCategoryService = subCategoryService;
@@ -100,6 +116,8 @@ public class KpiService extends BaseUserService {
                 totalIncome,
                 MovementType.INCOME
         );
+        List<InvoicePaymentBreakdownResponse> invoicePaymentBreakdowns =
+                buildInvoicePaymentBreakdownResponses(filteredMovements);
         return new DashboardKpiResponse(
                 request.startDate(),
                 request.endDate(),
@@ -113,8 +131,72 @@ public class KpiService extends BaseUserService {
                 totalExpense,
                 netBalance,
                 expensesByCategory,
-                incomesByCategory
+                incomesByCategory,
+                invoicePaymentBreakdowns
         );
+    }
+
+    /**
+     * Detalhamento de pagamentos de fatura no período (mesma base de filtros do dashboard),
+     * para exibir despesas do cartão nas categorias reais na UI de movimentações.
+     */
+    @Transactional(readOnly = true)
+    public List<InvoicePaymentBreakdownResponse> getInvoicePaymentBreakdowns(DashboardKpiRequest request) {
+        validatePeriod(request);
+
+        List<Long> accountFilterIds = normalizeIds(request.accountIds());
+        List<Long> categoryFilterIds = normalizeIds(request.categoryIds());
+        List<Long> subCategoryFilterIds = normalizeIds(request.subCategoryIds());
+
+        accountFilterIds.forEach(accountService::existsId);
+        categoryFilterIds.forEach(categoryService::existsId);
+        subCategoryFilterIds.forEach(subCategoryService::existsId);
+
+        Specification<CashMovement> specification = buildSpecification(
+                request,
+                accountFilterIds,
+                categoryFilterIds,
+                subCategoryFilterIds
+        );
+        List<CashMovement> filteredMovements = cashMovementRepository.findAll(specification);
+        return buildInvoicePaymentBreakdownResponses(filteredMovements);
+    }
+
+    private List<InvoicePaymentBreakdownResponse> buildInvoicePaymentBreakdownResponses(
+            List<CashMovement> filteredMovements
+    ) {
+        InvoicePaymentContext ctx = loadInvoicePaymentContext(filteredMovements, getCurrentWorkspaceId());
+        List<InvoicePaymentBreakdownResponse> out = new ArrayList<>();
+        for (CashMovement movement : filteredMovements) {
+            if (movement.getId() == null
+                    || movement.getMovementType() != MovementType.EXPENSE
+                    || movement.getPaymentMethod() != PaymentMethod.INVOICE_CREDIT_CARD) {
+                continue;
+            }
+            CreditCardInvoicePayment payment = ctx.paymentByMovementId().get(movement.getId());
+            CreditCardInvoice invoice = resolveInvoiceForInvoicePaymentMovement(movement, payment);
+            if (invoice == null || invoice.getId() == null) {
+                continue;
+            }
+            List<CreditCardExpense> exps = ctx.expensesByInvoice().getOrDefault(invoice.getId(), List.of());
+            List<InvoicePaymentAllocationLineResponse> lines = InvoicePaymentExpenseAllocation.toAllocationLines(
+                    defaultIfNull(movement.getAmount()),
+                    exps
+            );
+            if (lines.isEmpty()) {
+                continue;
+            }
+            var inv = invoice;
+            java.time.LocalDate due = inv.getDueDate() != null ? inv.getDueDate() : movement.getOccurredAt();
+            out.add(new InvoicePaymentBreakdownResponse(
+                    movement.getId(),
+                    inv.getId(),
+                    due,
+                    defaultIfNull(movement.getAmount()),
+                    lines
+            ));
+        }
+        return out;
     }
 
     private void validatePeriod(DashboardKpiRequest request) {
@@ -139,10 +221,39 @@ public class KpiService extends BaseUserService {
     }
 
     private List<KpiAmountLine> toLinesFromCashMovements(List<CashMovement> movements) {
+        InvoicePaymentContext ctx = loadInvoicePaymentContext(movements, getCurrentWorkspaceId());
         List<KpiAmountLine> lines = new ArrayList<>();
         for (CashMovement movement : movements) {
             if (movement.getSubCategory() == null || movement.getSubCategory().getCategory() == null) {
                 continue;
+            }
+            if (movement.getMovementType() == MovementType.EXPENSE
+                    && movement.getPaymentMethod() == PaymentMethod.INVOICE_CREDIT_CARD
+                    && movement.getId() != null) {
+                CreditCardInvoicePayment payment = ctx.paymentByMovementId().get(movement.getId());
+                CreditCardInvoice invoice = resolveInvoiceForInvoicePaymentMovement(movement, payment);
+                if (invoice != null && invoice.getId() != null) {
+                    List<CreditCardExpense> exps = ctx.expensesByInvoice().getOrDefault(
+                            invoice.getId(),
+                            List.of()
+                    );
+                    List<InvoicePaymentAllocationLineResponse> allocation = InvoicePaymentExpenseAllocation
+                            .toAllocationLines(defaultIfNull(movement.getAmount()), exps);
+                    if (!allocation.isEmpty()) {
+                        for (var view : InvoicePaymentExpenseAllocation.allocationToKpiLineViews(allocation)) {
+                            lines.add(new KpiAmountLine(
+                                    view.movementType(),
+                                    view.amount(),
+                                    view.categoryId(),
+                                    view.categoryName(),
+                                    view.categoryMovementType(),
+                                    view.subCategoryId(),
+                                    view.subCategoryName()
+                            ));
+                        }
+                        continue;
+                    }
+                }
             }
             lines.add(new KpiAmountLine(
                     movement.getMovementType(),
@@ -155,6 +266,79 @@ public class KpiService extends BaseUserService {
             ));
         }
         return lines;
+    }
+
+    private InvoicePaymentContext loadInvoicePaymentContext(List<CashMovement> movements, Long workspaceId) {
+        List<Long> invoiceMovementIds = new ArrayList<>();
+        for (CashMovement m : movements) {
+            if (m.getId() != null
+                    && m.getMovementType() == MovementType.EXPENSE
+                    && m.getPaymentMethod() == PaymentMethod.INVOICE_CREDIT_CARD) {
+                invoiceMovementIds.add(m.getId());
+            }
+        }
+        Map<Long, CreditCardInvoicePayment> paymentByMovementId = new LinkedHashMap<>();
+        if (!invoiceMovementIds.isEmpty()) {
+            for (CreditCardInvoicePayment p : creditCardInvoicePaymentRepository.findAllByMovementIdInAndWorkspaceId(
+                    invoiceMovementIds,
+                    workspaceId
+            )) {
+                if (p.getMovement() != null && p.getMovement().getId() != null) {
+                    paymentByMovementId.put(p.getMovement().getId(), p);
+                }
+            }
+        }
+        Set<Long> invoiceIds = new LinkedHashSet<>();
+        for (CreditCardInvoicePayment p : paymentByMovementId.values()) {
+            if (p.getInvoice() != null && p.getInvoice().getId() != null) {
+                invoiceIds.add(p.getInvoice().getId());
+            }
+        }
+        /* Fatura ligada diretamente ao movimento (ex.: legado sem linha em credit_card_invoice_payments). */
+        for (CashMovement m : movements) {
+            if (m.getMovementType() == MovementType.EXPENSE
+                    && m.getPaymentMethod() == PaymentMethod.INVOICE_CREDIT_CARD
+                    && m.getCreditCardInvoice() != null
+                    && m.getCreditCardInvoice().getId() != null) {
+                invoiceIds.add(m.getCreditCardInvoice().getId());
+            }
+        }
+        Map<Long, List<CreditCardExpense>> expensesByInvoice = new LinkedHashMap<>();
+        if (!invoiceIds.isEmpty()) {
+            List<CreditCardExpense> all = creditCardExpenseRepository.findAllByInvoiceIdInAndWorkspaceIdForKpi(
+                    invoiceIds,
+                    workspaceId
+            );
+            for (CreditCardExpense e : all) {
+                if (e.getInvoice() == null || e.getInvoice().getId() == null) {
+                    continue;
+                }
+                expensesByInvoice.computeIfAbsent(e.getInvoice().getId(), k -> new ArrayList<>()).add(e);
+            }
+        }
+        return new InvoicePaymentContext(paymentByMovementId, expensesByInvoice);
+    }
+
+    /**
+     * Prioriza o pagamento oficial; senão usa {@link CashMovement#getCreditCardInvoice()} preenchido na criação do pagamento.
+     */
+    private static CreditCardInvoice resolveInvoiceForInvoicePaymentMovement(
+            CashMovement movement,
+            CreditCardInvoicePayment payment
+    ) {
+        if (payment != null && payment.getInvoice() != null) {
+            return payment.getInvoice();
+        }
+        if (movement.getCreditCardInvoice() != null) {
+            return movement.getCreditCardInvoice();
+        }
+        return null;
+    }
+
+    private record InvoicePaymentContext(
+            Map<Long, CreditCardInvoicePayment> paymentByMovementId,
+            Map<Long, List<CreditCardExpense>> expensesByInvoice
+    ) {
     }
 
     private List<KpiAmountLine> loadOpenPlannedLines(

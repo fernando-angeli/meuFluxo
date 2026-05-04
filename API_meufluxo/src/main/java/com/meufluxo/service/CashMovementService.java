@@ -17,8 +17,10 @@ import com.meufluxo.messaging.mapper.CashMovementEventMapper;
 import com.meufluxo.model.Account;
 import com.meufluxo.model.CashMovement;
 import com.meufluxo.model.Category;
+import com.meufluxo.model.CreditCardInvoice;
 import com.meufluxo.model.SubCategory;
 import com.meufluxo.repository.CashMovementRepository;
+import com.meufluxo.repository.CreditCardInvoiceRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -42,6 +44,7 @@ public class CashMovementService extends BaseUserService{
     private final SubCategoryService subCategoryService;
     private final AccountService accountService;
     private final AccountMovementService accountMovementService;
+    private final CreditCardInvoiceRepository creditCardInvoiceRepository;
     // Kafka
     private final CashMovementEventPublisher eventPublisher;
     private final CashMovementEventMapper eventMapper;
@@ -54,6 +57,7 @@ public class CashMovementService extends BaseUserService{
             SubCategoryService subCategoryService,
             AccountService accountService,
             AccountMovementService accountMovementService,
+            CreditCardInvoiceRepository creditCardInvoiceRepository,
             CashMovementEventPublisher eventPublisher,
             CashMovementEventMapper eventMapper
     ) {
@@ -64,6 +68,7 @@ public class CashMovementService extends BaseUserService{
         this.subCategoryService = subCategoryService;
         this.accountService = accountService;
         this.accountMovementService = accountMovementService;
+        this.creditCardInvoiceRepository = creditCardInvoiceRepository;
         this.eventPublisher = eventPublisher;
         this.eventMapper = eventMapper;
     }
@@ -161,6 +166,9 @@ public class CashMovementService extends BaseUserService{
         SubCategory subCategory = subCategoryService.findByIdOrThrow(request.subCategoryId());
         Category category = subCategory.getCategory();
         Account account = accountService.findByIdOrThrow(request.accountId());
+        if (!account.isActive()) {
+            throw new BusinessException("Conta inativa não pode registrar movimentação.");
+        }
         LocalDate occurredAt = request.occurredAt() != null ? request.occurredAt() : LocalDate.now();
         validateMovementDateAgainstAccountInitialBalance(account, occurredAt);
         CashMovement movement = cashMovementMapper.toEntity(request);
@@ -176,6 +184,15 @@ public class CashMovementService extends BaseUserService{
         movement.setWorkspace(getCurrentWorkspace());
         accountMovementService.applyAccountMovement(account, request.amount(), movementType);
         movement = repository.save(movement);
+        if (request.creditCardInvoiceId() != null) {
+            CreditCardInvoice invoice = creditCardInvoiceRepository
+                    .findByIdAndCreditCardWorkspaceId(request.creditCardInvoiceId(), getCurrentWorkspaceId())
+                    .orElseThrow(() -> new NotFoundException(
+                            "Fatura de cartão não encontrada com ID: " + request.creditCardInvoiceId()
+                    ));
+            movement.setCreditCardInvoice(invoice);
+            movement = repository.save(movement);
+        }
         // publica evento (após salvar)
         publishEvent(KafkaTopics.CASH_MOVEMENT_CREATED, movement, "CREATED");
         return cashMovementMapper.toResponse(movement);

@@ -17,6 +17,8 @@ public record DashboardKpiResponse(
         BigDecimal totalExpense,
         BigDecimal netBalance,
         List<CategoryGroupedKpiResponse> expensesByCategory,
-        List<CategoryGroupedKpiResponse> incomesByCategory
+        List<CategoryGroupedKpiResponse> incomesByCategory,
+        /** Detalhamento de pagamentos de fatura (mesmo contrato do endpoint dedicado). */
+        List<InvoicePaymentBreakdownResponse> invoicePaymentBreakdowns
 ) {
 }

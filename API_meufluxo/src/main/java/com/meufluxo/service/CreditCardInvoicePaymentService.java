@@ -193,7 +193,8 @@ public class CreditCardInvoicePaymentService extends BaseUserService {
                 subCategory.getId(),
                 account.getId(),
                 buildMovementDescription(invoice),
-                trimToNull(request.notes())
+                trimToNull(request.notes()),
+                invoice.getId()
         ));
         return cashMovementService.findByIdOrThrow(movementResponse.id());
     }

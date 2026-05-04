@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -37,6 +38,19 @@ public interface CreditCardExpenseRepository extends JpaRepository<CreditCardExp
             """)
     BigDecimal sumPurchasesStartedInInvoice(
             @Param("invoiceId") Long invoiceId,
+            @Param("workspaceId") Long workspaceId
+    );
+
+    @Query("""
+            select e from CreditCardExpense e
+            join fetch e.category c
+            left join fetch e.subcategory s
+            join fetch e.invoice inv
+            where inv.id in :invoiceIds
+              and e.workspace.id = :workspaceId
+            """)
+    List<CreditCardExpense> findAllByInvoiceIdInAndWorkspaceIdForKpi(
+            @Param("invoiceIds") Collection<Long> invoiceIds,
             @Param("workspaceId") Long workspaceId
     );
 }

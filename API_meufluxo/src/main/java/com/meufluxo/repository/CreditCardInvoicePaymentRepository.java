@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -21,4 +22,16 @@ public interface CreditCardInvoicePaymentRepository extends JpaRepository<Credit
               and p.active = true
             """)
     BigDecimal sumActivePaymentsByInvoiceId(@Param("invoiceId") Long invoiceId);
+
+    @Query("""
+            select p from CreditCardInvoicePayment p
+            join fetch p.movement m
+            join fetch p.invoice inv
+            where p.workspace.id = :workspaceId
+              and m.id in :movementIds
+            """)
+    List<CreditCardInvoicePayment> findAllByMovementIdInAndWorkspaceId(
+            @Param("movementIds") Collection<Long> movementIds,
+            @Param("workspaceId") Long workspaceId
+    );
 }

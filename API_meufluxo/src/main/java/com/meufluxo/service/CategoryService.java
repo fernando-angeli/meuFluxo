@@ -10,18 +10,26 @@ import com.meufluxo.mapper.CategoryMapper;
 import com.meufluxo.model.Category;
 import com.meufluxo.repository.CashMovementRepository;
 import com.meufluxo.repository.CategoryRepository;
+import com.meufluxo.repository.PlannedEntryRepository;
 import com.meufluxo.repository.SubCategoryRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Objects;
+
 @Service
 public class CategoryService extends BaseUserService {
+
+    private static final String CATEGORY_DELETE_BLOCKED =
+            "Não é possível excluir a categoria porque ainda está em uso no sistema (movimentações, lançamentos planejados ou subcategorias). "
+                    + "Inative-a para ocultá-la ao criar novas despesas e receitas.";
 
     private final CategoryRepository categoryRepository;
     private final SubCategoryRepository subCategoryRepository;
     private final CashMovementRepository cashMovementRepository;
+    private final PlannedEntryRepository plannedEntryRepository;
     private final CategoryMapper categoryMapper;
     private final WorkspaceSyncStateService workspaceSyncStateService;
 
@@ -30,6 +38,7 @@ public class CategoryService extends BaseUserService {
             CategoryRepository categoryRepository,
             SubCategoryRepository subCategoryRepository,
             CashMovementRepository cashMovementRepository,
+            PlannedEntryRepository plannedEntryRepository,
             CategoryMapper categoryMapper,
             WorkspaceSyncStateService workspaceSyncStateService
     ) {
@@ -37,6 +46,7 @@ public class CategoryService extends BaseUserService {
         this.categoryRepository = categoryRepository;
         this.subCategoryRepository = subCategoryRepository;
         this.cashMovementRepository = cashMovementRepository;
+        this.plannedEntryRepository = plannedEntryRepository;
         this.categoryMapper = categoryMapper;
         this.workspaceSyncStateService = workspaceSyncStateService;
     }
@@ -72,6 +82,8 @@ public class CategoryService extends BaseUserService {
             CategoryUpdateRequest request
     ) {
         Category existingCategory = findByIdOrThrow(id);
+        assertCategoryEditableWhenInactive(existingCategory, request);
+
         if (request.name() != null) {
             String newName = request.name().trim();
             if (newName.isBlank())
@@ -96,11 +108,15 @@ public class CategoryService extends BaseUserService {
     @Transactional
     public void delete(Long id) {
         Category category = findByIdOrThrow(id);
-        if (cashMovementRepository.existsBySubCategoryCategoryIdAndWorkspaceId(id, getCurrentWorkspaceId())) {
-            throw new BusinessException("Não é possível excluir a categoria pois existem registros vinculados, só é possível inativa-la.");
+        Long workspaceId = getCurrentWorkspaceId();
+        if (plannedEntryRepository.existsByCategory_IdAndWorkspace_Id(id, workspaceId)) {
+            throw new BusinessException(CATEGORY_DELETE_BLOCKED);
         }
-        if (subCategoryRepository.existsByCategoryId(id)){
-            throw new BusinessException("Não é possível excluir a categoria pois existem subcategorias vinculados, só é possível inativa-la.");
+        if (cashMovementRepository.existsBySubCategoryCategoryIdAndWorkspaceId(id, workspaceId)) {
+            throw new BusinessException(CATEGORY_DELETE_BLOCKED);
+        }
+        if (subCategoryRepository.existsByCategoryId(id)) {
+            throw new BusinessException(CATEGORY_DELETE_BLOCKED);
         }
         categoryRepository.delete(category);
         workspaceSyncStateService.incrementCategoriesVersion(getCurrentWorkspaceId());
@@ -138,6 +154,25 @@ public class CategoryService extends BaseUserService {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private static void assertCategoryEditableWhenInactive(Category existing, CategoryUpdateRequest request) {
+        if (existing.isActive()) {
+            return;
+        }
+        if (Boolean.TRUE.equals(request.active())) {
+            return;
+        }
+        if (request.name() != null) {
+            String newName = request.name().trim();
+            if (!newName.equals(existing.getName())) {
+                throw new BusinessException("Categoria inativa: reative-a para alterar o nome ou a descrição.");
+            }
+        }
+        if (request.description() != null
+                && !Objects.equals(trimToNull(request.description()), existing.getDescription())) {
+            throw new BusinessException("Categoria inativa: reative-a para alterar o nome ou a descrição.");
+        }
     }
 
 }

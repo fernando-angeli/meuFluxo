@@ -93,7 +93,8 @@ class PlannedEntryServiceTest {
                 LocalDate.now().plusDays(1),
                 "FAT-001",
                 null,
-                "mensal"
+                "mensal",
+                null
         );
         Category category = buildExpenseCategory(1L);
         PlannedEntry mapped = new PlannedEntry();
@@ -358,6 +359,7 @@ class PlannedEntryServiceTest {
                 new BigDecimal("120.00"),
                 PlannedAmountBehavior.FIXED,
                 LocalDate.of(2026, 4, 10),
+                null,
                 null,
                 null,
                 null,

@@ -40,6 +40,12 @@ public record PlannedEntryCreateRequest(
         Long defaultAccountId,
 
         @Size(max = 2000, message = "Notas devem ter no máximo 2000 caracteres.")
-        String notes
+        String notes,
+
+        /**
+         * Quando true, após criar o lançamento em aberto, liquida na mesma operação
+         * (movimento na conta na data de vencimento, valor = esperado).
+         */
+        Boolean settleImmediately
 ) {
 }
