@@ -44,7 +44,8 @@ export type CashMovementApiSourceType =
   | "PAYABLE"
   | "RECEIVABLE"
   | "CARD"
-  | "TRANSFER";
+  | "TRANSFER"
+  | "CREDIT_CARD_INVOICE_DETAIL";
 
 export type CashMovementApiItem = {
   id: number;
@@ -65,6 +66,8 @@ export type CashMovementApiItem = {
   subCategory: CashMovementApiSubCategory;
   sourceType?: CashMovementApiSourceType;
   sourceId?: string | number | null;
+  creditCardInvoiceId?: number | null;
+  creditCardInvoiceDueDate?: string | null;
 };
 
 export type CashMovementApiPageResponse = PageResponse<CashMovementApiItem>;

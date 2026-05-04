@@ -43,6 +43,7 @@ export function SubcategoryFormModal({
   const { success, error } = useToast();
   const createMutation = useCreateSubcategory();
   const updateMutation = useUpdateSubcategory();
+  const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
   const [generalError, setGeneralError] = React.useState<string | null>(null);
@@ -68,6 +69,9 @@ export function SubcategoryFormModal({
   });
 
   const active = form.watch("active");
+  const parentLocked = !parentCategory.meta.active;
+  const subWasInactive = !!(subcategory && !subcategory.meta.active);
+  const structuralLocked = !!subcategory && subWasInactive && !active;
 
   React.useEffect(() => {
     if (!open) return;
@@ -129,8 +133,6 @@ export function SubcategoryFormModal({
     }
   });
 
-  const isSubmitting = createMutation.isPending || updateMutation.isPending;
-
   return (
     <FormDialogShell
       open={open}
@@ -143,11 +145,17 @@ export function SubcategoryFormModal({
             Categoria pai:{" "}
             <span className="font-medium text-foreground">{parentCategory.name}</span>
           </span>
-          <span className="text-muted-foreground">
-            {isEdit
-              ? "Ajuste o nome ou o status. O tipo segue o da categoria pai."
-              : "O tipo de movimentação será o mesmo da categoria pai."}
-          </span>
+          {parentLocked ? (
+            <span className="mt-1 block text-sm text-amber-700 dark:text-amber-500">
+              Esta categoria está inativa. Reative-a na edição da categoria para gerenciar subcategorias.
+            </span>
+          ) : (
+            <span className="text-muted-foreground">
+              {isEdit
+                ? "Ajuste o nome ou o status. O tipo segue o da categoria pai."
+                : "O tipo de movimentação será o mesmo da categoria pai."}
+            </span>
+          )}
         </>
       }
       generalError={generalError}
@@ -160,6 +168,7 @@ export function SubcategoryFormModal({
             id="subcat-name"
             placeholder="Ex.: Supermercado"
             autoComplete="off"
+            disabled={parentLocked || structuralLocked || isSubmitting}
             className={cn(
               getInputErrorClass(
                 fieldErrors.name ?? form.formState.errors.name?.message,
@@ -181,6 +190,7 @@ export function SubcategoryFormModal({
             rows={3}
             placeholder="Opcional"
             autoComplete="off"
+            disabled={parentLocked || structuralLocked || isSubmitting}
             className={cn(
               "flex min-h-[72px] w-full resize-y rounded-lg border bg-input px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
               getInputErrorClass(
@@ -204,12 +214,14 @@ export function SubcategoryFormModal({
               <div className="space-y-1">
                 <Label>Ativa</Label>
                 <p className="text-xs text-muted-foreground">
-                  Subcategorias inativas podem ser ocultadas em filtros.
+                  {structuralLocked
+                    ? "Subcategoria inativa: marque como ativa para editar nome e descrição."
+                    : "Inativa deixa de aparecer ao criar novas despesas e receitas."}
                 </p>
               </div>
               <Switch
                 checked={active}
-                disabled={isSubmitting}
+                disabled={parentLocked || isSubmitting}
                 onCheckedChange={(checked) => {
                   form.setValue("active", checked);
                   clearFieldError("active");
@@ -230,7 +242,7 @@ export function SubcategoryFormModal({
           >
             Cancelar
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
+          <Button type="submit" disabled={isSubmitting || parentLocked}>
             {isSubmitting ? "Salvando..." : isEdit ? "Salvar" : "Criar"}
           </Button>
         </DialogFooter>

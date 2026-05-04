@@ -35,7 +35,14 @@ import { normalizeBankString } from "@/features/accounts/lib/normalize-bank-fiel
 
 import { BankSelect } from "./bank-select";
 
-const ALLOWED_ACCOUNT_TYPES: AccountType[] = ["CHECKING", "CASH", "INVESTMENT"];
+/** Tipos disponíveis ao criar conta (alinhados ao enum da API). */
+const ALLOWED_ACCOUNT_TYPES: AccountType[] = [
+  "CHECKING",
+  "SAVING",
+  "INVESTMENT",
+  "CASH",
+  "BENEFIT_CARD",
+];
 
 const accountTypeEnum = z.enum([
   "CHECKING",
@@ -60,7 +67,6 @@ const accountModalSchema = z.object({
   initialBalance: z
     .string()
     .trim()
-    .min(1, "Saldo inicial é obrigatório.")
     .refine((v) => {
       const n = parseMoneyInput((v ?? "").trim() || "0");
       return Number.isFinite(n) && n >= 0;
@@ -205,16 +211,14 @@ export function AccountModal({
       form.reset({
         name: d.name ?? "",
         accountType: d.accountType as AccountType,
-        initialBalance:
-          (d.initialBalance ?? 0) > 0 ? amountToEditString(d.initialBalance ?? 0, intlLocale) : "",
+        initialBalance: amountToEditString(d.initialBalance ?? 0, intlLocale),
         initialBalanceDate: d.initialBalanceDate?.slice(0, 10) ?? todayIsoDate(),
         active: !!d.meta.active,
         bankCode: normalizeBankString(d.bankCode),
         bankName: normalizeBankString(d.bankName),
         agency: normalizeBankString(d.agency),
         accountNumber: normalizeBankString(d.accountNumber),
-        overdraftLimit:
-          (d.overdraftLimit ?? 0) > 0 ? amountToEditString(d.overdraftLimit ?? 0, intlLocale) : "",
+        overdraftLimit: amountToEditString(d.overdraftLimit ?? 0, intlLocale),
       });
       initialAnchorRef.current = {
         initialBalance: Number.isFinite(d.initialBalance) ? d.initialBalance : 0,
@@ -226,20 +230,17 @@ export function AccountModal({
     form.reset({
       name: account.name ?? "",
       accountType: account.accountType as AccountType,
-      initialBalance:
-        (account.currentBalance ?? 0) > 0
-          ? amountToEditString(account.currentBalance ?? 0, intlLocale)
-          : "",
+      initialBalance: amountToEditString(
+        Number.isFinite(account.currentBalance) ? account.currentBalance : 0,
+        intlLocale,
+      ),
       initialBalanceDate: account.initialBalanceDate?.slice(0, 10) ?? todayIsoDate(),
       active: !!account.meta.active,
       bankCode: normalizeBankString(account.bankCode),
       bankName: normalizeBankString(account.bankName),
       agency: normalizeBankString(account.agency),
       accountNumber: normalizeBankString(account.accountNumber),
-      overdraftLimit:
-        (account.overdraftLimit ?? 0) > 0
-          ? amountToEditString(account.overdraftLimit ?? 0, intlLocale)
-          : "",
+      overdraftLimit: amountToEditString(account.overdraftLimit ?? 0, intlLocale),
     });
     initialAnchorRef.current = {
       initialBalance: Number.isFinite(account.currentBalance) ? account.currentBalance : 0,
@@ -412,6 +413,9 @@ export function AccountModal({
             <FormFieldError
               message={fieldErrors.initialBalance ?? form.formState.errors.initialBalance?.message}
             />
+            <p className="text-xs text-muted-foreground">
+              Pode ficar em branco ou R$ 0,00 se o saldo for zero no cadastro.
+            </p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="initialBalanceDate">Data do saldo inicial</Label>
@@ -511,6 +515,9 @@ export function AccountModal({
                       fieldErrors.overdraftLimit ?? form.formState.errors.overdraftLimit?.message
                     }
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Pode ficar em branco ou R$ 0,00 se não houver cheque especial.
+                  </p>
                 </div>
               ) : null}
             </div>

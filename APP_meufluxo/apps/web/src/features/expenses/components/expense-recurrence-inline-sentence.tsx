@@ -4,6 +4,7 @@ import * as React from "react";
 import type { UseFormReturn } from "react-hook-form";
 
 import { Input } from "@/components/ui/input";
+import { getInputErrorClass } from "@/lib/api-error";
 import type { TranslationKey } from "@/lib/i18n/types";
 import type { ExpenseCreateFormValues } from "@/features/expenses/expense-create-form.schema";
 import { normalizeExpenseDateInput } from "@/features/expenses/expense-date-parse";
@@ -95,7 +96,7 @@ export function ExpenseRecurrenceInlineSentence({
           <Input
             id={isFixedDates ? `${idPrefix}-fixed-dates-repetitions` : `${idPrefix}-repetitions`}
             type="number"
-            className={repetitionsClass}
+            className={cn(repetitionsClass, getInputErrorClass(repetitionsErr))}
             min={1}
             max={120}
             step={1}
@@ -115,7 +116,7 @@ export function ExpenseRecurrenceInlineSentence({
               <Input
                 id={`${idPrefix}-interval-days`}
                 type="number"
-                className={intervalClass}
+                className={cn(intervalClass, getInputErrorClass(intervalErr))}
                 min={1}
                 max={365}
                 step={1}
@@ -139,13 +140,6 @@ export function ExpenseRecurrenceInlineSentence({
           )}
         </span>
       </p>
-
-      {repetitionsErr || intervalErr ? (
-        <div className="flex flex-col gap-0.5 text-xs text-destructive">
-          {repetitionsErr ? <p>{repetitionsErr}</p> : null}
-          {intervalErr ? <p>{intervalErr}</p> : null}
-        </div>
-      ) : null}
 
       {preview ? <p className="text-xs text-muted-foreground">{preview}</p> : null}
     </div>

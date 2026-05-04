@@ -30,7 +30,7 @@ export function CategoriesMultiSelect({
   triggerClassName,
 }: CategoriesMultiSelectProps) {
   const { t } = useTranslation();
-  const { data: categories = [], isLoading } = useCategories();
+  const { data: categories = [], isLoading } = useCategories({ activeOnly: true });
   const filteredCategories = getParentCategories(categories, movementType);
 
   const options = filteredCategories.map((category) => ({

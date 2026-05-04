@@ -15,6 +15,8 @@ type DetailsDrawerProps = {
   children: React.ReactNode;
   footer?: React.ReactNode;
   widthClassName?: string;
+  /** Área entre cabeçalho e rodapé (ex.: `flex min-h-0 flex-1 flex-col overflow-hidden` para corpo com scroll interno). */
+  contentClassName?: string;
 };
 
 export function DetailsDrawer({
@@ -25,6 +27,7 @@ export function DetailsDrawer({
   children,
   footer,
   widthClassName = "w-full sm:max-w-xl",
+  contentClassName = "min-h-0 flex-1 overflow-y-auto px-5 py-4",
 }: DetailsDrawerProps) {
   return (
     <DialogPrimitive.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -41,7 +44,7 @@ export function DetailsDrawer({
           <header className="border-b px-5 py-4">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 space-y-1">
-                <DialogPrimitive.Title className="truncate text-lg font-semibold">
+                <DialogPrimitive.Title className="text-lg font-semibold leading-tight text-foreground">
                   {title}
                 </DialogPrimitive.Title>
                 {description ? (
@@ -65,7 +68,7 @@ export function DetailsDrawer({
             </div>
           </header>
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
+          <div className={cn("min-h-0 flex-1", contentClassName)}>{children}</div>
 
           {footer ? <footer className="border-t px-5 py-4">{footer}</footer> : null}
         </DialogPrimitive.Content>

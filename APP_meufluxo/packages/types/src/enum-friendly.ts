@@ -57,7 +57,7 @@ export const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
   CASH: "Dinheiro",
   INVESTMENT: "Investimentos",
   SAVING: "Poupança",
-  BENEFIT_CARD: "Vale alimentação ou refeição",
+  BENEFIT_CARD: "VA / VR",
 };
 
 export const BRAND_CARD_LABELS: Record<BrandCard, string> = {

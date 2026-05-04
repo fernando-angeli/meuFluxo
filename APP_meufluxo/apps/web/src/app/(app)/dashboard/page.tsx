@@ -33,6 +33,7 @@ export default function DashboardPage() {
         filters.dateRange.startDate,
         filters.dateRange.endDate,
         filters.includeProjections,
+        filters.paymentMethod,
         filters.accountIds.join(","),
         filters.categoryIds.join(","),
         filters.subcategoryIds.join(","),

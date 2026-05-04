@@ -18,7 +18,7 @@ function statusesToKeys(statuses: PlannedEntryStatus[]): string[] {
 
 function keysToStatuses(keys: string[]): PlannedEntryStatus[] {
   if (keys.length === 0) {
-    return [...STATUS_ORDER];
+    return [];
   }
   const indices = [...new Set(keys)]
     .map((k) => Number(k))
@@ -53,6 +53,7 @@ export function PlannedStatusMultiSelect({
       options={options}
       value={statusesToKeys(value)}
       onChange={(keys) => onChange(keysToStatuses(keys))}
+      collapseWhenAllSelected={false}
       allLabel={t("filters.all")}
       className={className}
       triggerClassName={triggerClassName}

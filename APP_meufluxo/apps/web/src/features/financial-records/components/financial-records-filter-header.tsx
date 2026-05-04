@@ -11,7 +11,7 @@ import { getDefaultPlannedEntriesDateRange } from "@/features/financial-records/
 import { PlannedStatusMultiSelect } from "./planned-status-multi-select";
 
 export type FinancialRecordsFilterState = {
-  /** Vazio na UI não ocorre com o padrão; “Todas” no multiselect = todos os status. */
+  /** Vazio = nenhum status selecionado (API sem filtro de status). */
   statuses: PlannedEntryStatus[];
   categoryIds: string[];
   subCategoryIds: string[];

@@ -30,8 +30,8 @@ export default function ExpensesPage() {
   const auth = useAuthOptional();
   const { success, error } = useToast();
   const cancelMutation = useCancelExpense();
-  const { data: categories = [] } = useCategories({ realOnly: true });
-  const { data: subCategories = [] } = useSubCategories({ realOnly: true });
+  const { data: categories = [] } = useCategories({ realOnly: true, activeOnly: true });
+  const { data: subCategories = [] } = useSubCategories({ realOnly: true, activeOnly: true });
   const { data: accounts = [] } = useAccounts();
 
   const [filters, setFilters] = React.useState(() => getDefaultFinancialRecordsFilterState());
@@ -195,7 +195,8 @@ export default function ExpensesPage() {
         accounts={accounts.map((account) => ({
           id: account.id,
           name: account.name,
-          initialBalanceDate: account.initialBalanceDate,
+          initialBalanceDate: account.initialBalanceDate ?? null,
+          active: account.meta.active,
         }))}
         onSaved={() => {
           table.pageResponseQuery.refetch();

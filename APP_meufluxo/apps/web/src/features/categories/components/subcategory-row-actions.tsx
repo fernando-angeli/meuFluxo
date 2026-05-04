@@ -11,11 +11,15 @@ export function SubcategoryRowActions({
   onEdit,
   onDelete,
   isDeleting,
+  editDisabled,
+  deleteDisabled,
 }: {
   subcategory: SubCategory;
   onEdit: (s: SubCategory) => void;
   onDelete: (s: SubCategory) => void;
   isDeleting?: boolean;
+  editDisabled?: boolean;
+  deleteDisabled?: boolean;
 }) {
   const actions: RowActionButtonItem[] = [
     {
@@ -23,6 +27,7 @@ export function SubcategoryRowActions({
       label: "Editar",
       icon: Pencil,
       ariaLabel: "Editar subcategoria",
+      disabled: editDisabled,
       onClick: () => onEdit(subcategory),
     },
     {
@@ -30,7 +35,7 @@ export function SubcategoryRowActions({
       label: "Excluir",
       icon: Trash2,
       ariaLabel: "Excluir subcategoria",
-      disabled: isDeleting,
+      disabled: deleteDisabled || isDeleting,
       onClick: () => onDelete(subcategory),
     },
   ];

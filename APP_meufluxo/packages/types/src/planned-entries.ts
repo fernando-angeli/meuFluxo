@@ -19,6 +19,8 @@ export type ExpenseCreateRequest = {
   dueDate: string;
   defaultAccountId?: number | null;
   notes?: string | null;
+  /** Quando true, a API cria o planejamento e já liquida (movimento na conta na data de vencimento). */
+  settleImmediately?: boolean;
 };
 
 export type ExpenseUpdateRequest = {

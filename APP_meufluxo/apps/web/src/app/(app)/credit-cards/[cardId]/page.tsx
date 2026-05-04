@@ -133,8 +133,8 @@ export default function CreditCardManagerPage() {
   const cancelExpenseMutation = useCancelCreditCardExpense();
   const deleteCardMutation = useDeleteCreditCard();
   const { data: accounts = [] } = useAccounts();
-  const { data: categories = [] } = useCategories({ realOnly: true });
-  const { data: subCategories = [] } = useSubCategories({ realOnly: true });
+  const { data: categories = [] } = useCategories({ realOnly: true, activeOnly: true });
+  const { data: subCategories = [] } = useSubCategories({ realOnly: true, activeOnly: true });
   const { data: allInvoicesByCard = [], refetch: refetchInvoicesByCard } = useInvoices({
     creditCardId: cardId,
   });

@@ -46,8 +46,8 @@ export default function AccountManagerPage() {
     accountId,
     !!accountId && !auth?.isBootstrapping && !!auth?.isAuthenticated,
   );
-  const { data: categories = [] } = useCategories({ realOnly: true });
-  const { data: subCategories = [] } = useSubCategories({ realOnly: true });
+  const { data: categories = [] } = useCategories({ realOnly: true, activeOnly: true });
+  const { data: subCategories = [] } = useSubCategories({ realOnly: true, activeOnly: true });
 
   const [filters, setFilters] = React.useState<AccountMovementsFilterState>(() => getDefaultFilters());
 

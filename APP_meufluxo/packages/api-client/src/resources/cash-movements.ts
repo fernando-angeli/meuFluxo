@@ -7,7 +7,7 @@ export type CashMovementsListParams = {
   categoryId?: number;
   subCategoryId?: number;
   movementType?: "INCOME" | "EXPENSE";
-  paymentMethod?: "PIX" | "DEBIT" | "CASH" | "TRANSFER" | "BOLETO" | "VA" | "INVOICE_CREDIT_CARD";
+  paymentMethod?: string;
   page?: number;
   size?: number;
   sort?: string;

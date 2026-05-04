@@ -2,12 +2,20 @@ export type { LoginRequest, User, LoginResponse, RefreshResponse } from "./auth"
 export type {
   UserLanguage,
   UserTheme,
+  UserThemeApi,
   UserPreferences,
+  UserPreferencesThemePatchResponse,
   WorkspaceSummary,
   WorkspaceMembershipRole,
   WorkspaceMembership,
   SyncState,
   AuthenticatedUserSessionResponse,
+} from "./session";
+export {
+  normalizeUserLanguage,
+  normalizeUserTheme,
+  userPreferencesFromThemePatchResponse,
+  userThemeToApi,
 } from "./session";
 export * from "./workspace";
 export * from "./accounts";

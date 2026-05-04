@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import {
   Select,
@@ -19,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/components/toast";
 import { useTranslation } from "@/lib/i18n";
 import { useAccounts, useCategories, useCreateExpenseBatch, useCreateSingleExpense, useSubCategories } from "@/hooks/api";
@@ -75,8 +77,8 @@ export default function ExpenseRegistrationsPage() {
   const { t } = useTranslation();
   const expenseFormSchema = React.useMemo(() => createExpenseCreateFormSchema(t), [t]);
   const { success, error } = useToast();
-  const categoriesQuery = useCategories({ realOnly: true });
-  const subCategoriesQuery = useSubCategories({ realOnly: true });
+  const categoriesQuery = useCategories({ realOnly: true, activeOnly: true });
+  const subCategoriesQuery = useSubCategories({ realOnly: true, activeOnly: true });
   const { data: categories = [] } = categoriesQuery;
   const { data: subCategories = [] } = subCategoriesQuery;
   const { data: accounts = [] } = useAccounts();
@@ -105,11 +107,26 @@ export default function ExpenseRegistrationsPage() {
       notes: "",
       repetitionsCount: "",
       intervalDays: "",
+      settleImmediately: false,
     },
   });
 
   const selectedCategoryId = form.watch("categoryId");
   const creationType = form.watch("creationType");
+  const defaultAccountIdWatch = form.watch("defaultAccountId");
+  const subCategoryIdWatch = form.watch("subCategoryId");
+
+  React.useEffect(() => {
+    if (creationType === "RECURRING") {
+      form.setValue("settleImmediately", false);
+    }
+  }, [creationType, form]);
+
+  React.useEffect(() => {
+    if (!defaultAccountIdWatch?.trim() || !subCategoryIdWatch?.trim()) {
+      form.setValue("settleImmediately", false);
+    }
+  }, [defaultAccountIdWatch, subCategoryIdWatch, form]);
   const recurrenceType = form.watch("recurrenceType") ?? "INTERVAL_DAYS";
   const expenseCategories = React.useMemo(
     () => categories.filter((category) => category.movementType === "EXPENSE"),
@@ -131,6 +148,20 @@ export default function ExpenseRegistrationsPage() {
   }, [availableSubCategories, form, selectedCategoryId]);
 
   const onSubmit = form.handleSubmit(async (values) => {
+    form.clearErrors("defaultAccountId");
+    const selectedAccountId = values.defaultAccountId?.trim();
+    if (selectedAccountId) {
+      const acc = accounts.find((a) => String(a.id) === selectedAccountId);
+      if (!acc) {
+        form.setError("defaultAccountId", { message: t("expenses.validation.accountInvalid") });
+        return;
+      }
+      if (acc.meta.active === false) {
+        form.setError("defaultAccountId", { message: t("expenses.validation.accountInactive") });
+        return;
+      }
+    }
+
     if (!values.issueDate?.trim()) {
       const fallbackIssueDate = todayIsoDate();
       form.setValue("issueDate", fallbackIssueDate, {
@@ -192,6 +223,7 @@ export default function ExpenseRegistrationsPage() {
           ...payloadBase,
           issueDate: values.issueDate,
           dueDate: values.dueDate,
+          ...(values.settleImmediately ? { settleImmediately: true as const } : {}),
         });
         success(t("expenses.feedback.singleCreated"));
         form.reset({
@@ -202,6 +234,7 @@ export default function ExpenseRegistrationsPage() {
           dueDate: "",
           document: "",
           notes: "",
+          settleImmediately: false,
         });
         return;
       }
@@ -335,6 +368,7 @@ export default function ExpenseRegistrationsPage() {
           dueDate: "",
           document: "",
           notes: "",
+          settleImmediately: false,
         });
       } catch (err) {
         const apiError = extractApiError(err);
@@ -513,7 +547,33 @@ export default function ExpenseRegistrationsPage() {
               </div>
 
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="expense-account">{t("expenses.form.suggestedAccount")}</Label>
+                <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+                  <Label htmlFor="expense-account" className="shrink-0">
+                    {t("expenses.form.suggestedAccount")}
+                  </Label>
+                  {creationType === "SINGLE" ? (
+                    <Tooltip delayDuration={200}>
+                      <TooltipTrigger asChild>
+                        <label className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
+                          <Checkbox
+                            checked={!!form.watch("settleImmediately")}
+                            disabled={!defaultAccountIdWatch?.trim() || !subCategoryIdWatch?.trim()}
+                            onCheckedChange={(checked) =>
+                              form.setValue("settleImmediately", checked === true, {
+                                shouldDirty: true,
+                              })
+                            }
+                            aria-label={t("expenses.form.settleImmediatelyAria")}
+                          />
+                          <span className="select-none">{t("expenses.form.settleImmediately")}</span>
+                        </label>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs">
+                        {t("expenses.form.settleImmediatelyHint")}
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : null}
+                </div>
                 <Select
                   value={form.watch("defaultAccountId") || "__none"}
                   onValueChange={(value) =>
@@ -539,6 +599,11 @@ export default function ExpenseRegistrationsPage() {
                     ))}
                   </SelectContent>
                 </Select>
+                {form.formState.errors.defaultAccountId ? (
+                  <p className="text-xs text-destructive">
+                    {form.formState.errors.defaultAccountId.message}
+                  </p>
+                ) : null}
               </div>
 
               <div className="space-y-2">

@@ -18,6 +18,7 @@ export const dashboardKpisQueryKey = (params: DashboardKpisParams) =>
     params.categoryIds?.length ? [...params.categoryIds].sort((a, b) => a - b).join(",") : "",
     params.subCategoryIds?.length ? [...params.subCategoryIds].sort((a, b) => a - b).join(",") : "",
     params.movementType ?? "",
+    params.paymentMethod ?? "",
     params.includeProjections === true,
   ] as const;
 

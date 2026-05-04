@@ -35,8 +35,8 @@ export default function IncomePage() {
   const auth = useAuthOptional();
   const { success, error } = useToast();
   const cancelMutation = useCancelIncome();
-  const { data: categories = [] } = useCategories({ realOnly: true });
-  const { data: subCategories = [] } = useSubCategories({ realOnly: true });
+  const { data: categories = [] } = useCategories({ realOnly: true, activeOnly: true });
+  const { data: subCategories = [] } = useSubCategories({ realOnly: true, activeOnly: true });
   const { data: accounts = [] } = useAccounts();
 
   const [filters, setFilters] = React.useState(() => getDefaultFinancialRecordsFilterState());
@@ -235,7 +235,8 @@ export default function IncomePage() {
         accounts={accounts.map((account) => ({
           id: account.id,
           name: account.name,
-          initialBalanceDate: account.initialBalanceDate,
+          initialBalanceDate: account.initialBalanceDate ?? null,
+          active: account.meta.active,
         }))}
         onSaved={() => {
           table.pageResponseQuery.refetch();

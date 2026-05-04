@@ -180,5 +180,6 @@ export function getMockDashboardKpis(params: DashboardKpisParams): DashboardKpis
     incomeByCategory: buildCategoryKpis(filtered, "INCOME", totalIncome),
     temporalEvolution: buildTemporalEvolution(filtered, startDate, endDate),
     movements: buildMovementsMock(filtered),
+    invoicePaymentBreakdowns: [],
   };
 }
