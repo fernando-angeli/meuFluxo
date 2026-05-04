@@ -35,6 +35,9 @@ public record CashMovementRequest(
         @Size(min = 3, message = "A descrição deve conter no mínimo 3 caracteres")
         String description,
 
-        String notes
+        String notes,
+
+        /** Vincula o movimento à fatura do cartão (ex.: pagamento de fatura). Opcional. */
+        Long creditCardInvoiceId
 ) {
 }

@@ -47,7 +47,7 @@ function normalizePage(page: PageResponse<unknown>): PageResponse<SubCategory> {
 
 export async function fetchSubcategoriesPageForCategory(
   categoryId: string,
-  params: PageQueryParams & Record<string, unknown>,
+  params: PageQueryParams,
 ): Promise<PageResponse<SubCategory>> {
   const page = await api.subCategories.list({
     categoryId,

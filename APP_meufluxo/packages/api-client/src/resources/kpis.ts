@@ -27,6 +27,9 @@ function buildQuery(params: DashboardKpisParams): Record<string, HttpQueryValue>
   if (params.movementType) {
     query.movementType = params.movementType;
   }
+  if (params.paymentMethod) {
+    query.paymentMethod = params.paymentMethod;
+  }
   if (params.includeProjections === true) {
     query.includeProjections = true;
   }

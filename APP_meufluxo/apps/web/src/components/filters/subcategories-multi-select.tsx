@@ -29,7 +29,7 @@ export function SubcategoriesMultiSelect({
   triggerClassName,
   disabled = false,
 }: SubcategoriesMultiSelectProps) {
-  const { data: subCategories = [], isLoading } = useSubCategories();
+  const { data: subCategories = [], isLoading } = useSubCategories({ activeOnly: true });
   const filteredSubCategories = filterSubCategories(subCategories, parentCategoryIds);
   const { t } = useTranslation();
 

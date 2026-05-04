@@ -10,7 +10,8 @@ import { authTokenRef, on401RetryRef, onUnauthorizedRef } from "@/lib/auth-token
 import { refreshWithCredentials } from "@/services/auth.service";
 import type { SessionData, SessionState, AuthStatus, TokenMeta } from "./session-types";
 import { initialSessionState } from "./session-types";
-import type { LoginResponse, WorkspaceSummary } from "@meufluxo/types";
+import type { LoginResponse, UserTheme, WorkspaceSummary } from "@meufluxo/types";
+import { normalizeUserTheme, userPreferencesFromThemePatchResponse, userThemeToApi } from "@meufluxo/types";
 
 type SessionContextValue = SessionState & {
   status: AuthStatus;
@@ -20,6 +21,8 @@ type SessionContextValue = SessionState & {
   logout: () => void;
   clearSession: () => void;
   setActiveWorkspace: (workspaceId: string | null) => void;
+  /** PATCH tema no backend; atualiza `data.preferences` em caso de sucesso. */
+  persistTheme: (theme: UserTheme) => Promise<void>;
 };
 
 const SessionContext = React.createContext<SessionContextValue | null>(null);
@@ -61,7 +64,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     (data: SessionData | null) => {
       const theme = data?.preferences.theme;
       if (theme) {
-        setTheme(theme);
+        setTheme(normalizeUserTheme(theme));
       }
     },
     [setTheme],
@@ -314,6 +317,20 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const persistTheme = React.useCallback(
+    async (theme: UserTheme) => {
+      const userId = state.data?.id;
+      if (!userId) return;
+      const raw = await api.users.patchThemePreference(userId, { theme: userThemeToApi(theme) });
+      const preferences = userPreferencesFromThemePatchResponse(raw);
+      setState((previous) => ({
+        ...previous,
+        data: previous.data ? { ...previous.data, preferences } : null,
+      }));
+    },
+    [state.data?.id],
+  );
+
   const logout = React.useCallback(() => {
     on401RetryRef.current = null;
     onUnauthorizedRef.current = null;
@@ -331,6 +348,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     logout,
     clearSession,
     setActiveWorkspace,
+    persistTheme,
   };
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

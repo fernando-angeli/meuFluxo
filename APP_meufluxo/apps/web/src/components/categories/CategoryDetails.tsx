@@ -1,32 +1,14 @@
 "use client";
 
-import { format, parseISO } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import type { Category } from "@meufluxo/types";
 
-import type { Category, MovementType } from "@meufluxo/types";
-import { TRANSACTION_MOVEMENT_TYPE_LABELS } from "@meufluxo/types";
-
-import { DetailsRow, DetailsSection } from "@/components/details";
 import {
   SectionEmptyState,
   SectionErrorState,
   SectionLoadingState,
 } from "@/components/patterns";
-import { AccountStatusBadge } from "@/features/accounts/components/account-status-badge";
 import { CategorySubcategoriesPanel } from "@/features/categories/components/category-subcategories-panel";
-
-function formatDateTime(value?: string | null) {
-  if (!value) return "Não informado";
-  try {
-    return format(parseISO(value), "dd/MM/yyyy HH:mm", { locale: ptBR });
-  } catch {
-    return "Indisponível no momento";
-  }
-}
-
-function movementLabel(type: MovementType) {
-  return TRANSACTION_MOVEMENT_TYPE_LABELS[type] ?? type;
-}
+import { useTranslation } from "@/lib/i18n";
 
 export function CategoryDetails({
   category,
@@ -37,6 +19,8 @@ export function CategoryDetails({
   loading?: boolean;
   error?: string | null;
 }) {
+  const { t } = useTranslation();
+
   if (loading) {
     return <SectionLoadingState message="Carregando detalhes da categoria..." />;
   }
@@ -51,40 +35,38 @@ export function CategoryDetails({
     );
   }
 
+  const descriptionText = category.description?.trim()
+    ? category.description.trim()
+    : t("pages.categories.details.noDescription");
+
+  const subCount =
+    typeof category.subCategoryCount === "number" ? category.subCategoryCount : "—";
+
   return (
-    <div className="space-y-4">
-      <DetailsSection title="Resumo" description="Informações principais da categoria">
-        <DetailsRow label="Nome" value={category.name} />
-        <DetailsRow
-          label="Descrição"
-          value={
-            category.description?.trim() ? category.description : "Não informado"
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
+      <section
+        className="shrink-0 rounded-lg border border-border/80 bg-muted/15 px-4 py-3"
+        aria-labelledby="category-summary-heading"
+      >
+        <h2 id="category-summary-heading" className="sr-only">
+          {t("pages.categories.details.summaryTitle")}
+        </h2>
+        <p
+          className={
+            category.description?.trim()
+              ? "text-sm leading-relaxed text-foreground"
+              : "text-sm leading-relaxed text-muted-foreground italic"
           }
-        />
-        <DetailsRow
-          label="Tipo de movimento"
-          value={movementLabel(category.movementType)}
-        />
-        <DetailsRow
-          label="Status"
-          value={<AccountStatusBadge active={!!category.meta.active} />}
-        />
-        <DetailsRow
-          label="Quantidade de subcategorias"
-          value={
-            typeof category.subCategoryCount === "number"
-              ? String(category.subCategoryCount)
-              : "Não informado"
-          }
-        />
-      </DetailsSection>
+        >
+          {descriptionText}
+        </p>
+        <dl className="mt-3 flex flex-wrap items-baseline justify-between gap-2 border-t border-border/50 pt-3 text-sm">
+          <dt className="text-muted-foreground">{t("pages.categories.details.subcategoryCountLabel")}</dt>
+          <dd className="font-medium tabular-nums text-foreground">{subCount}</dd>
+        </dl>
+      </section>
 
-      <DetailsSection title="Metadados" description="Datas de criação e atualização">
-        <DetailsRow label="Criado em" value={formatDateTime(category.meta.createdAt)} />
-        <DetailsRow label="Atualizado em" value={formatDateTime(category.meta.updatedAt)} />
-      </DetailsSection>
-
-      <CategorySubcategoriesPanel category={category} />
+      <CategorySubcategoriesPanel category={category} className="min-h-0 flex-1" />
     </div>
   );
 }

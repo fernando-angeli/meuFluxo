@@ -6,11 +6,32 @@ import type { Category, MovementType } from "@meufluxo/types";
 import { TRANSACTION_MOVEMENT_TYPE_LABELS } from "@meufluxo/types";
 
 import type { DataTableColumn } from "@/components/data-table/types";
+import { cn } from "@/lib/utils";
 
 import { AccountStatusBadge } from "@/features/accounts/components/account-status-badge";
 
 function movementLabel(type: MovementType) {
   return TRANSACTION_MOVEMENT_TYPE_LABELS[type] ?? type;
+}
+
+/** Bolinha + texto (receita verde, despesa vermelha), alinhado ao padrão de status com indicador. */
+function CategoryMovementTypeCell({ type }: { type: MovementType }) {
+  const label = movementLabel(type);
+  const dotClass =
+    type === "INCOME"
+      ? "bg-emerald-500 dark:bg-emerald-400"
+      : type === "EXPENSE"
+        ? "bg-rose-600 dark:bg-rose-500"
+        : "bg-muted-foreground/60";
+  return (
+    <span className="inline-flex items-center gap-2.5 text-foreground">
+      <span
+        className={cn("h-2.5 w-2.5 shrink-0 rounded-full ring-1 ring-black/5 dark:ring-white/10", dotClass)}
+        aria-hidden
+      />
+      <span className="text-sm leading-none">{label}</span>
+    </span>
+  );
 }
 
 export function getCategoriesTableColumns({
@@ -44,9 +65,7 @@ export function getCategoriesTableColumns({
       sortable: true,
       sortKey: "movementType",
       align: "left",
-      render: (c) => (
-        <span className="text-muted-foreground">{movementLabel(c.movementType)}</span>
-      ),
+      render: (c) => <CategoryMovementTypeCell type={c.movementType} />,
     },
     {
       key: "subCategoryCount",

@@ -48,6 +48,7 @@ export function CategoryFormModal({ open, onOpenChange, category }: CategoryForm
   const { success, error } = useToast();
   const createMutation = useCreateCategory();
   const updateMutation = useUpdateCategory();
+  const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
   const [generalError, setGeneralError] = React.useState<string | null>(null);
@@ -75,6 +76,8 @@ export function CategoryFormModal({ open, onOpenChange, category }: CategoryForm
 
   const active = form.watch("active");
   const movementType = form.watch("movementType");
+  const wasInactive = !!(category && !category.meta.active);
+  const structuralLocked = isEdit && wasInactive && !active;
 
   React.useEffect(() => {
     if (!open) return;
@@ -148,8 +151,6 @@ export function CategoryFormModal({ open, onOpenChange, category }: CategoryForm
     }
   });
 
-  const isSubmitting = createMutation.isPending || updateMutation.isPending;
-
   return (
     <FormDialogShell
       open={open}
@@ -170,6 +171,7 @@ export function CategoryFormModal({ open, onOpenChange, category }: CategoryForm
             id="category-form-name"
             placeholder="Ex.: Moradia"
             autoComplete="off"
+            disabled={structuralLocked || isSubmitting}
             className={cn(
               getInputErrorClass(
                 fieldErrors.name ?? form.formState.errors.name?.message,
@@ -191,6 +193,7 @@ export function CategoryFormModal({ open, onOpenChange, category }: CategoryForm
             rows={3}
             placeholder="Opcional — texto livre sobre a categoria"
             autoComplete="off"
+            disabled={structuralLocked || isSubmitting}
             className={cn(
               "flex min-h-[80px] w-full resize-y rounded-lg border bg-input px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
               getInputErrorClass(
@@ -242,9 +245,11 @@ export function CategoryFormModal({ open, onOpenChange, category }: CategoryForm
             <div className="space-y-1">
               <Label>Categoria ativa</Label>
               <p className="text-xs text-muted-foreground">
-                {active
-                  ? "Visível nas seleções do workspace."
-                  : "Inativa permanece no histórico, mas pode ser oculta em filtros."}
+                {structuralLocked
+                  ? "Categoria inativa: altere o status para ativa para editar nome e descrição."
+                  : active
+                    ? "Visível nas seleções ao criar novas despesas e receitas."
+                    : "Inativa deixa de aparecer ao criar novas despesas e receitas; o histórico é mantido."}
               </p>
             </div>
 

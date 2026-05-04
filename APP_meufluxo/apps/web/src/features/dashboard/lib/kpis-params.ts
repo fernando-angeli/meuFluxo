@@ -29,5 +29,8 @@ export function toDashboardKpisParams(filters: DashboardFiltersValue): Dashboard
     ...(categoryIds.length ? { categoryIds } : {}),
     ...(subCategoryIds.length ? { subCategoryIds } : {}),
     includeProjections: filters.includeProjections,
+    ...(filters.paymentMethod !== "__ALL__" && filters.paymentMethod.trim()
+      ? { paymentMethod: filters.paymentMethod.trim() }
+      : {}),
   };
 }

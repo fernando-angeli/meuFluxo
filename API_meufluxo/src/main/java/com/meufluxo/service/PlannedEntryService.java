@@ -97,6 +97,15 @@ public class PlannedEntryService extends BaseUserService {
     }
 
     private PlannedEntryResponse createPlannedEntry(PlannedEntryCreateRequest request, FinancialDirection direction) {
+        if (Boolean.TRUE.equals(request.settleImmediately())) {
+            if (request.defaultAccountId() == null) {
+                throw new BusinessException("Para liquidar na criação, informe a conta.");
+            }
+            if (request.subCategoryId() == null) {
+                throw new BusinessException("Para liquidar na criação, informe a subcategoria.");
+            }
+        }
+
         PlannedEntry entry = plannedEntryMapper.toEntity(request);
         applyCommonRelations(entry, direction, request.categoryId(), request.subCategoryId(), request.defaultAccountId());
 
@@ -106,12 +115,23 @@ public class PlannedEntryService extends BaseUserService {
         entry.setGroupId(null);
         entry.setWorkspace(getCurrentWorkspace());
         entry.setDueDate(adjustDueDate(entry.getDueDate()));
+        validatePlanningDefaultAccountActive(entry.getDefaultAccount());
         validateDueDateAgainstAccountInitialBalance(entry.getDefaultAccount(), entry.getDueDate());
         entry.setIssueDate(Optional.ofNullable(request.issueDate()).orElse(entry.getDueDate()));
         entry.setDocument(trimToNull(request.document()));
         entry.setDescription(trimToNull(request.description()));
         entry.setNotes(trimToNull(request.notes()));
         entry = plannedEntryRepository.save(entry);
+
+        if (Boolean.TRUE.equals(request.settleImmediately())) {
+            PlannedEntrySettleRequest settleRequest = new PlannedEntrySettleRequest(
+                    entry.getExpectedAmount(),
+                    entry.getDueDate(),
+                    entry.getDefaultAccount().getId(),
+                    entry.getNotes()
+            );
+            return settleByDirection(entry.getId(), settleRequest, direction);
+        }
 
         return withComputedStatus(plannedEntryMapper.toResponse(entry));
     }
@@ -123,6 +143,7 @@ public class PlannedEntryService extends BaseUserService {
         Category category = validateAndGetCategoryForDirection(request.categoryId(), direction);
         SubCategory subCategory = validateAndGetSubCategory(request.subCategoryId(), category);
         Account defaultAccount = validateAndGetAccount(request.defaultAccountId());
+        validatePlanningDefaultAccountActive(defaultAccount);
         String description = trimToNull(request.description());
         String notes = trimToNull(request.notes());
         String rootDocument = trimToNull(request.document());
@@ -497,6 +518,9 @@ public class PlannedEntryService extends BaseUserService {
         }
 
         Account settledAccount = validateAndGetAccount(request.settledAccountId());
+        if (!settledAccount.isActive()) {
+            throw new BusinessException("Conta inativa não pode ser usada na liquidação.");
+        }
         MovementType movementType = direction == FinancialDirection.EXPENSE
                 ? MovementType.EXPENSE
                 : MovementType.INCOME;
@@ -516,7 +540,8 @@ public class PlannedEntryService extends BaseUserService {
                 entry.getSubCategory().getId(),
                 settledAccount.getId(),
                 description,
-                trimToNull(request.notes())
+                trimToNull(request.notes()),
+                null
         );
 
         CashMovementResponse createdMovement = cashMovementService.create(cmRequest);
@@ -631,6 +656,14 @@ public class PlannedEntryService extends BaseUserService {
             return null;
         }
         return accountService.findByIdOrThrow(accountId);
+    }
+
+    private void validatePlanningDefaultAccountActive(Account account) {
+        if (account != null && !account.isActive()) {
+            throw new BusinessException(
+                    "Não é possível utilizar uma conta inativa neste lançamento. Reative a conta ou escolha outra."
+            );
+        }
     }
 
     private void applyCommonRelations(

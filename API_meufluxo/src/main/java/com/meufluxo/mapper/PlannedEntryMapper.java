@@ -4,12 +4,14 @@ import com.meufluxo.dto.BaseResponse;
 import com.meufluxo.dto.plannedEntry.PlannedEntryCreateRequest;
 import com.meufluxo.dto.plannedEntry.PlannedEntryResponse;
 import com.meufluxo.model.PlannedEntry;
+import org.mapstruct.BeanMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
 @Mapper(componentModel = "spring")
 public interface PlannedEntryMapper {
 
+    @BeanMapping(ignoreUnmappedSourceProperties = "settleImmediately")
     PlannedEntry toEntity(PlannedEntryCreateRequest request);
 
     @Mapping(target = "meta", source = ".")

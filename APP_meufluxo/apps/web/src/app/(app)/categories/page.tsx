@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
+import { InfoDialog } from "@/components/dialogs/info-dialog";
+import { isDeleteBlockedByUsageMessage } from "@/features/categories/lib/delete-usage-blocked";
 import { DetailsDrawer } from "@/components/details";
 import { CategoryDetails, CategoriesTable } from "@/components/categories";
 import { useAuthOptional } from "@/hooks/useAuth";
@@ -21,6 +23,9 @@ import { useToast } from "@/components/toast";
 import { extractApiError } from "@/lib/api-error";
 import { getQueryErrorMessage } from "@/lib/query-error";
 import type { Category } from "@meufluxo/types";
+import { TRANSACTION_MOVEMENT_TYPE_LABELS } from "@meufluxo/types";
+import { Badge } from "@/components/ui/badge";
+import { AccountStatusBadge } from "@/features/accounts/components/account-status-badge";
 import { CategoryFormModal } from "@/features/categories/components/category-form-modal";
 import { CategoryRowActions } from "@/features/categories/components/category-row-actions";
 import { getCategoriesTableColumns } from "@/features/categories/categories.columns";
@@ -41,6 +46,8 @@ export default function CategoriesPage() {
 
   const [deleteOpen, setDeleteOpen] = React.useState(false);
   const [deletingCategory, setDeletingCategory] = React.useState<Category | null>(null);
+  const [usageBlockOpen, setUsageBlockOpen] = React.useState(false);
+  const [usageBlockMessage, setUsageBlockMessage] = React.useState("");
 
   const deleteMutation = useDeleteCategory();
   const categoryDetailsQuery = useCategoryDetails(selectedCategoryId, detailsOpen);
@@ -106,6 +113,9 @@ export default function CategoriesPage() {
     : null;
 
   const selectedCategoryForEdit: Category | null =
+    categoryDetailsQuery.data ?? selectedCategoryPreview;
+
+  const drawerCategory: Category | null =
     categoryDetailsQuery.data ?? selectedCategoryPreview;
 
   const renderActions = React.useCallback(
@@ -180,26 +190,49 @@ export default function CategoriesPage() {
         isOpen={detailsOpen}
         onClose={closeDetails}
         title={
-          categoryDetailsQuery.data?.name ??
-          selectedCategoryPreview?.name ??
-          "Detalhes da categoria"
+          <span className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3 sm:gap-y-2">
+            <span className="min-w-0 break-words">
+              {drawerCategory?.name ??
+                selectedCategoryPreview?.name ??
+                t("pages.categories.title")}
+            </span>
+            {drawerCategory ? (
+              <span className="flex flex-wrap items-center gap-2">
+                <Badge
+                  variant={drawerCategory.movementType === "INCOME" ? "success" : "secondary"}
+                  className="w-fit shrink-0 rounded-md font-normal"
+                >
+                  {TRANSACTION_MOVEMENT_TYPE_LABELS[drawerCategory.movementType] ??
+                    drawerCategory.movementType}
+                </Badge>
+                <AccountStatusBadge active={!!drawerCategory.meta.active} />
+              </span>
+            ) : null}
+          </span>
         }
-        description="Visualize os dados da categoria e as subcategorias vinculadas."
-        widthClassName="w-full sm:max-w-2xl"
+        description={t("pages.categories.drawer.hint")}
+        widthClassName="w-full max-w-full sm:w-[50vw] sm:max-w-none md:w-[40vw] md:min-w-[620px] md:max-w-[900px]"
+        contentClassName="flex min-h-0 flex-1 flex-col overflow-hidden px-5 py-4"
         footer={
-          <div className="flex items-center justify-end gap-2">
-            <Button type="button" variant="outline" onClick={closeDetails}>
-              Fechar
+          <div className="flex w-full flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end sm:gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={closeDetails}
+            >
+              {t("common.close")}
             </Button>
             <Button
               type="button"
+              className="w-full sm:w-auto"
               disabled={!selectedCategoryForEdit}
               onClick={() => {
                 if (!selectedCategoryForEdit) return;
                 openEditModal(selectedCategoryForEdit);
               }}
             >
-              Editar categoria
+              {t("pages.categories.edit")}
             </Button>
           </div>
         }
@@ -243,11 +276,25 @@ export default function CategoriesPage() {
             }
           } catch (err) {
             const apiErr = extractApiError(err);
-            error(apiErr?.detail ?? "Não foi possível excluir a categoria");
+            const detail = apiErr?.detail;
+            if (isDeleteBlockedByUsageMessage(detail)) {
+              setDeleteOpen(false);
+              setUsageBlockMessage(detail ?? "");
+              setUsageBlockOpen(true);
+            } else {
+              error(detail ?? "Não foi possível excluir a categoria");
+            }
           } finally {
             setDeletingCategory(null);
           }
         }}
+      />
+
+      <InfoDialog
+        open={usageBlockOpen}
+        onOpenChange={setUsageBlockOpen}
+        title="Não é possível excluir"
+        description={usageBlockMessage}
       />
     </>
   );

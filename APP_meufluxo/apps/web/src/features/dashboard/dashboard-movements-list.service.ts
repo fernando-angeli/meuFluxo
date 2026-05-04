@@ -1,6 +1,6 @@
 "use client";
 
-import type { ExpenseRecord, PageQueryParams, PageResponse } from "@meufluxo/types";
+import type { ExpenseRecord, InvoicePaymentBreakdown, PageQueryParams, PageResponse } from "@meufluxo/types";
 import { DASHBOARD_PROJECTION_PLANNED_STATUSES } from "@meufluxo/types";
 
 import type { DashboardFiltersValue } from "@/components/filters";
@@ -38,6 +38,9 @@ export function buildDashboardMovementsListExtraParams(
   if (filters.subcategoryIds.length) {
     out.filterSubcategoryIds = filters.subcategoryIds.join(",");
   }
+  if (filters.paymentMethod !== "__ALL__" && filters.paymentMethod.trim()) {
+    out.paymentMethod = filters.paymentMethod.trim();
+  }
   out.includeProjections = filters.includeProjections;
   return out;
 }
@@ -48,6 +51,46 @@ function parseCsvIds(raw: unknown): number[] {
     .split(",")
     .map((s) => Number(s.trim()))
     .filter((n) => Number.isInteger(n) && n > 0);
+}
+
+/** Remove chave só para invalidar cache da tabela quando o GET /kpis/dashboard termina. */
+function stripDashboardTableStamp(
+  params: PageQueryParams & Record<string, unknown>,
+): PageQueryParams & Record<string, unknown> {
+  const { _kpiDataUpdatedAt: _stamp, ...rest } = params;
+  return rest;
+}
+
+function expandCashRowsWithInvoiceBreakdown(
+  cashRows: CashMovementListItem[],
+  invoicePaymentBreakdowns: InvoicePaymentBreakdown[] | null | undefined,
+): CashMovementListItem[] {
+  if (!cashRows.length) return cashRows;
+  if (invoicePaymentBreakdowns == null) return cashRows;
+  const suppressed = new Set<string>();
+  const synthetic: CashMovementListItem[] = [];
+  for (const b of invoicePaymentBreakdowns) {
+    if (!b.lines.length) continue;
+    suppressed.add(String(b.cashMovementId));
+    const base = cashRows.find((r) => r.id === String(b.cashMovementId));
+    const due = b.invoiceDueDate.slice(0, 10);
+    for (const line of b.lines) {
+      synthetic.push({
+        id: `cc-inv-${b.invoiceId}-exp-${line.expenseId}-mv-${b.cashMovementId}`,
+        occurredAt: due,
+        description: line.description,
+        accountName: base?.accountName ?? "—",
+        categoryName: line.categoryName,
+        subCategoryName: line.subCategoryName ?? "—",
+        movementType: "EXPENSE",
+        amount: line.allocatedAmount,
+        paymentMethod: "INVOICE_CREDIT_CARD",
+        sourceType: "CREDIT_CARD_INVOICE_DETAIL",
+      });
+    }
+  }
+  const kept = cashRows.filter((r) => !suppressed.has(r.id));
+  return [...kept, ...synthetic];
 }
 
 function plannedToRow(r: ExpenseRecord, kind: "EXPENSE" | "INCOME"): CashMovementListItem {
@@ -133,6 +176,9 @@ async function fetchAllCashRowsForMerge(
       accountId: typeof params.accountId === "string" ? params.accountId : undefined,
       categoryId: typeof params.categoryId === "string" ? params.categoryId : undefined,
       subCategoryId: typeof params.subCategoryId === "string" ? params.subCategoryId : undefined,
+      ...(typeof params.paymentMethod === "string" && params.paymentMethod.trim()
+        ? { paymentMethod: params.paymentMethod.trim() }
+        : {}),
     });
     all.push(...(res.content ?? []));
     if (res.last || (res.content?.length ?? 0) < pageSize) break;
@@ -191,37 +237,36 @@ function slicePage<T>(all: T[], page: number, size: number): PageResponse<T> {
 
 export async function fetchDashboardMovementsPage(
   params: PageQueryParams & Record<string, unknown>,
+  invoicePaymentBreakdowns?: InvoicePaymentBreakdown[] | null,
 ): Promise<PageResponse<CashMovementListItem>> {
-  const include = params.includeProjections === true || params.includeProjections === "true";
-  const page = params.page ?? 0;
-  const size = params.size ?? 20;
-  const sort = typeof params.sort === "string" ? params.sort : undefined;
+  const clean = stripDashboardTableStamp(params);
+  const include = clean.includeProjections === true || clean.includeProjections === "true";
+  const page = clean.page ?? 0;
+  const size = clean.size ?? 20;
+  const sort = typeof clean.sort === "string" ? clean.sort : undefined;
 
   if (!include) {
-    return fetchCashMovementsPage({
-      page,
-      size,
-      ...(sort ? { sort } : {}),
-      startDate: typeof params.startDate === "string" ? params.startDate : undefined,
-      endDate: typeof params.endDate === "string" ? params.endDate : undefined,
-      accountId: typeof params.accountId === "string" ? params.accountId : undefined,
-      categoryId: typeof params.categoryId === "string" ? params.categoryId : undefined,
-      subCategoryId: typeof params.subCategoryId === "string" ? params.subCategoryId : undefined,
-    });
+    const cashRows = await fetchAllCashRowsForMerge(clean);
+    const expanded = expandCashRowsWithInvoiceBreakdown(cashRows, invoicePaymentBreakdowns);
+    const field = parseSortField(sort);
+    const dir = parseSortDir(sort);
+    expanded.sort((a, b) => compareRows(a, b, field, dir));
+    return slicePage(expanded, page, size);
   }
 
-  const startDate = typeof params.startDate === "string" ? params.startDate : "";
-  const endDate = typeof params.endDate === "string" ? params.endDate : "";
-  const accountIds = parseCsvIds(params.filterAccountIds);
-  const categoryIds = parseCsvIds(params.filterCategoryIds);
-  const subCategoryIds = parseCsvIds(params.filterSubcategoryIds);
+  const startDate = typeof clean.startDate === "string" ? clean.startDate : "";
+  const endDate = typeof clean.endDate === "string" ? clean.endDate : "";
+  const accountIds = parseCsvIds(clean.filterAccountIds);
+  const categoryIds = parseCsvIds(clean.filterCategoryIds);
+  const subCategoryIds = parseCsvIds(clean.filterSubcategoryIds);
 
   const [cashRows, plannedRows] = await Promise.all([
-    fetchAllCashRowsForMerge(params),
+    fetchAllCashRowsForMerge(clean),
     fetchAllPlannedRows(startDate, endDate, accountIds, categoryIds, subCategoryIds),
   ]);
 
-  let merged = [...cashRows, ...plannedRows];
+  const cashExpanded = expandCashRowsWithInvoiceBreakdown(cashRows, invoicePaymentBreakdowns);
+  let merged = [...cashExpanded, ...plannedRows];
   if (merged.length > MERGE_MAX_ROWS) {
     merged = merged.slice(0, MERGE_MAX_ROWS);
   }

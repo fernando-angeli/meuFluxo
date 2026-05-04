@@ -28,6 +28,8 @@ type FilterSelectProps<T extends string = string> = {
   "data-1p-ignore"?: "true" | "false";
   "data-form-type"?: "other";
   parseValue?: (value: string) => T;
+  /** Borda/estado de erro no trigger (ex.: validação de formulário). */
+  invalid?: boolean;
 };
 
 /**
@@ -48,6 +50,7 @@ export function FilterSelect<T extends string>({
   "data-1p-ignore": data1pIgnore = "true",
   "data-form-type": dataFormType = "other",
   parseValue,
+  invalid = false,
 }: FilterSelectProps<T>) {
   const EMPTY_VALUE = "__empty__";
 
@@ -69,6 +72,7 @@ export function FilterSelect<T extends string>({
         data-lpignore={dataLpIgnore}
         data-1p-ignore={data1pIgnore}
         data-form-type={dataFormType}
+        aria-invalid={invalid || undefined}
         className={cn(
           "h-10 min-h-10 min-w-0 w-full items-center gap-2 py-2 pr-10 text-sm leading-normal box-border",
           "data-[state=open]:border-primary data-[state=open]:shadow-md data-[state=open]:ring-2 data-[state=open]:ring-primary/25 data-[state=open]:ring-offset-2 data-[state=open]:ring-offset-background dark:data-[state=open]:ring-primary/35",

@@ -15,6 +15,8 @@ export type CashMovementListItem = {
   amount: number;
   paymentMethod?: string | null;
   sourceType?: string | null;
+  creditCardInvoiceId?: number | null;
+  creditCardInvoiceDueDate?: string | null;
 };
 
 function toNumber(value: unknown): number {
@@ -27,6 +29,8 @@ function normalizeMovement(raw: unknown): CashMovementListItem {
   const account = (r.account ?? {}) as Record<string, unknown>;
   const subCategory = (r.subCategory ?? {}) as Record<string, unknown>;
   const category = (subCategory.category ?? {}) as Record<string, unknown>;
+  const invDue = r.creditCardInvoiceDueDate != null ? String(r.creditCardInvoiceDueDate).slice(0, 10) : null;
+  const invId = r.creditCardInvoiceId != null ? toNumber(r.creditCardInvoiceId) : null;
   return {
     id: String(r.id ?? ""),
     occurredAt: String(r.occurredAt ?? ""),
@@ -38,6 +42,8 @@ function normalizeMovement(raw: unknown): CashMovementListItem {
     amount: toNumber(r.amount),
     paymentMethod: r.paymentMethod != null ? String(r.paymentMethod) : null,
     sourceType: r.sourceType != null ? String(r.sourceType) : null,
+    creditCardInvoiceId: invId != null && invId > 0 ? invId : null,
+    creditCardInvoiceDueDate: invDue && /^\d{4}-\d{2}-\d{2}$/.test(invDue) ? invDue : null,
   };
 }
 
@@ -54,10 +60,12 @@ export async function fetchCashMovementsPage(
     categoryId?: string;
     subCategoryId?: string;
     movementType?: "INCOME" | "EXPENSE";
+    paymentMethod?: string;
     startDate?: string;
     endDate?: string;
   },
 ): Promise<PageResponse<CashMovementListItem>> {
+  const pm = params.paymentMethod?.trim();
   const page = await api.cashMovements.list({
     page: params.page,
     size: params.size,
@@ -66,6 +74,7 @@ export async function fetchCashMovementsPage(
     ...(params.categoryId ? { categoryId: Number(params.categoryId) } : {}),
     ...(params.subCategoryId ? { subCategoryId: Number(params.subCategoryId) } : {}),
     ...(params.movementType ? { movementType: params.movementType } : {}),
+    ...(pm ? { paymentMethod: pm } : {}),
     ...(params.startDate ? { startDate: params.startDate } : {}),
     ...(params.endDate ? { endDate: params.endDate } : {}),
   });

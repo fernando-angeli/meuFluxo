@@ -39,8 +39,8 @@ export default function CardExpensesPage() {
   const auth = useAuthOptional();
   const { success, error } = useToast();
   const cancelMutation = useCancelCreditCardExpense();
-  const { data: categories = [] } = useCategories({ realOnly: true });
-  const { data: subCategories = [] } = useSubCategories({ realOnly: true });
+  const { data: categories = [] } = useCategories({ realOnly: true, activeOnly: true });
+  const { data: subCategories = [] } = useSubCategories({ realOnly: true, activeOnly: true });
   const { data: creditCards = [] } = useCreditCards();
 
   const initialCreditCardId = toNumericId(searchParams.get("creditCardId"));

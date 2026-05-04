@@ -17,7 +17,7 @@ export function IncomeFormModal({
   income: ExpenseRecord | null;
   categories: Array<{ id: string; name: string; movementType?: string }>;
   subCategories: Array<{ id: string; name: string; categoryId: string }>;
-  accounts: Array<{ id: string; name: string; initialBalanceDate?: string | null }>;
+  accounts: Array<{ id: string; name: string; initialBalanceDate?: string | null; active?: boolean }>;
   onSaved: () => void;
 }) {
   return (

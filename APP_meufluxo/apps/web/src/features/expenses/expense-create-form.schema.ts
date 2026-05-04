@@ -50,8 +50,33 @@ export function createExpenseCreateFormSchema(t: (key: TranslationKey) => string
         .optional(),
       repetitionsCount: z.string().trim().optional(),
       intervalDays: z.string().trim().optional(),
+      settleImmediately: z.boolean().optional(),
     })
     .superRefine((data, ctx) => {
+      if (data.settleImmediately) {
+        if (data.creationType !== "SINGLE") {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["settleImmediately"],
+            message: t("expenses.validation.settleOnlySingle"),
+          });
+        }
+        if (!data.defaultAccountId?.trim()) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["settleImmediately"],
+            message: t("expenses.validation.settleRequiresAccount"),
+          });
+        }
+        if (!data.subCategoryId?.trim()) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["subCategoryId"],
+            message: t("expenses.validation.settleRequiresSubCategory"),
+          });
+        }
+      }
+
       if (data.creationType === "RECURRING") {
         const recurrenceType = data.recurrenceType;
         if (!recurrenceType) {

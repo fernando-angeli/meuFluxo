@@ -38,11 +38,16 @@ type FilterMultiSelectProps = {
   triggerClassName?: string | undefined;
   disabled?: boolean | undefined;
   renderTriggerSummary?: ((ids: string[]) => string) | undefined;
+  /**
+   * Quando true (padrão), ao aplicar com todas as opções marcadas o valor emitido é `[]`
+   * (sem filtro). Use `false` quando a lista vazia tiver outro significado no pai.
+   */
+  collapseWhenAllSelected?: boolean | undefined;
 };
 
 /**
  * Multi-select padrão para filtros: busca, chips com remoção, aplicar e limpar.
- * `value` vazio = nenhum filtro ativo (“todas as opções”).
+ * `value` vazio = nenhum filtro ativo (“todas as opções”) quando o pai trata assim.
  */
 export function FilterMultiSelect({
   value,
@@ -58,6 +63,7 @@ export function FilterMultiSelect({
   triggerClassName,
   disabled = false,
   renderTriggerSummary,
+  collapseWhenAllSelected = true,
 }: FilterMultiSelectProps) {
   const { t } = useTranslation();
   const placeholder = placeholderProp ?? t("filters.selectOneOrMore");
@@ -71,16 +77,26 @@ export function FilterMultiSelect({
   const [search, setSearch] = React.useState("");
 
   React.useEffect(() => {
-    setPending(value);
+    if (open) {
+      setPending(value);
+    }
   }, [value, open]);
 
-  const isAll = pending.length === 0;
+  const allOptionValues = React.useMemo(() => options.map((o) => o.value), [options]);
+  const isAllSelected = React.useMemo(
+    () =>
+      options.length > 0 &&
+      pending.length === allOptionValues.length &&
+      allOptionValues.every((id) => pending.includes(id)),
+    [pending, allOptionValues, options.length],
+  );
+
   const appliedSummary =
     value.length === 0
       ? allLabel
       : (renderTriggerSummary?.(value) ??
         t("filters.multiSelectedCount").replace("{count}", String(value.length)));
-  const triggerLabel = open ? (isAll ? allLabel : placeholder) : appliedSummary;
+  const triggerLabel = open ? (isAllSelected ? allLabel : placeholder) : appliedSummary;
 
   const filteredOptions = React.useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -95,28 +111,35 @@ export function FilterMultiSelect({
   }, [options]);
 
   const toggle = (id: string) => {
-    if (pending.length === 0) {
-      setPending(options.filter((o) => o.value !== id).map((o) => o.value));
-    } else if (pending.includes(id)) {
+    if (pending.includes(id)) {
       setPending(pending.filter((x) => x !== id));
     } else {
-      const next = [...pending, id];
-      setPending(next.length === options.length ? [] : next);
+      setPending([...pending, id]);
     }
   };
 
-  const selectAll = () => setPending([]);
+  const selectAll = () => {
+    if (isAllSelected) {
+      setPending([]);
+    } else {
+      setPending([...allOptionValues]);
+    }
+  };
 
   const handleApply = () => {
-    onChange(pending);
+    const allSelected =
+      collapseWhenAllSelected &&
+      options.length > 0 &&
+      pending.length === allOptionValues.length &&
+      allOptionValues.every((id) => pending.includes(id));
+    onChange(allSelected ? [] : pending);
     setOpen(false);
     setSearch("");
   };
 
+  /** Só limpa a seleção em rascunho; mantém o popover aberto até Aplicar ou fechar fora. */
   const handleClearPending = () => {
     setPending([]);
-    onChange([]);
-    setOpen(false);
     setSearch("");
   };
 
@@ -135,7 +158,10 @@ export function FilterMultiSelect({
         open={open}
         onOpenChange={(next) => {
           setOpen(next);
-          if (!next) setSearch("");
+          if (!next) {
+            setSearch("");
+            setPending(value);
+          }
         }}
       >
         <PopoverTrigger asChild>
@@ -143,7 +169,7 @@ export function FilterMultiSelect({
             type="button"
             disabled={disabled}
             className={cn(
-              "flex h-10 min-w-[140px] items-center justify-between gap-2 rounded-xl border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors",
+              "flex h-10 min-w-[140px] items-center justify-between gap-2 rounded-lg border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors",
               "hover:bg-muted/50 hover:border-input",
               "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
               "data-[state=open]:border-primary/50 data-[state=open]:ring-2 data-[state=open]:ring-primary/20",
@@ -158,27 +184,27 @@ export function FilterMultiSelect({
           </button>
         </PopoverTrigger>
         <PopoverContent
-          className="w-[var(--radix-popover-trigger-width)] p-0"
+          className="w-[var(--radix-popover-trigger-width)] overflow-hidden rounded-lg border bg-popover p-0 text-popover-foreground shadow-lg"
           align="start"
           sideOffset={6}
         >
-          <div className="rounded-xl border bg-popover shadow-lg overflow-hidden">
-            <div className="border-b p-2">
+          <div className="flex min-w-0 flex-col">
+            <div className="border-b border-border p-2">
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder={searchPlaceholder}
-                className="h-9 rounded-lg"
+                className="h-9 rounded border-input"
                 aria-label={searchPlaceholder}
               />
             </div>
-            <div className="p-1.5 border-b bg-muted/30">
+            <div className="border-b border-border bg-muted/30 p-1.5">
               <button
                 type="button"
-                className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-accent"
+                className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm hover:bg-accent"
                 onClick={selectAll}
               >
-                <Checkbox checked={isAll} onCheckedChange={selectAll} />
+                <Checkbox checked={isAllSelected} onCheckedChange={selectAll} />
                 <span>{allLabel}</span>
               </button>
             </div>
@@ -190,10 +216,10 @@ export function FilterMultiSelect({
                   filteredOptions.map((opt) => (
                     <label
                       key={opt.value}
-                      className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-accent"
+                      className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm hover:bg-accent"
                     >
                       <Checkbox
-                        checked={isAll || pending.includes(opt.value)}
+                        checked={pending.includes(opt.value)}
                         onCheckedChange={() => toggle(opt.value)}
                       />
                       {opt.color != null && (
@@ -208,17 +234,17 @@ export function FilterMultiSelect({
                 )}
               </div>
             </ScrollArea>
-            <div className="flex gap-2 border-t p-2">
+            <div className="flex gap-2 border-t border-border p-2">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                className="flex-1 rounded-lg"
+                className="flex-1 rounded"
                 onClick={handleClearPending}
               >
                 {clearLabel}
               </Button>
-              <Button type="button" className="flex-1 rounded-lg" size="sm" onClick={handleApply}>
+              <Button type="button" className="flex-1 rounded" size="sm" onClick={handleApply}>
                 {applyLabel}
               </Button>
             </div>

@@ -7,6 +7,7 @@ import {
   type DashboardSubCategoryKpi,
   type DashboardTemporalSeries,
   type ExpenseRecord,
+  type InvoicePaymentBreakdown,
   type PageResponse,
 } from "@meufluxo/types";
 
@@ -81,6 +82,45 @@ function mapCategoryList(v: unknown): DashboardCategoryKpi[] {
  * Converte o JSON do backend (record Java) para o contrato usado pelo app.
  * Aceita `incomesByCategory` (API) ou `incomeByCategory` (legado/mock).
  */
+/** Parseia um item de `invoicePaymentBreakdowns` (dashboard ou endpoint dedicado). */
+export function parseInvoicePaymentBreakdown(raw: unknown): InvoicePaymentBreakdown | null {
+  if (!isRecord(raw)) return null;
+  const linesRaw = raw.lines;
+  const lines = Array.isArray(linesRaw)
+    ? linesRaw
+        .map((lr) => {
+          if (!isRecord(lr)) return null;
+          return {
+            expenseId: Math.trunc(coerceNumber(lr.expenseId)),
+            categoryId: Math.trunc(coerceNumber(lr.categoryId)),
+            categoryName: String(lr.categoryName ?? ""),
+            categoryMovementType: String(lr.categoryMovementType ?? "EXPENSE"),
+            subCategoryId:
+              lr.subCategoryId != null && lr.subCategoryId !== ""
+                ? Math.trunc(coerceNumber(lr.subCategoryId))
+                : null,
+            subCategoryName: String(lr.subCategoryName ?? "—"),
+            description: String(lr.description ?? ""),
+            allocatedAmount: coerceNumber(lr.allocatedAmount),
+          };
+        })
+        .filter((x): x is NonNullable<typeof x> => x != null)
+    : [];
+  const due = coerceIsoDate(raw.invoiceDueDate);
+  return {
+    cashMovementId: Math.trunc(coerceNumber(raw.cashMovementId)),
+    invoiceId: Math.trunc(coerceNumber(raw.invoiceId)),
+    invoiceDueDate: due || String(raw.invoiceDueDate ?? ""),
+    paymentAmount: coerceNumber(raw.paymentAmount),
+    lines,
+  };
+}
+
+export function parseInvoicePaymentBreakdownsList(raw: unknown): InvoicePaymentBreakdown[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map(parseInvoicePaymentBreakdown).filter((x): x is InvoicePaymentBreakdown => x != null);
+}
+
 export function mapDashboardKpiApiPayload(raw: unknown): Omit<
   DashboardKpisResponse,
   "temporalEvolution" | "movements"
@@ -105,6 +145,7 @@ export function mapDashboardKpiApiPayload(raw: unknown): Omit<
     netBalance: coerceNumber(raw.netBalance),
     expensesByCategory,
     incomeByCategory,
+    invoicePaymentBreakdowns: parseInvoicePaymentBreakdownsList(raw.invoicePaymentBreakdowns),
   };
 }
 

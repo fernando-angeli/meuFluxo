@@ -20,6 +20,8 @@ public record CashMovementResponse(
         MovementType movementType,
         AccountSimpleResponse account,
         SubCategorySimpleResponse subCategory,
+        Long creditCardInvoiceId,
+        LocalDate creditCardInvoiceDueDate,
         BaseResponse meta
 ) {
 }

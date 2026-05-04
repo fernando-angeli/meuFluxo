@@ -1,7 +1,11 @@
 package com.meufluxo.service;
 
+import com.meufluxo.common.exception.BusinessException;
+import com.meufluxo.common.exception.NotFoundException;
+import com.meufluxo.dto.user.UserPreferenceResponse;
 import com.meufluxo.enums.UserLanguage;
 import com.meufluxo.enums.UserTheme;
+import com.meufluxo.mapper.UserPreferenceMapper;
 import com.meufluxo.model.workspaceAndUsers.User;
 import com.meufluxo.model.workspaceAndUsers.UserPreference;
 import com.meufluxo.model.workspaceAndUsers.Workspace;
@@ -22,9 +26,28 @@ public class UserPreferenceService {
     private static final String DEFAULT_TIMEZONE = "America/Sao_Paulo";
 
     private final UserPreferenceRepository userPreferenceRepository;
+    private final UserPreferenceMapper userPreferenceMapper;
 
-    public UserPreferenceService(UserPreferenceRepository userPreferenceRepository) {
+    public UserPreferenceService(
+            UserPreferenceRepository userPreferenceRepository,
+            UserPreferenceMapper userPreferenceMapper
+    ) {
         this.userPreferenceRepository = userPreferenceRepository;
+        this.userPreferenceMapper = userPreferenceMapper;
+    }
+
+    @Transactional
+    public UserPreferenceResponse updateTheme(Long userId, UserTheme theme) {
+        if (theme == null) {
+            throw new BusinessException("Tema é obrigatório.");
+        }
+
+        UserPreference preference = userPreferenceRepository.findByUserIdWithActiveWorkspace(userId)
+                .orElseThrow(() -> new NotFoundException("Preferências do usuário não encontradas para ID: " + userId));
+
+        preference.setTheme(theme);
+        UserPreference savedPreference = userPreferenceRepository.save(preference);
+        return userPreferenceMapper.toResponse(savedPreference);
     }
 
     @Transactional

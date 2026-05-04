@@ -17,6 +17,10 @@ import java.util.UUID;
 
 public interface PlannedEntryRepository extends JpaRepository<PlannedEntry, Long>, JpaSpecificationExecutor<PlannedEntry> {
 
+    boolean existsByCategory_IdAndWorkspace_Id(Long categoryId, Long workspaceId);
+
+    boolean existsBySubCategory_IdAndWorkspace_Id(Long subCategoryId, Long workspaceId);
+
     @Override
     @EntityGraph(attributePaths = {"category", "subCategory", "defaultAccount", "settledAccount", "movement"})
     Page<PlannedEntry> findAll(Specification<PlannedEntry> spec, Pageable pageable);

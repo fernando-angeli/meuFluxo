@@ -7,7 +7,7 @@ public enum AccountType {
     CASH ("Dinheiro"),
     INVESTMENT("Investimentos"),
     SAVING("Poupança"),
-    BENEFIT_CARD("Vale alimentação ou refeição");
+    BENEFIT_CARD("VA / VR");
 
     private final String labelPtBr;
 

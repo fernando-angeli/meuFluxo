@@ -10,6 +10,7 @@ import com.meufluxo.mapper.SubCategoryMapper;
 import com.meufluxo.model.Category;
 import com.meufluxo.model.SubCategory;
 import com.meufluxo.repository.CashMovementRepository;
+import com.meufluxo.repository.PlannedEntryRepository;
 import com.meufluxo.repository.SubCategoryRepository;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -17,12 +18,19 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Objects;
+
 @Service
 public class SubCategoryService extends BaseUserService {
     private static final String DEFAULT_SUBCATEGORY_NAME = "Geral";
 
+    private static final String SUBCATEGORY_DELETE_BLOCKED =
+            "Não é possível excluir a subcategoria porque ainda está em uso no sistema. "
+                    + "Inative-a para ocultá-la ao criar novas despesas e receitas.";
+
     private final SubCategoryRepository subCategoryRepository;
     private final CashMovementRepository cashMovementRepository;
+    private final PlannedEntryRepository plannedEntryRepository;
     private final SubCategoryMapper subCategoryMapper;
     private final CategoryService categoryService;
     private final WorkspaceSyncStateService workspaceSyncStateService;
@@ -31,6 +39,7 @@ public class SubCategoryService extends BaseUserService {
             CurrentUserService currentUserService,
             SubCategoryRepository subCategoryRepository,
             CashMovementRepository cashMovementRepository,
+            PlannedEntryRepository plannedEntryRepository,
             SubCategoryMapper subCategoryMapper,
             CategoryService categoryService,
             WorkspaceSyncStateService workspaceSyncStateService
@@ -38,6 +47,7 @@ public class SubCategoryService extends BaseUserService {
         super(currentUserService);
         this.subCategoryRepository = subCategoryRepository;
         this.cashMovementRepository = cashMovementRepository;
+        this.plannedEntryRepository = plannedEntryRepository;
         this.subCategoryMapper = subCategoryMapper;
         this.categoryService = categoryService;
         this.workspaceSyncStateService = workspaceSyncStateService;
@@ -74,6 +84,9 @@ public class SubCategoryService extends BaseUserService {
             throw new BusinessException("Já existe uma subcategoria com este nome");
         }
         Category category = categoryService.findByIdOrThrow(request.categoryId());
+        if (!category.isActive()) {
+            throw new BusinessException("Não é possível criar subcategoria em uma categoria inativa.");
+        }
         SubCategory newSubCategory = subCategoryMapper.toEntity(request);
         newSubCategory.setCategory(category);
         newSubCategory.setWorkspace(getCurrentWorkspace());
@@ -89,6 +102,12 @@ public class SubCategoryService extends BaseUserService {
             SubCategoryUpdateRequest request
     ) {
         SubCategory existingSubCategory = findByIdOrThrow(id);
+        Category parent = existingSubCategory.getCategory();
+        if (!parent.isActive()) {
+            throw new BusinessException("Categoria inativa: reative a categoria para alterar subcategorias.");
+        }
+        assertSubCategoryEditableWhenInactive(existingSubCategory, request);
+
         String targetName = request.name() != null ? request.name().trim() : existingSubCategory.getName();
         Long targetCategoryId = request.categoryId() != null ? request.categoryId() : existingSubCategory.getCategory().getId();
 
@@ -99,6 +118,9 @@ public class SubCategoryService extends BaseUserService {
         }
         if (request.categoryId() != null) {
             Category newCategory = categoryService.findByIdOrThrow(request.categoryId());
+            if (!newCategory.isActive()) {
+                throw new BusinessException("Não é possível mover a subcategoria para uma categoria inativa.");
+            }
             Category lastCategory = categoryService.findByIdOrThrow(existingSubCategory.getCategory().getId());
             if(newCategory.getMovementType() != lastCategory.getMovementType()){
                 throw new BusinessException("Não é possível mudar categoria de " + lastCategory.getMovementType() + " por " + newCategory.getMovementType());
@@ -112,7 +134,7 @@ public class SubCategoryService extends BaseUserService {
                 getCurrentWorkspaceId(),
                 id
         )) {
-            throw new BusinessException("Já existe uma categoria com este nome");
+            throw new BusinessException("Já existe uma subcategoria com este nome");
         }
 
         if (request.active() != null) {
@@ -129,8 +151,12 @@ public class SubCategoryService extends BaseUserService {
     @Transactional
     public void delete(Long id) {
         SubCategory subCategory = findByIdOrThrow(id);
-        if (cashMovementRepository.existsBySubCategoryIdAndWorkspaceId(id, getCurrentWorkspaceId())) {
-            throw new BusinessException("Não é possível excluir a categoria pois existem registros vinculados, só é possível inativa-la.");
+        Long workspaceId = getCurrentWorkspaceId();
+        if (plannedEntryRepository.existsBySubCategory_IdAndWorkspace_Id(id, workspaceId)) {
+            throw new BusinessException(SUBCATEGORY_DELETE_BLOCKED);
+        }
+        if (cashMovementRepository.existsBySubCategoryIdAndWorkspaceId(id, workspaceId)) {
+            throw new BusinessException(SUBCATEGORY_DELETE_BLOCKED);
         }
         subCategoryRepository.delete(subCategory);
         workspaceSyncStateService.incrementCategoriesVersion(getCurrentWorkspaceId());
@@ -178,6 +204,28 @@ public class SubCategoryService extends BaseUserService {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private static void assertSubCategoryEditableWhenInactive(SubCategory existing, SubCategoryUpdateRequest request) {
+        if (existing.isActive()) {
+            return;
+        }
+        if (Boolean.TRUE.equals(request.active())) {
+            return;
+        }
+        if (request.categoryId() != null && !request.categoryId().equals(existing.getCategory().getId())) {
+            throw new BusinessException("Subcategoria inativa: reative-a antes de alterar a categoria pai.");
+        }
+        if (request.name() != null) {
+            String newName = request.name().trim();
+            if (!newName.equals(existing.getName())) {
+                throw new BusinessException("Subcategoria inativa: reative-a para alterar o nome ou a descrição.");
+            }
+        }
+        if (request.description() != null
+                && !Objects.equals(trimToNull(request.description()), existing.getDescription())) {
+            throw new BusinessException("Subcategoria inativa: reative-a para alterar o nome ou a descrição.");
+        }
     }
 
 }

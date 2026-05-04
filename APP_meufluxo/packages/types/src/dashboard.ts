@@ -49,6 +49,8 @@ export type DashboardKpisResponse = {
   incomeByCategory: DashboardCategoryKpi[];
   temporalEvolution: DashboardTemporalSeries;
   movements: DashboardMovementRow[];
+  /** Incluído no GET /kpis/dashboard (evita chamada extra à rota de breakdown). */
+  invoicePaymentBreakdowns?: InvoicePaymentBreakdown[];
 };
 
 export type DashboardKpisParams = {
@@ -59,6 +61,28 @@ export type DashboardKpisParams = {
   subCategoryIds?: number[];
   /** Omitido ou todos os tipos: a API considera receitas e despesas. */
   movementType?: "INCOME" | "EXPENSE";
+  /** Filtro opcional alinhado ao backend (ex.: PIX, INVOICE_CREDIT_CARD). */
+  paymentMethod?: string;
   /** Inclui planejados em aberto ou em atraso (vencimento no período ou antes do início) nos KPIs e séries. */
   includeProjections?: boolean;
+};
+
+/** Linha de rateio de pagamento de fatura (GET /kpis/dashboard/invoice-payment-breakdowns). */
+export type InvoicePaymentAllocationLine = {
+  expenseId: number;
+  categoryId: number;
+  categoryName: string;
+  categoryMovementType: string;
+  subCategoryId: number | null;
+  subCategoryName: string;
+  description: string;
+  allocatedAmount: number;
+};
+
+export type InvoicePaymentBreakdown = {
+  cashMovementId: number;
+  invoiceId: number;
+  invoiceDueDate: string;
+  paymentAmount: number;
+  lines: InvoicePaymentAllocationLine[];
 };

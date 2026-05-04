@@ -2,6 +2,8 @@
 
 import * as React from "react";
 
+import type { PageQueryParams } from "@meufluxo/types";
+
 import { DataTable } from "@/components/data-table/DataTable";
 import type { DashboardFiltersValue } from "@/components/filters";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,8 +12,10 @@ import {
   buildDashboardMovementsListExtraParams,
   fetchDashboardMovementsPage,
 } from "@/features/dashboard/dashboard-movements-list.service";
+import { toDashboardKpisParams } from "@/features/dashboard/lib/kpis-params";
 import { getDashboardMovementsColumns } from "@/features/dashboard/dashboard-movements.columns";
 import { useAuthOptional } from "@/hooks/useAuth";
+import { useDashboardKpis } from "@/hooks/api";
 import { useServerDataTable } from "@/hooks/useServerDataTable";
 import { useTranslation } from "@/lib/i18n";
 import { getQueryErrorMessage } from "@/lib/query-error";
@@ -23,14 +27,27 @@ type DashboardMovementsTableProps = {
 export function DashboardMovementsTable({ filters }: DashboardMovementsTableProps) {
   const { t } = useTranslation();
   const auth = useAuthOptional();
+  const kpisParams = React.useMemo(() => toDashboardKpisParams(filters), [filters]);
+  const kpiQuery = useDashboardKpis(kpisParams);
+
   const extraQueryParams = React.useMemo(
-    () => buildDashboardMovementsListExtraParams(filters),
-    [filters],
+    () => ({
+      ...buildDashboardMovementsListExtraParams(filters),
+      /** Quando o GET /kpis/dashboard conclui, a tabela refaz o merge com `invoicePaymentBreakdowns`. */
+      _kpiDataUpdatedAt: kpiQuery.isSuccess ? String(kpiQuery.dataUpdatedAt) : "pending",
+    }),
+    [filters, kpiQuery.isSuccess, kpiQuery.dataUpdatedAt],
+  );
+
+  const fetchPage = React.useCallback(
+    (params: PageQueryParams & Record<string, unknown>) =>
+      fetchDashboardMovementsPage(params, kpiQuery.data?.invoicePaymentBreakdowns),
+    [kpiQuery.data?.invoicePaymentBreakdowns],
   );
 
   const table = useServerDataTable<CashMovementListItem>({
     queryKey: ["dashboard", "movements"],
-    fetchPage: fetchDashboardMovementsPage,
+    fetchPage,
     initialPageSize: 20,
     initialSortKey: "occurredAt",
     initialDirection: "desc",

@@ -2,6 +2,7 @@ package com.meufluxo.controller;
 
 import com.meufluxo.dto.kpi.DashboardKpiRequest;
 import com.meufluxo.dto.kpi.DashboardKpiResponse;
+import com.meufluxo.dto.kpi.InvoicePaymentBreakdownResponse;
 import com.meufluxo.service.KpiService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -14,6 +15,8 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/kpis")
@@ -108,5 +111,34 @@ public class KpiController {
                 includeProjections
         );
         return kpiService.getDashboardKpis(resolved);
+    }
+
+    @Operation(
+            summary = "Breakdown of credit card invoice payments by real categories",
+            description = """
+                    For each cash movement that pays a credit card invoice in the filtered period,
+                    returns the allocation of the payment amount across invoice line items (categories/subcategories).
+                    Used by the dashboard movements table to show “Fatura cartão” lines by category.
+                    """
+    )
+    @GetMapping("/dashboard/invoice-payment-breakdowns")
+    public List<InvoicePaymentBreakdownResponse> getInvoicePaymentBreakdowns(
+            @ModelAttribute DashboardKpiRequest request,
+            @RequestParam(name = "includeProjections", required = false) Boolean includeProjectionsQuery
+    ) {
+        Boolean includeProjections = includeProjectionsQuery != null
+                ? includeProjectionsQuery
+                : request.includeProjections();
+        DashboardKpiRequest resolved = new DashboardKpiRequest(
+                request.startDate(),
+                request.endDate(),
+                request.accountIds(),
+                request.categoryIds(),
+                request.subCategoryIds(),
+                request.paymentMethod(),
+                request.movementType(),
+                includeProjections
+        );
+        return kpiService.getInvoicePaymentBreakdowns(resolved);
     }
 }

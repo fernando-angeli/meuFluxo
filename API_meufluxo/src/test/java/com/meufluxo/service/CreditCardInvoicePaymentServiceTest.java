@@ -110,6 +110,8 @@ class CreditCardInvoicePaymentServiceTest {
                 MovementType.EXPENSE,
                 null,
                 null,
+                11L,
+                LocalDate.of(2026, 5, 10),
                 null
         ));
         when(cashMovementService.findByIdOrThrow(900L)).thenReturn(movement);

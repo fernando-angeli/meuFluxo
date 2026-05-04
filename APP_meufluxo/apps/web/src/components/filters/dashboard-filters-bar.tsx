@@ -25,6 +25,8 @@ export type DashboardFiltersValue = {
   accountIds: string[];
   categoryIds: string[];
   subcategoryIds: string[];
+  /** `"__ALL__"` = todas as formas (evita string vazia no Select, que vira “não selecionado”). */
+  paymentMethod: string;
   /** Quando true, inclui planejados em aberto ou em atraso (vencimento no período ou antes do início) nos KPIs, gráficos e tabela. */
   includeProjections: boolean;
 };
@@ -43,6 +45,7 @@ const defaultFilters = (): DashboardFiltersValue => {
     accountIds: [],
     categoryIds: [],
     subcategoryIds: [],
+    paymentMethod: "__ALL__",
     includeProjections: false,
   };
 };
@@ -97,6 +100,20 @@ export function DashboardFiltersBar({
   const yearOptions = useMemo(
     () => getYearOptions(selectedYear),
     [selectedYear],
+  );
+
+  const paymentMethodOptions = useMemo(
+    () => [
+      { value: "__ALL__", label: t("filters.paymentMethod.all") },
+      { value: "PIX", label: "PIX" },
+      { value: "DEBIT", label: t("filters.paymentMethod.debit") },
+      { value: "CASH", label: t("filters.paymentMethod.cash") },
+      { value: "TRANSFER", label: t("filters.paymentMethod.transfer") },
+      { value: "BOLETO", label: t("filters.paymentMethod.boleto") },
+      { value: "VA", label: t("filters.paymentMethod.va") },
+      { value: "INVOICE_CREDIT_CARD", label: t("filters.paymentMethod.invoiceCard") },
+    ],
+    [t],
   );
 
   const handleYearChange = (yearStr: string) => {
@@ -260,6 +277,27 @@ export function DashboardFiltersBar({
               onChange={(subcategoryIds) => update({ subcategoryIds })}
               parentCategoryIds={value.categoryIds}
               triggerClassName={cn("h-full w-full", FILTER_HEIGHT)}
+            />
+          </div>
+          <div
+            className={cn(
+              "flex items-center",
+              FILTER_HEIGHT,
+              "min-w-[160px]",
+            )}
+          >
+            <FilterSelect
+              value={value.paymentMethod}
+              onChange={(paymentMethod) => update({ paymentMethod })}
+              options={paymentMethodOptions}
+              placeholder={t("filters.paymentMethod.placeholder")}
+              triggerClassName={cn(
+                "h-full w-full rounded-xl border border-input bg-background shadow-sm transition-colors",
+                "hover:bg-muted/50 hover:border-input",
+                "focus:ring-2 focus:ring-ring focus:ring-offset-2",
+                "data-[state=open]:border-primary/50 data-[state=open]:ring-2 data-[state=open]:ring-primary/20",
+                FILTER_HEIGHT,
+              )}
             />
           </div>
         </div>

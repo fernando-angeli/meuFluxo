@@ -8,6 +8,14 @@ Dashboard principal como carro-chefe: visão clara de entradas/saídas, drill-do
 
 ## Camada de dados
 
+### Pagamento de fatura de cartão (KPIs e tabela)
+
+- No caixa, o pagamento da fatura é um único movimento com `paymentMethod = INVOICE_CREDIT_CARD` e subcategoria técnica de “pagamento de fatura”.
+- **KPIs (pizza por categoria):** o backend distribui o valor desse pagamento pelas categorias/subcategorias reais das despesas do cartão na fatura (`CreditCardExpense`), com rateio proporcional em pagamento parcial. Itens cancelados não entram.
+- **Tabela de movimentações:** o campo **`invoicePaymentBreakdowns`** vem no mesmo **`GET /kpis/dashboard`** (evita rota extra e 404 em ambientes sem o endpoint dedicado). O merge substitui cada linha técnica de fatura por **várias linhas sintéticas** (`sourceType: CREDIT_CARD_INVOICE_DETAIL`): uma por despesa alocada, forma de pagamento **Fatura cartão**, **data = vencimento da fatura** (`invoiceDueDate`), valor rateado. A tabela reutiliza o cache do React Query do KPI (`useDashboardKpis` com os mesmos parâmetros da página).
+- **Filtro “Forma de pagamento”** na barra do dashboard: repassado ao KPI e à listagem de caixa; ao escolher um método que não seja fatura, linhas de fatura (e o breakdown) somem; ao escolher **Fatura cartão**, aparecem só os pagamentos de fatura (expandidos na tabela).
+- **Série temporal:** continua baseada nos movimentos de caixa reais (totais por semana), sem redistribuir por categoria.
+
 ### Tipos (`@meufluxo/types`)
 
 - **DashboardKpisResponse** (estendido):

@@ -1,11 +1,12 @@
-import type { SubCategory, PageQueryParams, PageResponse } from "@meufluxo/types";
+import type { SubCategory, PageResponse } from "@meufluxo/types";
 
 import type { HttpClient } from "../http";
 
-export type SubCategoriesListParams = Partial<Omit<PageQueryParams, "page" | "size">> & {
+export type SubCategoriesListParams = {
   page?: number;
   size?: number;
-  sort?: string;
+  /** Spring: `name,ASC` ou múltiplos com array (`['active,DESC','name,ASC']`). */
+  sort?: string | readonly string[];
   /** Filtra subcategorias pela categoria pai (opcional). */
   categoryId?: string;
 };
@@ -42,7 +43,9 @@ export function createSubCategoriesApi(http: HttpClient): SubCategoriesApi {
         query: {
           ...(params?.page !== undefined ? { page: params.page } : {}),
           ...(params?.size !== undefined ? { size: params.size } : {}),
-          ...(params?.sort ? { sort: params.sort } : {}),
+          ...(params?.sort != null && params.sort !== ""
+            ? { sort: params.sort as string | readonly string[] }
+            : {}),
           ...(params?.categoryId != null &&
           String(params.categoryId).trim() !== "" &&
           !Number.isNaN(Number(params.categoryId))
