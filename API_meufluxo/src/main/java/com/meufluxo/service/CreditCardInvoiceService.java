@@ -145,7 +145,8 @@ public class CreditCardInvoiceService extends BaseUserService {
                 ))
                 .toList();
 
-        boolean canEdit = invoice.getStatus() == CreditCardInvoiceStatus.OPEN;
+        boolean canEdit = invoice.getStatus() == CreditCardInvoiceStatus.OPEN
+                || invoice.getStatus() == CreditCardInvoiceStatus.OVERDUE;
         boolean canPay = nvl(invoice.getRemainingAmount()).compareTo(BigDecimal.ZERO) > 0;
         boolean canClose = invoice.getStatus() == CreditCardInvoiceStatus.OPEN
                 && invoice.getClosingDate() != null
@@ -226,18 +227,8 @@ public class CreditCardInvoiceService extends BaseUserService {
     }
 
     public void assertInvoiceAllowsExpenseChanges(CreditCardInvoice invoice) {
-        if (invoice.getStatus() == CreditCardInvoiceStatus.OPEN) {
-            return;
-        }
-
-        // Permite ajustes/lancamentos em faturas pagas/parciais antes do fechamento,
-        // cobrindo o caso de pagamento antecipado com nova compra no mesmo ciclo.
-        if (
-                invoice.getClosingDate() != null &&
-                LocalDate.now().isBefore(invoice.getClosingDate()) &&
-                (invoice.getStatus() == CreditCardInvoiceStatus.PAID
-                        || invoice.getStatus() == CreditCardInvoiceStatus.PARTIALLY_PAID)
-        ) {
+        if (invoice.getStatus() == CreditCardInvoiceStatus.OPEN
+                || invoice.getStatus() == CreditCardInvoiceStatus.OVERDUE) {
             return;
         }
 

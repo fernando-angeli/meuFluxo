@@ -105,7 +105,7 @@ public class DevDataInitializer {
             String name,
             String description
     ) {
-        Workspace workspace = workspaceRepository.findByNameIgnoreCase(name)
+        Workspace workspace = workspaceRepository.findFirstByNameIgnoreCaseOrderByIdAsc(name)
                 .orElseGet(Workspace::new);
 
         workspace.setName(name);
