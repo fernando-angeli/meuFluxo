@@ -53,7 +53,7 @@ export default function LoginPage() {
             {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
           </div>
 
-          {errorMessage && <p className="text-sm text-destructive">{errorMessage}</p>}
+          {errorMessage && <p className="text-sm text-destructive text-yellow-500 font-bold text-center">{errorMessage}</p>}
 
           <Button type="submit" className="w-full" disabled={isSubmitting}>
             {isSubmitting ? t("auth.entering") : t("auth.login")}
