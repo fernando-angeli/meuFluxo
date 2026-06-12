@@ -4,6 +4,7 @@ import com.meufluxo.common.exception.BusinessException;
 import com.meufluxo.dto.bank.BankResponse;
 import com.meufluxo.dto.bank.BrasilApiBankResponse;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
@@ -14,6 +15,7 @@ import java.util.Comparator;
 import java.util.List;
 
 @Service
+@Transactional
 public class BankService {
 
     private static final String BANKS_API_URL = "https://brasilapi.com.br/api/banks/v1";
@@ -28,6 +30,7 @@ public class BankService {
         this.restClient = RestClient.create();
     }
 
+    @Transactional(readOnly = true)
     public List<BankResponse> getBanks() {
         Instant now = Instant.now();
         if (now.isBefore(cacheExpiresAt) && !cachedBanks.isEmpty()) {
@@ -58,6 +61,7 @@ public class BankService {
         }
     }
 
+    @Transactional(readOnly = true)
     private List<BankResponse> mapBanks(BrasilApiBankResponse[] response) {
         if (response == null || response.length == 0) {
             return List.of();
@@ -65,8 +69,4 @@ public class BankService {
 
         return Arrays.stream(response)
                 .filter(bank -> bank != null && bank.code() != null && bank.name() != null)
-                .map(bank -> new BankResponse(bank.code(), bank.name()))
-                .sorted(Comparator.comparing(BankResponse::code))
-                .toList();
-    }
-}
+                .map(ba

@@ -20,6 +20,7 @@ import java.math.BigDecimal;
 import java.util.Objects;
 
 @Service
+@Transactional
 public class AccountMovementService {
 
     private final AccountRepository accountRepository;
@@ -64,6 +65,4 @@ public class AccountMovementService {
 
         if (amount.compareTo(BigDecimal.ZERO) == 0) {
             throw new IllegalArgumentException("amount must not be zero");
-        }
-    }
-}
+     

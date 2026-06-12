@@ -26,6 +26,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -162,6 +164,7 @@ public class CashMovementService extends BaseUserService{
     }
 
     @Transactional
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public CashMovementResponse create(CashMovementRequest request) {
         SubCategory subCategory = subCategoryService.findByIdOrThrow(request.subCategoryId());
         Category category = subCategory.getCategory();
@@ -375,10 +378,4 @@ public class CashMovementService extends BaseUserService{
         }
         if (occurredAt.isBefore(account.getInitialBalanceDate())) {
             throw new BusinessException(
-                    "A data do movimento não pode ser anterior à data do saldo inicial da conta ("
-                            + account.getInitialBalanceDate() + ")."
-            );
-        }
-    }
-
-}
+ 

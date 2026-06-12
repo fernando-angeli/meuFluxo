@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 @Service
+@Transactional
 public class BootstrapService {
 
     private final AuthService authService;
@@ -62,7 +63,7 @@ public class BootstrapService {
         this.workspaceSyncStateService = workspaceSyncStateService;
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public BootstrapResponse getBootstrap() {
         AuthenticatedUserResponse authenticatedUser = authService.getAuthenticatedUser();
         Workspace workspace = currentUserService.getCurrentWorkspace();
@@ -89,7 +90,4 @@ public class BootstrapService {
                 subCategories,
                 accounts,
                 creditCards,
-                workspaceSyncStateService.getResponseByWorkspaceId(workspaceId)
-        );
-    }
-}
+                workspaceSyncStateService.getResponseByWorkspaceId(wor

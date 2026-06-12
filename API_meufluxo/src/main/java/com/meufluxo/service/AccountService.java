@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.Set;
 
 @Service
+@Transactional
 public class AccountService extends BaseUserService{
 
     private final AccountRepository accountRepository;
@@ -49,6 +50,7 @@ public class AccountService extends BaseUserService{
         this.workspaceSyncStateService = workspaceSyncStateService;
     }
 
+    @Transactional(readOnly = true)
     public AccountDetailsResponse getById(Long id) {
         Account account = accountRepository.findByIdAndWorkspaceId(id, getCurrentWorkspaceId())
                 .orElseThrow(() -> new NotFoundException("Conta não encontrada com ID: " + id));
@@ -60,13 +62,13 @@ public class AccountService extends BaseUserService{
         );
     }
 
+    @Transactional(readOnly = true)
     public PageResponse<AccountResponse> getAll(Pageable pageable) {
         Page<Account> categories = accountRepository.findAllByWorkspaceId(getCurrentWorkspaceId(), pageable);
         Page<AccountResponse> responsePage = categories.map(accountMapper::toResponse);
         return PageResponse.toPageResponse(responsePage);
     }
 
-    @Transactional
     public AccountResponse create(AccountRequest request) {
         if (accountRepository.existsByNameAndWorkspaceId(request.name(), getCurrentWorkspaceId())) {
             throw new BusinessException("Já existe uma conta com este nome.");
@@ -87,7 +89,6 @@ public class AccountService extends BaseUserService{
         return accountMapper.toResponse(newAccount);
     }
 
-    @Transactional
     public AccountResponse update(
             Long id,
             AccountUpdateRequest request
@@ -127,7 +128,6 @@ public class AccountService extends BaseUserService{
         return accountMapper.toResponse(existingAccount);
     }
 
-    @Transactional
     public void delete(Long id) {
         Account account = findByIdOrThrow(id);
         if (cashMovementRepository.existsByAccountId(id)) {
@@ -187,7 +187,4 @@ public class AccountService extends BaseUserService{
             return null;
         }
         String normalized = value.trim();
-        return normalized.isEmpty() ? null : normalized;
-    }
-
-}
+        return normalized.isEmpty() ? nu

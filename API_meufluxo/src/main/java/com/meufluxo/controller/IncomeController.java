@@ -44,7 +44,7 @@ import java.util.UUID;
 import org.springframework.util.MultiValueMap;
 
 @RestController
-@RequestMapping({"/income", "/incomes"})
+@RequestMapping({"/incomes"})
 @Tag(name = "Receitas Planejadas", description = "Operações de lançamentos planejados de receitas")
 public class IncomeController {
 
@@ -180,3 +180,4 @@ public class IncomeController {
         return ResponseEntity.ok(plannedEntryService.updateIncomeFutureOpen(id, request));
     }
 }
+           

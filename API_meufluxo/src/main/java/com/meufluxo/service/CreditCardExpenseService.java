@@ -224,7 +224,7 @@ public class CreditCardExpenseService extends BaseUserService {
         return creditCardExpenseMapper.toResponse(saved);
     }
 
-    public CreditCardExpense findByIdOrThrow(Long id) {
+    private CreditCardExpense findByIdOrThrow(Long id) {
         return creditCardExpenseRepository.findByIdAndWorkspaceId(id, getCurrentWorkspaceId())
                 .orElseThrow(() -> new NotFoundException("Lançamento de cartão não encontrado com ID: " + id));
     }

@@ -2,6 +2,7 @@ package com.meufluxo.service;
 
 import com.meufluxo.repository.HolidayRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -43,6 +44,7 @@ public class BusinessDayService {
         return isBusinessDay(date, workspaceId, resolveCurrentCountryCode());
     }
 
+    @Transactional
     public boolean isBusinessDay(LocalDate date, Long workspaceId, String countryCode) {
         DayOfWeek dayOfWeek = date.getDayOfWeek();
         if (dayOfWeek == DayOfWeek.SATURDAY || dayOfWeek == DayOfWeek.SUNDAY) {
@@ -74,8 +76,4 @@ public class BusinessDayService {
 
     private String normalizeCountryCode(String countryCode) {
         if (countryCode == null || countryCode.isBlank()) {
-            return DEFAULT_COUNTRY_CODE;
-        }
-        return countryCode.trim().toUpperCase();
-    }
-}
+            return DEFAULT_
