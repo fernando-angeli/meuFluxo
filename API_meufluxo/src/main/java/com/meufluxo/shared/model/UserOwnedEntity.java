@@ -1,0 +1,20 @@
+package com.meufluxo.shared.model;
+
+import com.meufluxo.workspace.model.Workspace;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.MappedSuperclass;
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+@MappedSuperclass
+public abstract class UserOwnedEntity extends BaseModel{
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "workspace_id", nullable = false)
+    private Workspace workspace;
+
+}

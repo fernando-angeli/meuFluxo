@@ -34,7 +34,7 @@ spring:
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
         spring.json.trusted.packages: "com.meufluxo.*"
-        spring.json.value.default.type: com.meufluxo.messaging.events.CashMovementEvent
+        spring.json.value.default.type: com.meufluxo.cashmovement.messaging.CashMovementEvent
 
   flyway:
     enabled: false

@@ -1,0 +1,25 @@
+package com.meufluxo.category.repository;
+
+import com.meufluxo.category.model.Category;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.Optional;
+import java.util.List;
+
+public interface CategoryRepository extends JpaRepository<Category, Long> {
+    Optional<Category> findByIdAndWorkspaceId(Long id, Long workspaceId);
+
+    Page<Category> findAllByWorkspaceId(Long workspaceId, Pageable pageable);
+
+    boolean existsByNameAndWorkspaceId(String categoryName, Long workspaceId);
+
+    boolean existsByNameAndWorkspaceIdAndIdNot(String categoryName, Long workspaceId, Long categoryId);
+
+    List<Category> findAllByWorkspaceIdOrderByIdAsc(Long workspaceId);
+
+    Long findIdByName(String name);
+
+    Optional<Category> findByNameIgnoreCaseAndWorkspaceId(String name, Long workspaceId);
+}

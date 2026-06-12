@@ -1,0 +1,26 @@
+package com.meufluxo.planning.mapper;
+
+import com.meufluxo.shared.dto.BaseResponse;
+import com.meufluxo.planning.dto.PlannedEntryCreateRequest;
+import com.meufluxo.planning.dto.PlannedEntryResponse;
+import com.meufluxo.planning.model.PlannedEntry;
+import org.mapstruct.BeanMapping;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+
+@Mapper(componentModel = "spring")
+public interface PlannedEntryMapper {
+
+    @BeanMapping(ignoreUnmappedSourceProperties = "settleImmediately")
+    PlannedEntry toEntity(PlannedEntryCreateRequest request);
+
+    @Mapping(target = "meta", source = ".")
+    @Mapping(target = "categoryId", source = "category.id")
+    @Mapping(target = "subCategoryId", source = "subCategory.id")
+    @Mapping(target = "defaultAccountId", source = "defaultAccount.id")
+    @Mapping(target = "settledAccountId", source = "settledAccount.id")
+    @Mapping(target = "movementId", source = "movement.id")
+    PlannedEntryResponse toResponse(PlannedEntry plannedEntry);
+
+    BaseResponse toBaseResponse(PlannedEntry plannedEntry);
+}

@@ -1,0 +1,40 @@
+package com.meufluxo.category.model;
+
+import com.meufluxo.shared.model.UserOwnedEntity;
+
+import com.meufluxo.cashmovement.model.MovementType;
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@Entity
+@Getter
+@Setter
+@Table(
+        name = "categories",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_category_workspace_name", columnNames = {"workspace_id", "name"})
+        }
+)
+public class Category extends UserOwnedEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false)
+    private String name;
+
+    @Column(length = 1000)
+    private String description;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private MovementType movementType;
+
+    @OneToMany(mappedBy = "category")
+    private List<SubCategory> subCategories = new ArrayList<>();
+}
