@@ -24,6 +24,8 @@ spring:
     port: ${RABBITMQ_PORT:5672}
     username: ${RABBITMQ_USER:meufluxo}
     password: ${RABBITMQ_PASS:meufluxo}
+    template:
+      mandatory: true
 
   flyway:
     enabled: false
