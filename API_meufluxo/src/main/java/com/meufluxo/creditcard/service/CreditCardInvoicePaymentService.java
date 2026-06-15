@@ -26,6 +26,8 @@ import com.meufluxo.category.model.SubCategory;
 import com.meufluxo.category.repository.CategoryRepository;
 import com.meufluxo.creditcard.repository.CreditCardInvoicePaymentRepository;
 import com.meufluxo.category.repository.SubCategoryRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -39,6 +41,7 @@ import java.util.Optional;
 
 @Service
 public class CreditCardInvoicePaymentService extends BaseUserService {
+    private static final Logger log = LoggerFactory.getLogger(CreditCardInvoicePaymentService.class);
     private static final String INVOICE_PAYMENT_CATEGORY_NAME = "Pagamento de fatura de cartao";
     private static final String DEFAULT_SUBCATEGORY_NAME = "Geral";
 
@@ -135,6 +138,8 @@ public class CreditCardInvoicePaymentService extends BaseUserService {
         CreditCardInvoicePayment saved = creditCardInvoicePaymentRepository.save(payment);
         creditCardInvoiceService.recalculateInvoiceTotals(invoice.getId());
         workspaceSyncStateService.incrementCreditCardsVersion(getCurrentWorkspaceId());
+        log.info("Pagamento de fatura registrado | paymentId={} invoiceId={} accountId={} amount={} workspaceId={}",
+                saved.getId(), invoice.getId(), account.getId(), request.amount(), getCurrentWorkspaceId());
         return creditCardInvoicePaymentMapper.toResponse(saved);
     }
 
@@ -170,6 +175,8 @@ public class CreditCardInvoicePaymentService extends BaseUserService {
         }
 
         creditCardInvoiceService.recalculateInvoiceTotals(invoiceId);
+        log.info("Pagamento de fatura excluído | paymentId={} invoiceId={} movementId={} workspaceId={}",
+                paymentId, invoiceId, movementId, getCurrentWorkspaceId());
         workspaceSyncStateService.incrementCreditCardsVersion(getCurrentWorkspaceId());
     }
 
@@ -203,7 +210,7 @@ public class CreditCardInvoicePaymentService extends BaseUserService {
                 buildMovementDescription(invoice),
                 trimToNull(request.notes()),
                 invoice.getId()
-        ));
+        ), "INVOICE_PAYMENT");
         return cashMovementService.findByIdOrThrow(movementResponse.id());
     }
 

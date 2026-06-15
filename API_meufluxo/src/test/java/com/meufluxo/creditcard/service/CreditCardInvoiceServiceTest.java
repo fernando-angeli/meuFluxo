@@ -101,6 +101,9 @@ class CreditCardInvoiceServiceTest {
         CreditCardInvoice previous = buildInvoice(99L, LocalDate.of(2026, 4, 21));
         previous.setReferenceYear(2026);
         previous.setReferenceMonth(4);
+        // Carry-over so ocorre para faturas parcialmente pagas com saldo restante.
+        previous.setStatus(CreditCardInvoiceStatus.PARTIALLY_PAID);
+        previous.setPaidAmount(new BigDecimal("10.00"));
         previous.setRemainingAmount(new BigDecimal("123.45"));
 
         when(calculationService.calculate(card, LocalDate.of(2026, 4, 11))).thenReturn(calc);

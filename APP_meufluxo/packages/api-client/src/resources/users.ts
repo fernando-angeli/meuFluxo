@@ -9,7 +9,7 @@ import type { HttpClient } from "../http";
 export type UsersApi = {
   /** Fonte única de verdade da sessão autenticada. */
   me: () => Promise<AuthenticatedUserSessionResponse>;
-  /** PATCH `/users/{id}/preferences/theme` — persiste LIGHT | DARK | SYSTEM. */
+  /** PATCH `/users/{id}/preferences/theme` — persiste ligth | dark | system. */
   patchThemePreference: (
     userId: string | number,
     body: { theme: UserThemeApi },

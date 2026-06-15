@@ -95,4 +95,7 @@ public class BootstrapService {
                 subCategories,
                 accounts,
                 creditCards,
-                workspaceSyncStateService.getResponseByWorkspaceId(wor
+                workspaceSyncStateService.getResponseByWorkspaceId(workspaceId)
+        );
+    }
+}

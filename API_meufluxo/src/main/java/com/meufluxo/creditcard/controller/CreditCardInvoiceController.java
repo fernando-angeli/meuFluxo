@@ -21,13 +21,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
@@ -104,5 +98,16 @@ public class CreditCardInvoiceController {
         URI uri = ServletUriComponentsBuilder.fromCurrentRequest().path("/{paymentId}")
                 .buildAndExpand(created.id()).toUri();
         return ResponseEntity.created(uri).body(created);
+    }
+
+    @PatchMapping("{id}/close")
+    @Operation(summary = "Fechar uma fatura", description = "Realiza o fechamento de uma fatura desde que a data senha igual ou superior a data de fechamento.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Fatura fechada",
+                    content = @Content(schema = @Schema(implementation = CreditCardInvoicePaymentResponse.class))),
+            @ApiResponse(responseCode = "422", description = "A fatura só pode ser fechada a partir da data de fechamento", content = @Content)
+    })
+    public ResponseEntity<CreditCardInvoiceResponse> closeInvoice(@PathVariable Long invoiceId){
+        return ResponseEntity.ok(service.closeInvoice(invoiceId));
     }
 }

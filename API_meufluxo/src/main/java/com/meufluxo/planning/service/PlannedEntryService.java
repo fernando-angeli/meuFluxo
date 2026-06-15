@@ -27,6 +27,8 @@ import com.meufluxo.planning.model.PlannedEntry;
 import com.meufluxo.category.model.SubCategory;
 import com.meufluxo.cashmovement.repository.CashMovementRepository;
 import com.meufluxo.planning.repository.PlannedEntryRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -51,6 +53,7 @@ import java.util.UUID;
 
 @Service
 public class PlannedEntryService extends BaseUserService {
+    private static final Logger log = LoggerFactory.getLogger(PlannedEntryService.class);
     private static final int MAX_PAGE_SIZE = 100;
 
     private final PlannedEntryRepository plannedEntryRepository;
@@ -552,7 +555,9 @@ public class PlannedEntryService extends BaseUserService {
                 null
         );
 
-        CashMovementResponse createdMovement = cashMovementService.create(cmRequest);
+        CashMovementResponse createdMovement = cashMovementService.create(cmRequest, "PLANNED_ENTRY");
+        log.info("Planejamento liquidado | entryId={} movementId={} amount={} type={} workspaceId={}",
+                entry.getId(), createdMovement.id(), request.actualAmount(), movementType, getCurrentWorkspaceId());
         CashMovement movement = cashMovementRepository
                 .findByIdAndWorkspaceId(createdMovement.id(), getCurrentWorkspaceId())
                 .orElseThrow(() -> new NotFoundException("Movimento gerado não encontrado: " + createdMovement.id()));

@@ -47,7 +47,7 @@ public class AccountMovementService {
         account.credit(amount.abs());
     }
 
-    public void revertAccountMovement(Account account, BigDecimal amount, MovementType movementType){
+    public void revertAccountMovement(Account account, BigDecimal amount, MovementType movementType) {
         validate(account, amount, movementType);
         // Reverter EXPENSE => creditar o valor que foi debitado
         if (movementType == MovementType.EXPENSE) {
@@ -65,4 +65,6 @@ public class AccountMovementService {
 
         if (amount.compareTo(BigDecimal.ZERO) == 0) {
             throw new IllegalArgumentException("amount must not be zero");
-     
+        }
+    }
+}

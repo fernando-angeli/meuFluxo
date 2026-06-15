@@ -78,4 +78,8 @@ public class BusinessDayService {
 
     private String normalizeCountryCode(String countryCode) {
         if (countryCode == null || countryCode.isBlank()) {
-            return DEFAULT_
+            return DEFAULT_COUNTRY_CODE;
+        }
+        return countryCode.trim().toUpperCase();
+    }
+}

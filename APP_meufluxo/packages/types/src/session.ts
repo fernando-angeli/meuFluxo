@@ -6,7 +6,7 @@ export type UserLanguage = "pt-BR" | "en" | "es";
 export type UserTheme = "light" | "dark" | "system";
 
 /** Valores enviados ao PATCH de preferência de tema (API). */
-export type UserThemeApi = "LIGHT" | "DARK" | "SYSTEM";
+export type UserThemeApi = "light" | "dark" | "system";
 
 /** Corpo da resposta 200 do PATCH `/users/{id}/preferences/theme`. */
 export type UserPreferencesThemePatchResponse = {
@@ -17,11 +17,11 @@ export type UserPreferencesThemePatchResponse = {
   timezone: string;
 };
 
-/** Converte tema vindo da API (ex.: LIGHT) para o contrato do app / next-themes. */
+/** Converte tema vindo da API (ex.: light) para o contrato do app / next-themes. */
 export function normalizeUserTheme(raw: string | null | undefined): UserTheme {
-  const u = String(raw ?? "LIGHT").toUpperCase();
-  if (u === "DARK") return "dark";
-  if (u === "SYSTEM") return "system";
+  const u = String(raw ?? "light").toLowerCase();
+  if (u === "dark") return "dark";
+  if (u === "system") return "system";
   return "light";
 }
 
@@ -47,9 +47,9 @@ export function userPreferencesFromThemePatchResponse(
 }
 
 export function userThemeToApi(theme: UserTheme): UserThemeApi {
-  if (theme === "dark") return "DARK";
-  if (theme === "system") return "SYSTEM";
-  return "LIGHT";
+  if (theme === "dark") return "dark";
+  if (theme === "system") return "system";
+  return "light";
 }
 
 export type UserPreferences = {

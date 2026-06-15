@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
+@Transactional
 public class CreditCardInvoiceService extends BaseUserService {
 
     private final CreditCardInvoiceRepository creditCardInvoiceRepository;
@@ -60,15 +61,18 @@ public class CreditCardInvoiceService extends BaseUserService {
         this.creditCardService = creditCardService;
     }
 
+    @Transactional(readOnly = true)
     public CreditCardInvoiceResponse findById(Long id) {
         return creditCardInvoiceMapper.toResponse(findByIdOrThrow(id));
     }
 
+    @Transactional(readOnly = true)
     public CreditCardInvoice findByIdOrThrow(Long id) {
         return creditCardInvoiceRepository.findByIdAndCreditCardWorkspaceId(id, getCurrentWorkspaceId())
                 .orElseThrow(() -> new NotFoundException("Fatura de cartão não encontrada com ID: " + id));
     }
 
+    @Transactional(readOnly = true)
     public PageResponse<CreditCardInvoiceListResponse> findByFilters(
             Long creditCardId,
             CreditCardInvoiceStatus status,
@@ -111,6 +115,7 @@ public class CreditCardInvoiceService extends BaseUserService {
         return PageResponse.toPageResponse(page.map(creditCardInvoiceMapper::toListResponse));
     }
 
+    @Transactional(readOnly = true)
     public CreditCardInvoiceDetailsResponse getDetails(Long id) {
         CreditCardInvoice invoice = findByIdOrThrow(id);
         List<CreditCardExpense> expenses = creditCardExpenseRepository
@@ -189,7 +194,6 @@ public class CreditCardInvoiceService extends BaseUserService {
         );
     }
 
-    @Transactional
     public CreditCardInvoice findOrCreateForPurchaseDate(CreditCard creditCard, LocalDate purchaseDate) {
         CreditCardInvoiceCalculationService.InvoiceCalculationResult calc = calculationService.calculate(creditCard, purchaseDate);
 
@@ -203,7 +207,6 @@ public class CreditCardInvoiceService extends BaseUserService {
                 .orElseGet(() -> createInvoice(creditCard, calc));
     }
 
-    @Transactional
     public CreditCardInvoice recalculateInvoiceTotals(Long invoiceId) {
         CreditCardInvoice invoice = findByIdOrThrow(invoiceId);
         BigDecimal billedAmount = creditCardInvoiceRepository.sumOpenExpensesByInvoiceId(invoiceId);
@@ -336,5 +339,16 @@ public class CreditCardInvoiceService extends BaseUserService {
             return invoice.getCreditCard().getName();
         }
         return invoice.getCreditCard().getName() + " - " + invoice.getCreditCard().getBrand().name();
+    }
+
+    public CreditCardInvoiceResponse closeInvoice(Long invoiceId) {
+        CreditCardInvoice invoice = findByIdOrThrow(invoiceId);
+
+        if(invoice.getClosingDate() == null || LocalDate.now().isBefore(invoice.getClosingDate())){
+            throw new BusinessException("A fatura só pode ser fechada a partir da data de fechamento");
+        }
+
+        invoice.setStatus(CreditCardInvoiceStatus.CLOSED);
+        return creditCardInvoiceMapper.toResponse(creditCardInvoiceRepository.save(invoice));
     }
 }

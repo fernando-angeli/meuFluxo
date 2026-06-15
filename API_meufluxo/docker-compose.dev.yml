@@ -27,13 +27,16 @@ services:
     depends_on:
       meufluxo_db_dev:
         condition: service_healthy
-      kafka:
+      rebbitqm:
         condition: service_started
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://meufluxo_db_dev:5432/${DB_DEV_NAME}
       SPRING_DATASOURCE_USERNAME: ${DB_DEV_USER}
       SPRING_DATASOURCE_PASSWORD: ${DB_DEV_PASSWORD}
-      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: meufluxo
+      SPRING_RABBITMQ_PASSWORD: meufluxo
       SERVER_PORT: ${SERVER_PORT:-8080}
       LOG_DIR: /workspace/logs
     ports:

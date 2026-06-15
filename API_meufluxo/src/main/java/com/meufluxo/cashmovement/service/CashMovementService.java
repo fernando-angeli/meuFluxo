@@ -1,6 +1,5 @@
 package com.meufluxo.cashmovement.service;
 
-import com.meufluxo.account.service.AccountMovementService;
 import com.meufluxo.account.service.AccountService;
 import com.meufluxo.category.service.CategoryService;
 import com.meufluxo.category.service.SubCategoryService;
@@ -10,7 +9,6 @@ import com.meufluxo.workspace.service.CurrentUserService;
 import com.meufluxo.shared.dto.PageResponse;
 import com.meufluxo.shared.exception.BusinessException;
 import com.meufluxo.shared.exception.NotFoundException;
-import com.meufluxo.cashmovement.messaging.CashMovementEventPublisher;
 import com.meufluxo.account.dto.AccountMovementSummaryResponse;
 import com.meufluxo.cashmovement.dto.CashMovementRequest;
 import com.meufluxo.cashmovement.dto.CashMovementResponse;
@@ -18,9 +16,7 @@ import com.meufluxo.cashmovement.dto.CashMovementUpdateRequest;
 import com.meufluxo.cashmovement.model.MovementType;
 import com.meufluxo.cashmovement.model.PaymentMethod;
 import com.meufluxo.cashmovement.mapper.CashMovementMapper;
-import com.meufluxo.cashmovement.messaging.KafkaTopics;
-import com.meufluxo.cashmovement.messaging.CashMovementEvent;
-import com.meufluxo.cashmovement.messaging.CashMovementEventMapper;
+import com.meufluxo.account.messaging.AccountMovementPublisher;
 import com.meufluxo.account.model.Account;
 import com.meufluxo.cashmovement.model.CashMovement;
 import com.meufluxo.category.model.Category;
@@ -28,35 +24,32 @@ import com.meufluxo.creditcard.model.CreditCardInvoice;
 import com.meufluxo.category.model.SubCategory;
 import com.meufluxo.cashmovement.repository.CashMovementRepository;
 import com.meufluxo.creditcard.repository.CreditCardInvoiceRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.event.TransactionPhase;
-import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 @Service
-public class CashMovementService extends BaseUserService{
+public class CashMovementService extends BaseUserService {
+
+    private static final Logger log = LoggerFactory.getLogger(CashMovementService.class);
 
     private final CashMovementRepository repository;
     private final CashMovementMapper cashMovementMapper;
     private final CategoryService categoryService;
     private final SubCategoryService subCategoryService;
     private final AccountService accountService;
-    private final AccountMovementService accountMovementService;
     private final CreditCardInvoiceRepository creditCardInvoiceRepository;
-    // Kafka
-    private final CashMovementEventPublisher eventPublisher;
-    private final CashMovementEventMapper eventMapper;
+    private final AccountMovementPublisher movementPublisher;
 
     public CashMovementService(
             CurrentUserService currentUserService,
@@ -65,10 +58,8 @@ public class CashMovementService extends BaseUserService{
             CategoryService categoryService,
             SubCategoryService subCategoryService,
             AccountService accountService,
-            AccountMovementService accountMovementService,
             CreditCardInvoiceRepository creditCardInvoiceRepository,
-            CashMovementEventPublisher eventPublisher,
-            CashMovementEventMapper eventMapper
+            AccountMovementPublisher movementPublisher
     ) {
         super(currentUserService);
         this.repository = repository;
@@ -76,10 +67,8 @@ public class CashMovementService extends BaseUserService{
         this.categoryService = categoryService;
         this.subCategoryService = subCategoryService;
         this.accountService = accountService;
-        this.accountMovementService = accountMovementService;
         this.creditCardInvoiceRepository = creditCardInvoiceRepository;
-        this.eventPublisher = eventPublisher;
-        this.eventMapper = eventMapper;
+        this.movementPublisher = movementPublisher;
     }
 
     public CashMovementResponse findById(Long id) {
@@ -171,8 +160,12 @@ public class CashMovementService extends BaseUserService{
     }
 
     @Transactional
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public CashMovementResponse create(CashMovementRequest request) {
+        return create(request, "MANUAL");
+    }
+
+    @Transactional
+    public CashMovementResponse create(CashMovementRequest request, String originType) {
         SubCategory subCategory = subCategoryService.findByIdOrThrow(request.subCategoryId());
         Category category = subCategory.getCategory();
         Account account = accountService.findByIdOrThrow(request.accountId());
@@ -192,7 +185,6 @@ public class CashMovementService extends BaseUserService{
         );
         movement.setMovementType(movementType);
         movement.setWorkspace(getCurrentWorkspace());
-        accountMovementService.applyAccountMovement(account, request.amount(), movementType);
         movement = repository.save(movement);
         if (request.creditCardInvoiceId() != null) {
             CreditCardInvoice invoice = creditCardInvoiceRepository
@@ -203,8 +195,9 @@ public class CashMovementService extends BaseUserService{
             movement.setCreditCardInvoice(invoice);
             movement = repository.save(movement);
         }
-        // publica evento (após salvar)
-        publishEvent(KafkaTopics.CASH_MOVEMENT_CREATED, movement, "CREATED");
+        log.info("Movimento criado | movementId={} accountId={} amount={} type={} originType={} workspaceId={}",
+                movement.getId(), account.getId(), movement.getAmount(), movementType, originType, getCurrentWorkspaceId());
+        movementPublisher.apply(movement.getId(), account.getId(), movementType.name(), movement.getAmount(), originType);
         return cashMovementMapper.toResponse(movement);
     }
 
@@ -236,18 +229,13 @@ public class CashMovementService extends BaseUserService{
         BigDecimal newAmount = (request.amount() != null) ? request.amount() : oldAmount;
 
         MovementType newType;
-        if(request.movementType() != null){
+        if (request.movementType() != null) {
             newType = request.movementType();
-        } else if (request.subCategoryId() != null){
+        } else if (request.subCategoryId() != null) {
             newType = newSubCategory.getCategory().getMovementType();
         } else {
             newType = oldType;
         }
-
-        // Reverter movimento anterior
-        accountMovementService.revertAccountMovement(oldAccount, oldAmount, oldType);
-        // Aplicar movimento novo
-        accountMovementService.applyAccountMovement(newAccount, newAmount, newType);
 
         if (request.description() != null) existingCashMovement.setDescription(request.description());
         if (request.occurredAt() != null) existingCashMovement.setOccurredAt(request.occurredAt());
@@ -258,23 +246,25 @@ public class CashMovementService extends BaseUserService{
         existingCashMovement.setMovementType(newType);
         existingCashMovement = repository.save(existingCashMovement);
 
-        publishEvent(KafkaTopics.CASH_MOVEMENT_UPDATED, existingCashMovement, "UPDATED");
+        log.info("Movimento atualizado | movementId={} accountId={} amount={} type={}",
+                existingCashMovement.getId(), newAccount.getId(), newAmount, newType);
+        movementPublisher.revert(existingCashMovement.getId(), oldAccount.getId(), oldType.name(), oldAmount, "MANUAL");
+        movementPublisher.apply(existingCashMovement.getId(), newAccount.getId(), newType.name(), newAmount, "MANUAL");
         return cashMovementMapper.toResponse(existingCashMovement);
     }
 
     // TODO validar o delete de movimentos após fechamento de faturas por exemplo, pois
-    //      pode comprometer a integridade de dados
+    // pode comprometer a integridade de dados
     @Transactional
     public void delete(Long id) {
         CashMovement cashMovement = findByIdOrThrow(id);
 
-        accountMovementService.revertAccountMovement(
-                cashMovement.getAccount(),
-                cashMovement.getAmount(),
-                cashMovement.getMovementType()
-        );
         repository.delete(cashMovement);
-        publishEvent(KafkaTopics.CASH_MOVEMENT_DELETED, cashMovement, "DELETED");
+        log.info("Movimento excluído | movementId={} accountId={} amount={} type={}",
+                cashMovement.getId(), cashMovement.getAccount().getId(),
+                cashMovement.getAmount(), cashMovement.getMovementType());
+        movementPublisher.revert(cashMovement.getId(), cashMovement.getAccount().getId(),
+                cashMovement.getMovementType().name(), cashMovement.getAmount(), "MANUAL");
     }
 
     public CashMovement findByIdOrThrow(Long id) {
@@ -358,31 +348,10 @@ public class CashMovementService extends BaseUserService{
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    private void publishEvent(String topic, CashMovement movement, String eventType) {
-        CashMovementEvent base = eventMapper.toEvent(movement);
-
-        CashMovementEvent event = new CashMovementEvent(
-                UUID.randomUUID().toString(),
-                eventType,
-                LocalDateTime.now(),
-
-                base.movementId(),
-                base.accountId(),
-                base.categoryId(),
-                base.amount(),
-                base.movementType(),
-                base.movementDate()
-        );
-
-        // key: accountId ajuda a manter ordenação por conta
-        String key = movement.getAccount() != null ? movement.getAccount().getId().toString() : movement.getId().toString();
-        eventPublisher.publish(topic, key, event);
-    }
-
     private void validateMovementDateAgainstAccountInitialBalance(Account account, LocalDate occurredAt) {
         if (account == null || occurredAt == null || account.getInitialBalanceDate() == null) {
             return;
         }
-        if (occurredAt.isBefore(account.getInitialBalanceDate())) {
-            throw new BusinessException(
+    }
+}
  

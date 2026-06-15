@@ -191,4 +191,7 @@ public class AccountService extends BaseUserService{
             return null;
         }
         String normalized = value.trim();
-        return normalized.isEmpty() ? nu
+        return normalized.isEmpty() ? null : normalized;
+    }
+
+}

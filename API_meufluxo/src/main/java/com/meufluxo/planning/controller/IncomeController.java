@@ -180,4 +180,3 @@ public class IncomeController {
         return ResponseEntity.ok(plannedEntryService.updateIncomeFutureOpen(id, request));
     }
 }
-           

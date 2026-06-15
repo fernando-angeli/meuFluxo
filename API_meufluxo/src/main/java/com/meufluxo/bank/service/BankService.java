@@ -69,4 +69,7 @@ public class BankService {
 
         return Arrays.stream(response)
                 .filter(bank -> bank != null && bank.code() != null && bank.name() != null)
-                .map(ba
+                .map(bank -> new BankResponse(bank.code(), bank.name()))
+                .toList();
+    }
+}
