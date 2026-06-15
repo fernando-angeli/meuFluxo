@@ -43,7 +43,7 @@ services:
     container_name: meufluxo_grafana
     profiles: ["obs"]
     ports:
-      - "3000:3000"
+      - "3001:3000"
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: admin
