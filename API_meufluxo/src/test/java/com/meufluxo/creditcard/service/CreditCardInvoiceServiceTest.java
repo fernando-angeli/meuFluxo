@@ -1,5 +1,6 @@
 package com.meufluxo.creditcard.service;
 
+import com.meufluxo.shared.exception.BusinessException;
 import com.meufluxo.workspace.service.CurrentUserService;
 
 import com.meufluxo.creditcard.model.BrandCard;
@@ -21,8 +22,10 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
@@ -123,6 +126,30 @@ class CreditCardInvoiceServiceTest {
         assertEquals(new BigDecimal("123.45"), created.getTotalAmount());
         assertEquals(new BigDecimal("123.45"), created.getRemainingAmount());
         assertEquals(CreditCardInvoiceStatus.OPEN, created.getStatus());
+    }
+
+    @Test
+    void assertInvoiceAllowsExpenseChangesShouldAllowOverdue() {
+        CreditCardInvoice invoice = buildInvoice(5L, LocalDate.now().minusDays(2));
+        invoice.setStatus(CreditCardInvoiceStatus.OVERDUE);
+
+        assertDoesNotThrow(() -> service.assertInvoiceAllowsExpenseChanges(invoice));
+    }
+
+    @Test
+    void assertInvoiceAllowsExpenseChangesShouldBlockPaid() {
+        CreditCardInvoice invoice = buildInvoice(6L, LocalDate.now().plusDays(5));
+        invoice.setStatus(CreditCardInvoiceStatus.PAID);
+
+        assertThrows(BusinessException.class, () -> service.assertInvoiceAllowsExpenseChanges(invoice));
+    }
+
+    @Test
+    void assertInvoiceAllowsExpenseChangesShouldBlockPartiallyPaid() {
+        CreditCardInvoice invoice = buildInvoice(7L, LocalDate.now().plusDays(5));
+        invoice.setStatus(CreditCardInvoiceStatus.PARTIALLY_PAID);
+
+        assertThrows(BusinessException.class, () -> service.assertInvoiceAllowsExpenseChanges(invoice));
     }
 
     private CreditCardInvoice buildInvoice(Long id, LocalDate dueDate) {

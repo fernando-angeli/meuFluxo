@@ -7,5 +7,5 @@ import java.util.Optional;
 
 public interface WorkspaceRepository extends JpaRepository<Workspace, Long> {
 
-    Optional<Workspace> findByNameIgnoreCase(String name);
+    Optional<Workspace> findFirstByNameIgnoreCaseOrderByIdAsc(String name);
 }
