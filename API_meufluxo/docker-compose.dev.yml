@@ -27,8 +27,8 @@ services:
     depends_on:
       meufluxo_db_dev:
         condition: service_healthy
-      rebbitqm:
-        condition: service_started
+      rabbitmq:
+        condition: service_healthy
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://meufluxo_db_dev:5432/${DB_DEV_NAME}
       SPRING_DATASOURCE_USERNAME: ${DB_DEV_USER}

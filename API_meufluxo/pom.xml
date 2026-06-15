@@ -29,6 +29,7 @@
     </properties>
 
     <dependencies>
+
         <!-- Spring Boot Starters -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -130,7 +131,7 @@
             <version>8.1</version>
         </dependency>
 
-    <!-- RabbitMQ       -->
+        <!-- RabbitMQ       -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-amqp</artifactId>

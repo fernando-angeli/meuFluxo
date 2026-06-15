@@ -23,22 +23,28 @@ services:
     container_name: meufluxo_api
     profiles: ["prod"]
     healthcheck:
-      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:${SERVER_PORT:-8080}/api/actuator/health"]
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:${SERVER_PORT:-8088}/api/actuator/health"]
       interval: 30s
       timeout: 10s
       retries: 3
     depends_on:
       meufluxo_db_prod:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
       SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_PROD_NAME}:${DB_PROD_PORT}/${DB_PROD_NAME}
       SPRING_DATASOURCE_USERNAME: ${DB_PROD_USER}
       SPRING_DATASOURCE_PASSWORD: ${DB_PROD_PASSWORD}
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:-meufluxo}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASS:-meufluxo}
       SERVER_PORT: ${SERVER_PORT}
       LOG_DIR: /app/logs
     ports:
-      - "${SERVER_PORT:-8080}:${SERVER_PORT:-8080}"
+      - "${SERVER_PORT:-8088}:${SERVER_PORT:-8088}"
     volumes:
       - ./logs:/app/logs
     restart: no

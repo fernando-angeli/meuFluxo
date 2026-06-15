@@ -17,7 +17,7 @@ menu:
 help:
 	@echo Alvos disponiveis:
 	@echo   make menu          # exibe este menu
-	@echo   make dev-up        # sobe ambiente de desenvolvimento (API + DB + Kafka)
+	@echo   make dev-up        # sobe ambiente de desenvolvimento (API + DB + RabbitMQ)
 	@echo   make dev-start     # alias de dev-up
 	@echo   make dev-down      # derruba ambiente de desenvolvimento
 	@echo   make dev-stop      # alias de dev-down
