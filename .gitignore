@@ -22,6 +22,8 @@ logs/
 target/
 build/
 .mvn/wrapper/maven-wrapper.jar
+*.mv.db
+*.trace.db
 
 # ---- Frontend (Node) ----
 node_modules/

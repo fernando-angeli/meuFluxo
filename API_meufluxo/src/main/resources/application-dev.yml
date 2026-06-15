@@ -12,8 +12,11 @@ spring:
       hibernate:
         format-sql: true
 
-  kafka:
-    bootstrap-servers: localhost:9092
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: meufluxo
+    password: meufluxo
 
   flyway:
     enabled: false
