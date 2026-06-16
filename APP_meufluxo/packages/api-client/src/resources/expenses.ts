@@ -28,6 +28,7 @@ export type ExpensesApi = {
   ) => Promise<ExpenseBatchCreateResponse>;
   cancel: (id: string) => Promise<ExpenseRecord>;
   settle: (id: string, request: ExpenseSettleRequest) => Promise<ExpenseRecord>;
+  unsettle: (id: string) => Promise<ExpenseRecord>;
 };
 
 export type ExpensesListParams = Partial<Omit<PageQueryParams, "page" | "size">> & {
@@ -97,6 +98,10 @@ export function createPlannedEntriesApi(
       http.request<ExpenseRecord>(`${basePath}/${encodeURIComponent(id)}/settle`, {
         method: "PATCH",
         body: request,
+      }),
+    unsettle: (id) =>
+      http.request<ExpenseRecord>(`${basePath}/${encodeURIComponent(id)}/unsettle`, {
+        method: "PATCH",
       }),
   };
 }

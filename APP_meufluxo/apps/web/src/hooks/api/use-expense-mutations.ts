@@ -1,11 +1,13 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
+import { api } from "@/services/api";
 
 import type {
   ExpenseBatchCreateRequest,
   ExpenseCreateRequest,
   ExpenseUpdateRequest,
+  ExpenseSettleRequest,
 } from "@meufluxo/types";
 import {
   createExpenseBatch,
@@ -31,3 +33,23 @@ export function useUpdateExpense() {
       updateExpense(params.id, params.request),
   });
 }
+
+export function useCancelExpense() {
+  return useMutation({
+    mutationFn: (id: string) => api.expenses.cancel(id),
+  });
+}
+
+export function useSettleExpense() {
+  return useMutation({
+    mutationFn: (params: { id: string; request: ExpenseSettleRequest }) =>
+      api.expenses.settle(params.id, params.request),
+  });
+}
+
+export function useUnsettleExpense() {
+  return useMutation({
+    mutationFn: (id: string) => api.expenses.unsettle(id),
+  });
+}
+

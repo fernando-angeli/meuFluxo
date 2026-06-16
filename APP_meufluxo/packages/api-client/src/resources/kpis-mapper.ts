@@ -308,7 +308,7 @@ function dedupeExpenseRecordsById(rows: ExpenseRecord[]): ExpenseRecord[] {
 
 async function fetchPlannedWindowPages(
   http: HttpClient,
-  basePath: "/expenses" | "/income",
+  basePath: "/expenses" | "/incomes",
   params: DashboardKpisParams,
   window: PlannedDueWindow,
 ): Promise<ExpenseRecord[]> {
@@ -328,7 +328,7 @@ async function fetchPlannedWindowPages(
 /** Planejados OPEN (API: status OPEN+OVERDUE) no intervalo de vencimento + atrasados anteriores ao início do período. */
 export async function fetchAllOpenPlannedForDashboard(
   http: HttpClient,
-  basePath: "/expenses" | "/income",
+  basePath: "/expenses" | "/incomes",
   params: DashboardKpisParams,
 ): Promise<ExpenseRecord[]> {
   const inRange = await fetchPlannedWindowPages(http, basePath, params, {

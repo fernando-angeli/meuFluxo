@@ -86,7 +86,7 @@ export default function DashboardPage() {
             tone={data.currentBalance >= 0 ? "success" : "danger"}
           />
           <KpiCard
-            title={t("dashboard.income")}
+            title={t("dashboard.incomes")}
             value={formatCurrency(data.totalIncome)}
             tone="success"
           />
@@ -129,7 +129,7 @@ export default function DashboardPage() {
                 data={
                   data.temporalEvolution ?? {
                     labels: [],
-                    income: [],
+                    incomes: [],
                     expenses: [],
                   }
                 }

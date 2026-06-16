@@ -171,6 +171,14 @@ public class IncomeController {
         return ResponseEntity.ok(plannedEntryService.settleIncome(id, request));
     }
 
+    @PatchMapping("/{id}/unsettle")
+    @Operation(summary = "Reverter baixa de receitas (desfaz o movimento em conta)")
+    public ResponseEntity<PlannedEntryResponse> unsettleIncome(
+            @PathVariable Long id
+    ) {
+        return ResponseEntity.ok(plannedEntryService.unsettleIncome(id));
+    }
+
     @PutMapping("/{id}/future-open")
     @Operation(summary = "Atualizar próximos lançamentos em aberto do grupo")
     public ResponseEntity<PlannedEntryFutureOpenUpdateResponse> updateFutureOpen(

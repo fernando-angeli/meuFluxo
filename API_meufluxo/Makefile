@@ -1,12 +1,13 @@
 .DEFAULT_GOAL := menu
 
-.PHONY: menu help dev-up dev-start dev-down dev-stop dev-logs dev-ps dev-restart prod-up prod-down prod-logs prod-ps obs-up obs-down obs-logs all-up all-down
+.PHONY: menu help dev-up dev-start dev-down dev-stop dev-logs dev-ps dev-restart dev-obs-up dev-obs-down prod-up prod-down prod-logs prod-ps obs-up obs-down obs-logs all-up all-down
 
 COMPOSE_BASE = docker compose -f docker-compose.yml
 COMPOSE_DEV = $(COMPOSE_BASE) -f docker-compose.dev.yml --profile dev
 COMPOSE_PROD = $(COMPOSE_BASE) -f docker-compose.prod.yml --profile prod
 COMPOSE_PROD_OBS = $(COMPOSE_BASE) -f docker-compose.prod.yml --profile prod --profile obs
-COMPOSE_OBS = docker compose --profile obs
+COMPOSE_OBS = $(COMPOSE_BASE) --profile obs
+COMPOSE_DEV_OBS = $(COMPOSE_BASE) -f docker-compose.dev.yml --profile dev --profile obs
 
 menu:
 	@echo ==============================================
@@ -28,6 +29,8 @@ help:
 	@echo   make prod-down     # derruba ambiente de producao
 	@echo   make prod-logs     # acompanha logs da API prod
 	@echo   make prod-ps       # lista status dos containers prod
+	@echo   make dev-obs-up    # sobe dev + observabilidade (Loki/Promtail/Grafana)
+	@echo   make dev-obs-down  # derruba dev + observabilidade
 	@echo   make obs-up        # sobe stack de observabilidade (Loki/Promtail/Grafana)
 	@echo   make obs-down      # derruba stack de observabilidade
 	@echo   make obs-logs      # acompanha logs da stack observabilidade
@@ -52,6 +55,12 @@ dev-ps:
 
 dev-restart:
 	$(COMPOSE_DEV) restart api_dev
+
+dev-obs-up:
+	$(COMPOSE_DEV_OBS) up -d
+
+dev-obs-down:
+	$(COMPOSE_DEV_OBS) down
 
 prod-up:
 	$(COMPOSE_PROD) up -d --build

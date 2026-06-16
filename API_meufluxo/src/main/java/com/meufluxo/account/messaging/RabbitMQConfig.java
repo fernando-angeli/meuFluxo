@@ -1,6 +1,8 @@
 package com.meufluxo.account.messaging;
 
 import org.springframework.amqp.core.*;
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -14,6 +16,11 @@ public class RabbitMQConfig {
     public static final String RK_APPLY = "account.movement.apply";
     public static final String RK_REVERT = "account.movement.revert";
     public static final String RK_DLQ = "account.movement.dead";
+
+    @Bean
+    public MessageConverter messageConverter() {
+        return new Jackson2JsonMessageConverter();
+    }
 
     // durable=true → sobrevive a restart do broker
     @Bean

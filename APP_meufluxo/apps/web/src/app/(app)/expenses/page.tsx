@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { DataTable } from "@/components/data-table/DataTable";
 import { useServerDataTable } from "@/hooks/useServerDataTable";
 import { useAuthOptional } from "@/hooks/useAuth";
-import { useCategories, useSubCategories, useCancelExpense, useAccounts } from "@/hooks/api";
+import { useCategories, useSubCategories, useCancelExpense, useUnsettleExpense, useAccounts } from "@/hooks/api";
 import { useToast } from "@/components/toast";
 import { getQueryErrorMessage } from "@/lib/query-error";
 import { fetchExpensesPage } from "@/features/expenses/expenses-list.service";
@@ -30,6 +30,7 @@ export default function ExpensesPage() {
   const auth = useAuthOptional();
   const { success, error } = useToast();
   const cancelMutation = useCancelExpense();
+  const unsettleMutation = useUnsettleExpense();
   const { data: categories = [] } = useCategories({ realOnly: true, activeOnly: true });
   const { data: subCategories = [] } = useSubCategories({ realOnly: true, activeOnly: true });
   const { data: accounts = [] } = useAccounts();
@@ -47,7 +48,7 @@ export default function ExpensesPage() {
     fetchPage: fetchExpensesPage,
     initialPageSize: 20,
     initialSortKey: "dueDate",
-    initialDirection: "asc",
+    initialDirection: "desc",
     enabled: !auth?.isBootstrapping && !!auth?.isAuthenticated,
     extraQueryParams: {
       ...(filters.statuses.length ? { statuses: filters.statuses } : {}),
@@ -103,10 +104,19 @@ export default function ExpensesPage() {
                 error("Não foi possível cancelar a despesa.");
               }
             }}
+            onUnsettle={async (row) => {
+              try {
+                await unsettleMutation.mutateAsync(row.id);
+                success("Baixa revertida com sucesso.");
+                table.pageResponseQuery.refetch();
+              } catch {
+                error("Não foi possível reverter a baixa.");
+              }
+            }}
           />
         ),
       }),
-    [cancelMutation, categoryNameById, error, subCategoryNameById, success, table.pageResponseQuery],
+    [cancelMutation, unsettleMutation, categoryNameById, error, subCategoryNameById, success, table.pageResponseQuery],
   );
 
   return (

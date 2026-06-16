@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, Pencil, Trash2 } from "lucide-react";
+import { CheckCircle2, CircleX, Pencil, Trash2 } from "lucide-react";
 
 import type { ExpenseRecord } from "@meufluxo/types";
 import { RowActionButtons, type RowActionButtonItem } from "@/components/patterns";
@@ -10,6 +10,7 @@ export function ExpenseRowActions({
   onEdit,
   onDelete,
   onSettle,
+  onUnsettle,
   deleting,
   labels,
 }: {
@@ -17,17 +18,20 @@ export function ExpenseRowActions({
   onEdit: (expense: ExpenseRecord) => void;
   onDelete: (expense: ExpenseRecord) => void;
   onSettle: (expense: ExpenseRecord) => void;
+  onUnsettle: (expense: ExpenseRecord) => void;
   deleting?: boolean;
   labels?: {
     edit?: string;
     delete?: string;
     settle?: string;
+    cancel?: string;
     editAria?: string;
     deleteAria?: string;
     settleAria?: string;
+    unsettleAria?: string;
   };
 }) {
-  const actions: RowActionButtonItem[] = [
+  const actionsOpened: RowActionButtonItem[] = [
     {
       key: "edit",
       label: labels?.edit ?? "Editar",
@@ -40,7 +44,7 @@ export function ExpenseRowActions({
       label: labels?.delete ?? "Excluir",
       icon: Trash2,
       ariaLabel: labels?.deleteAria ?? "Excluir despesa",
-      disabled: deleting,
+      disabled: expense.status === "OPEN",
       onClick: () => onDelete(expense),
     },
     {
@@ -52,9 +56,20 @@ export function ExpenseRowActions({
     },
   ];
 
+  const actionsClosed: RowActionButtonItem[] = [
+    {
+      key: "unsettle",
+      label: labels?.unsettle ?? "Cancelar baixa",
+      icon: CircleX,
+      ariaLabel: labels?.unsettleAria ?? "Cancelar baixa da despesa",
+      onClick: () => onUnsettle(expense),
+    }
+  ];
+
+  const selectedActions = expense.status === "COMPLETED" ? actionsClosed : actionsOpened;
   return (
     <RowActionButtons
-      actions={actions.map((action) => ({
+      actions={selectedActions.map((action) => ({
         ...action,
         buttonClassName: "h-10 w-10",
       }))}

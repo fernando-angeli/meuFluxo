@@ -20,7 +20,7 @@ export type FinancialRecordsFilterState = {
 
 export function getDefaultFinancialRecordsFilterState(): FinancialRecordsFilterState {
   return {
-    statuses: ["OPEN", "OVERDUE"],
+    statuses: ["OPEN", "OVERDUE", "CANCELED", "COMPLETED"],
     categoryIds: [],
     subCategoryIds: [],
     dateRange: getDefaultPlannedEntriesDateRange(),

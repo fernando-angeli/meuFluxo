@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
+import { api } from "@/services/api";
 
 import type {
   ExpenseBatchCreateRequest,
@@ -13,7 +14,6 @@ import {
   createSingleIncome,
   updateIncome,
 } from "@/features/income/income.service";
-import { api } from "@/services/api";
 
 export function useCreateSingleIncome() {
   return useMutation({
@@ -44,5 +44,11 @@ export function useSettleIncome() {
   return useMutation({
     mutationFn: (params: { id: string; request: ExpenseSettleRequest }) =>
       api.income.settle(params.id, params.request),
+  });
+}
+
+export function useUnsettleIncome() {
+  return useMutation({
+    mutationFn: (id: string) => api.income.unsettle(id),
   });
 }
