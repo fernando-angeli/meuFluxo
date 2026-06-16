@@ -66,7 +66,7 @@ export function createKpisApi(http: HttpClient): KpisApi {
           try {
             const [plannedExpenses, plannedIncomes] = await Promise.all([
               fetchAllOpenPlannedForDashboard(http, "/expenses", params),
-              fetchAllOpenPlannedForDashboard(http, "/income", params),
+              fetchAllOpenPlannedForDashboard(http, "/incomes", params),
             ]);
             temporalEvolution = mergePlannedIntoTemporalSeries(
               temporalEvolution,

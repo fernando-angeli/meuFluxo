@@ -28,7 +28,7 @@ type TemporalEvolutionChartProps = {
 function buildChartData(data: DashboardTemporalSeries) {
   return data.labels.map((label, i) => ({
     period: label,
-    entradas: data.income[i] ?? 0,
+    entradas: data.incomes[i] ?? 0,
     saídas: Math.abs(data.expenses[i] ?? 0),
   }));
 }

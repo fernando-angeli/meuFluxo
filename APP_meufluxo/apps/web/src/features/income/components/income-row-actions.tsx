@@ -9,12 +9,14 @@ export function IncomeRowActions({
   onDelete,
   onSettle,
   deleting,
+  onUnsettle,
 }: {
   income: ExpenseRecord;
   onEdit: (income: ExpenseRecord) => void;
   onDelete: (income: ExpenseRecord) => void;
   onSettle: (income: ExpenseRecord) => void;
   deleting?: boolean;
+  onUnsettle: (income: ExpenseRecord) => void;
 }) {
   return (
     <ExpenseRowActions
@@ -23,11 +25,14 @@ export function IncomeRowActions({
       onEdit={onEdit}
       onDelete={onDelete}
       onSettle={onSettle}
+      onUnsettle={onUnsettle}
       labels={{
         settle: "Receber",
         settleAria: "Marcar como recebido",
         editAria: "Editar receita",
         deleteAria: "Cancelar receita",
+        unsettle: "Cancelar recebimento",
+        unsettleAria: "Cancelar recebimento da receita",
       }}
     />
   );

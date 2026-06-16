@@ -23,7 +23,7 @@ Dashboard principal como carro-chefe: visão clara de entradas/saídas, drill-do
   - `temporalEvolution: DashboardTemporalSeries` — labels (eixo X) + séries de valores.
   - `movements: DashboardMovementRow[]` — listagem para a tabela (view model com nomes resolvidos).
 
-- **DashboardTemporalSeries**: `{ labels: string[]; income: number[]; expenses: number[] }`.
+- **DashboardTemporalSeries**: `{ labels: string[]; incomes: number[]; expenses: number[] }`.
 
 - **DashboardMovementRow**: id, description, categoryName, subcategoryName, date (ISO), value, accountName, paymentMethod, status ('paga' | 'aberta' | 'projeção').
 

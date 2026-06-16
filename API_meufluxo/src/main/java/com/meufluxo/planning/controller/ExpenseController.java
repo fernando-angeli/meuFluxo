@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.apache.coyote.Response;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -154,6 +155,14 @@ public class ExpenseController {
             @Valid @RequestBody PlannedEntrySettleRequest request
     ) {
         return ResponseEntity.ok(plannedEntryService.settleExpense(id, request));
+    }
+
+    @PatchMapping("/{id}/unsettle")
+    @Operation(summary = "Reverter baixa de despesas (desfaz o movimento em conta)")
+    public ResponseEntity<PlannedEntryResponse> unsettleExpense(
+            @PathVariable Long id
+    ) {
+        return ResponseEntity.ok(plannedEntryService.unsettleExpense(id));
     }
 
     @PutMapping("/{id}/future-open")

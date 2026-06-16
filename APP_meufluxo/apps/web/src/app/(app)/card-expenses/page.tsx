@@ -138,7 +138,7 @@ export default function CardExpensesPage() {
               setEditingExpense(row);
               setFormOpen(true);
             }}
-            onCancel={(row) => {
+            onUnsettle={(row) => {
               setCancelingExpense(row);
               setCancelOpen(true);
             }}

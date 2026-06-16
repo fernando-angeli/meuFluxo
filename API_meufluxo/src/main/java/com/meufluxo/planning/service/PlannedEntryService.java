@@ -311,6 +311,14 @@ public class PlannedEntryService extends BaseUserService {
         return settleByDirection(id, request, FinancialDirection.INCOME);
     }
 
+    public PlannedEntryResponse unsettleExpense(Long id) {
+        return unsettleByDirection(id, FinancialDirection.EXPENSE);
+    }
+
+    public PlannedEntryResponse unsettleIncome(Long id) {
+        return unsettleByDirection(id, FinancialDirection.INCOME);
+    }
+
     @Transactional
     public PlannedEntryFutureOpenUpdateResponse updateExpenseFutureOpen(
             Long referenceId,
@@ -569,6 +577,41 @@ public class PlannedEntryService extends BaseUserService {
         entry.setMovement(movement);
 
         PlannedEntry saved = plannedEntryRepository.save(entry);
+        return withComputedStatus(plannedEntryMapper.toResponse(saved));
+    }
+
+    private PlannedEntryResponse unsettleByDirection(Long id, FinancialDirection direction){
+        PlannedEntry entry = findByIdOrThrow(id, direction);
+        if (entry.getStatus() != PlannedEntryStatus.COMPLETED) {
+            throw new BusinessException("Apenas lançamentos liquidados podem ser revertidos.");
+        }
+
+        CashMovement movement = cashMovementService.findByIdOrThrow(entry.getMovement().getId());
+        if (movement == null) {
+            throw new BusinessException("Movimentação não localizada.");
+        }
+
+        Account account = validateAndGetAccount(movement.getAccount().getId());
+        if (account == null || !account.isActive()) {
+            throw new BusinessException("Conta inativa ou não encontrada, não é possível reverter a liquidação.");
+        }
+
+        MovementType movementType = direction == FinancialDirection.EXPENSE
+                ? MovementType.EXPENSE
+                : MovementType.INCOME;
+
+        entry.setActualAmount(null);
+        entry.setSettledAccount(null);
+        entry.setSettledAt(null);
+        entry.setStatus(PlannedEntryStatus.OPEN);
+        entry.setMovement(null);
+        PlannedEntry saved = plannedEntryRepository.save(entry);
+
+        cashMovementService.delete(movement.getId());
+
+        log.info("Baixa revertida | entryId={} movementId={} amount={} type={} workspaceId={}",
+                entry.getId(), movement.getId(), movement.getAmount(), movementType, getCurrentWorkspaceId());
+
         return withComputedStatus(plannedEntryMapper.toResponse(saved));
     }
 
@@ -832,4 +875,5 @@ public class PlannedEntryService extends BaseUserService {
         }
         return null;
     }
+
 }

@@ -15,6 +15,7 @@ import {
   useCategories,
   useSubCategories,
   useCancelIncome,
+  useUnsettleIncome,
 } from "@/hooks/api";
 import { useToast } from "@/components/toast";
 import { getQueryErrorMessage } from "@/lib/query-error";
@@ -35,6 +36,7 @@ export default function IncomePage() {
   const auth = useAuthOptional();
   const { success, error } = useToast();
   const cancelMutation = useCancelIncome();
+  const unsettleMutation = useUnsettleIncome();
   const { data: categories = [] } = useCategories({ realOnly: true, activeOnly: true });
   const { data: subCategories = [] } = useSubCategories({ realOnly: true, activeOnly: true });
   const { data: accounts = [] } = useAccounts();
@@ -52,7 +54,7 @@ export default function IncomePage() {
     fetchPage: fetchIncomePage,
     initialPageSize: 20,
     initialSortKey: "dueDate",
-    initialDirection: "asc",
+    initialDirection: "desc",
     enabled: !auth?.isBootstrapping && !!auth?.isAuthenticated,
     extraQueryParams: {
       ...(filters.statuses.length ? { statuses: filters.statuses } : {}),
@@ -108,10 +110,19 @@ export default function IncomePage() {
                 error("Não foi possível cancelar a receita.");
               }
             }}
+            onUnsettle={async (row) => {
+              try {
+                await unsettleMutation.mutateAsync(row.id);
+                success("Recebimento revertido com sucesso.");
+                table.pageResponseQuery.refetch();
+              } catch {
+                error("Não foi possível reverter o recebimento.");
+              }
+            }}
           />
         ),
       }),
-    [cancelMutation, categoryNameById, error, subCategoryNameById, success, table.pageResponseQuery],
+    [cancelMutation, unsettleMutation, categoryNameById, error, subCategoryNameById, success, table.pageResponseQuery],
   );
 
   return (
